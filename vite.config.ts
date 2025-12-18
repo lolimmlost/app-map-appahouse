@@ -17,7 +17,12 @@ const config = defineConfig({
         nitroV2Plugin({ preset: "vercel" }),
         viteReact(),
         devtoolsJson()
-    ]
+    ],
+    server: {
+        host: true,
+        port: 4175,
+        allowedHosts: ["dev5.appahouse.com", "localhost"]
+    }
 })
 
 export default config

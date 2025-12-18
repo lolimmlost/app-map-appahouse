@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Save, RefreshCw, Palette, LayoutGrid, Activity } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -16,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeEditor } from "@/components/theme/theme-editor";
 import { getUserSettings, updateUserSettings } from "@/lib/server/user-settings";
 import type { UserSettings } from "@/database/schema/user-settings";
 
@@ -50,10 +50,11 @@ function SettingsPage() {
     queryKey: ["userSettings"],
     queryFn: () => getUserSettings(),
     enabled: !!session?.user,
+    staleTime: 30000,
   });
 
   // Update form when settings load
-  useState(() => {
+  useEffect(() => {
     if (settingsData?.settings) {
       const s = settingsData.settings;
       setFormData({
@@ -64,7 +65,7 @@ function SettingsPage() {
         theme: s.theme ?? "system",
       });
     }
-  });
+  }, [settingsData?.settings]);
 
   // Save settings mutation
   const saveMutation = useMutation({
@@ -116,13 +117,13 @@ function SettingsPage() {
   }
 
   return (
-    <main className="container mx-auto flex flex-col gap-6 p-6 max-w-3xl">
-      <div className="flex items-center justify-between">
+    <main className="container mx-auto flex flex-col gap-6 p-4 sm:p-6 max-w-3xl">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Customize your dashboard experience</p>
+          <p className="text-muted-foreground text-sm sm:text-base">Customize your dashboard experience</p>
         </div>
-        <Button onClick={handleSave} disabled={!isDirty || saveMutation.isPending}>
+        <Button onClick={handleSave} disabled={!isDirty || saveMutation.isPending} className="w-full sm:w-auto">
           {saveMutation.isPending ? (
             <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
           ) : (
@@ -132,7 +133,7 @@ function SettingsPage() {
         </Button>
       </div>
 
-      {isLoading ? (
+      {isLoading && !settingsData ? (
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -150,9 +151,9 @@ function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Theme</Label>
+                  <Label>Color Mode</Label>
                   <p className="text-sm text-muted-foreground">
-                    Select your preferred color theme
+                    Select light, dark, or system preference
                   </p>
                 </div>
                 <Select
@@ -169,6 +170,20 @@ function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Theme Editor */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                <CardTitle>Theme Editor</CardTitle>
+              </div>
+              <CardDescription>Choose a preset theme or customize colors</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ThemeEditor />
             </CardContent>
           </Card>
 

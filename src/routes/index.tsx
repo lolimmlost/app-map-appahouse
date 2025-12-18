@@ -166,7 +166,7 @@ function DashboardPage() {
   return (
     <main className="container mx-auto flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -174,7 +174,7 @@ function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Refresh health button */}
           <Button
             variant="outline"
@@ -220,7 +220,17 @@ function DashboardPage() {
           {/* Group toggle */}
           <Button
             variant={groupByCategory ? "secondary" : "outline"}
+            size="icon"
+            className="sm:hidden"
+            onClick={() => setGroupByCategory(!groupByCategory)}
+            title="Group by Category"
+          >
+            <Settings2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={groupByCategory ? "secondary" : "outline"}
             size="sm"
+            className="hidden sm:flex"
             onClick={() => setGroupByCategory(!groupByCategory)}
           >
             <Settings2 className="h-4 w-4 mr-2" />
@@ -228,7 +238,10 @@ function DashboardPage() {
           </Button>
 
           {/* Add app button */}
-          <Button onClick={() => setFormOpen(true)}>
+          <Button size="icon" className="sm:hidden" onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button className="hidden sm:flex" onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add App
           </Button>

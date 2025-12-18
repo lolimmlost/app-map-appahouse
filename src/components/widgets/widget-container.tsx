@@ -20,6 +20,7 @@ interface WidgetContainerProps {
   onRefresh?: () => void;
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  headerActions?: ReactNode;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export function WidgetContainer({
   onRefresh,
   onEdit,
   onDelete,
+  headerActions,
   className,
 }: WidgetContainerProps) {
   return (
@@ -43,6 +45,7 @@ export function WidgetContainer({
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
           </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {headerActions}
             {onRefresh && (
               <Button
                 variant="ghost"

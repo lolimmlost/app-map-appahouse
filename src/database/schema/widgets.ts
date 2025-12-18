@@ -15,6 +15,7 @@ export const widgetTypeEnum = pgEnum("widget_type", [
   "docker",
   "iframe",
   "bookmarks",
+  "notes",
 ]);
 
 export type WidgetPosition = {
@@ -48,6 +49,8 @@ export type WidgetConfig = {
   url?: string;
   // Bookmarks widget
   bookmarks?: Array<{ name: string; url: string; icon?: string }>;
+  // Notes widget
+  content?: string;
   // Generic
   title?: string;
   refreshInterval?: number;

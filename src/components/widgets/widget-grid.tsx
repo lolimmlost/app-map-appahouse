@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { Plus, Clock, Activity, Bookmark, ExternalLink } from "lucide-react";
+import { Plus, Clock, Activity, Bookmark, ExternalLink, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { ClockWidget } from "./clock-widget";
 import { UptimeKumaWidget } from "./uptime-kuma-widget";
 import { BookmarksWidget } from "./bookmarks-widget";
 import { IframeWidget } from "./iframe-widget";
+import { NotesWidget } from "./notes-widget";
 import { getWidgets, createWidget, deleteWidget } from "@/lib/server/widgets";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
 import type { Integration } from "@/database/schema/integrations";
@@ -56,6 +57,13 @@ const WIDGET_TYPES = [
     name: "Embed",
     description: "Embed external content",
     icon: ExternalLink,
+    requiresIntegration: false,
+  },
+  {
+    type: "notes" as const,
+    name: "Notes",
+    description: "Quick notes and reminders",
+    icon: StickyNote,
     requiresIntegration: false,
   },
 ];
@@ -127,6 +135,8 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
         return <BookmarksWidget key={widget.id} {...commonProps} />;
       case "iframe":
         return <IframeWidget key={widget.id} {...commonProps} />;
+      case "notes":
+        return <NotesWidget key={widget.id} {...commonProps} />;
       default:
         return null;
     }

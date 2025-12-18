@@ -8,20 +8,25 @@ import { auth } from "@/lib/auth";
 // Get user settings
 export const getUserSettings = createServerFn({ method: "GET" }).handler(
   async () => {
-    const request = getRequest();
-    const session = await auth.api.getSession({ headers: request.headers });
+    try {
+      const request = getRequest();
+      const session = await auth.api.getSession({ headers: request.headers });
 
-    if (!session?.user?.id) {
+      if (!session?.user?.id) {
+        return { settings: null };
+      }
+
+      const [settings] = await db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, session.user.id))
+        .limit(1);
+
+      return { settings: settings ?? null };
+    } catch (error) {
+      console.error("Error fetching user settings:", error);
       return { settings: null };
     }
-
-    const [settings] = await db
-      .select()
-      .from(userSettings)
-      .where(eq(userSettings.userId, session.user.id))
-      .limit(1);
-
-    return { settings: settings ?? null };
   }
 );
 

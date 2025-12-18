@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes"
 
 import { authClient } from "@/lib/auth-client"
 import { MetaTheme } from "./meta-theme"
+import { CustomThemeLoader } from "./theme/custom-theme-loader"
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -35,6 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     {children}
 
                     <MetaTheme />
+                    <CustomThemeLoader />
                 </AuthUIProvider>
             </ThemeProvider>
         </QueryClientProvider>
