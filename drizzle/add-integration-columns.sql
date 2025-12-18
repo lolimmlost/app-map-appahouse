@@ -1,0 +1,2 @@
+ALTER TABLE integrations ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE integrations ADD COLUMN IF NOT EXISTS password TEXT;

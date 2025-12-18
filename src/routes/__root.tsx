@@ -1,6 +1,4 @@
-import { TanStackDevtools } from "@tanstack/react-devtools"
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router"
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
+import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import { Header } from "@/components/header"
 import { Providers } from "@/components/providers"
 import appCss from "../styles/styles.css?url"
@@ -8,7 +6,7 @@ import appCss from "../styles/styles.css?url"
 export const Route = createRootRoute({
     head: () => ({
         meta: [
-            { title: "Better Auth Starter" },
+            { title: "App Map - Homelab Dashboard" },
             { charSet: "utf-8" },
             {
                 name: "viewport",
@@ -27,10 +25,10 @@ export const Route = createRootRoute({
         ]
     }),
 
-    shellComponent: RootDocument
+    component: RootDocument
 })
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument() {
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
@@ -41,20 +39,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 <Providers>
                     <Header />
 
-                    {children}
+                    <Outlet />
                 </Providers>
-
-                <TanStackDevtools
-                    config={{
-                        position: "bottom-right"
-                    }}
-                    plugins={[
-                        {
-                            name: "Tanstack Router",
-                            render: <TanStackRouterDevtoolsPanel />
-                        }
-                    ]}
-                />
 
                 <Scripts />
             </body>

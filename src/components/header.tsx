@@ -1,51 +1,46 @@
-import { GitHubIcon, UserButton } from "@daveyplate/better-auth-ui"
-import { Link } from "@tanstack/react-router"
-import { ModeToggle } from "./mode-toggle"
-import { Button } from "./ui/button"
+import { UserButton } from "@daveyplate/better-auth-ui";
+import { Link } from "@tanstack/react-router";
+import { Map, Settings, Tags, Layers, Search } from "lucide-react";
+import { ModeToggle } from "./mode-toggle";
+import { Button } from "./ui/button";
+import { CommandPalette } from "./command-palette";
 
 export function Header() {
-    return (
-        <header className="sticky top-0 z-50 flex h-12 justify-between border-b bg-background/60 px-safe-or-4 backdrop-blur md:h-14 md:px-safe-or-6">
-            <Link to="/" className="flex items-center gap-2">
-                <svg
-                    aria-label="Better-Auth Logo"
-                    className="size-5"
-                    fill="none"
-                    height="45"
-                    viewBox="0 0 60 45"
-                    width="60"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <title>Better Auth UI Logo</title>
-                    <path
-                        className="fill-black dark:fill-white"
-                        clipRule="evenodd"
-                        d="M0 0H15V45H0V0ZM45 0H60V45H45V0ZM20 0H40V15H20V0ZM20 30H40V45H20V30Z"
-                        fillRule="evenodd"
-                    />
-                </svg>
-                BETTER-AUTH. STARTER
-            </Link>
+  return (
+    <header className="sticky top-0 z-50 flex h-12 justify-between border-b bg-background/60 px-safe-or-4 backdrop-blur md:h-14 md:px-safe-or-6">
+      <div className="flex items-center gap-6">
+        <Link to="/" className="flex items-center gap-2 font-semibold">
+          <Map className="h-5 w-5" />
+          App Map
+        </Link>
 
-            <div className="flex items-center gap-2">
-                <a
-                    href="https://github.com/daveyplate/better-auth-nextjs-starter"
-                    target="_blank"
-                    rel="noopener"
-                >
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="size-8 rounded-full"
-                    >
-                        <GitHubIcon />
-                    </Button>
-                </a>
+        <nav className="hidden md:flex items-center gap-1">
+          <Link to="/">
+            <Button variant="ghost" size="sm">
+              <Layers className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+          </Link>
+          <Link to="/categories">
+            <Button variant="ghost" size="sm">
+              <Tags className="h-4 w-4 mr-2" />
+              Categories
+            </Button>
+          </Link>
+          <Link to="/settings">
+            <Button variant="ghost" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+          </Link>
+        </nav>
+      </div>
 
-                <ModeToggle />
-
-                <UserButton size="icon" />
-            </div>
-        </header>
-    )
+      <div className="flex items-center gap-2">
+        <CommandPalette />
+        <ModeToggle />
+        <UserButton size="icon" />
+      </div>
+    </header>
+  );
 }
