@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Copy, MoreVertical, Pencil, Trash2, StickyNote } from "lucide-react";
+import { Copy, MoreVertical, Pencil, Trash2, StickyNote, Home, Globe } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,9 +52,12 @@ export function AppCard({
   onDelete,
   onViewNotes,
 }: AppCardProps) {
-  const [copied, setCopied] = useState(false);
+  const [copiedType, setCopiedType] = useState<"local" | "remote" | null>(null);
 
   const primaryUrl = app.localUrl || app.remoteUrl;
+  const hasLocalUrl = !!app.localUrl?.trim();
+  const hasRemoteUrl = !!app.remoteUrl?.trim();
+  const hasBothUrls = hasLocalUrl && hasRemoteUrl;
 
   // Ensure URL has a protocol and is valid
   const normalizeUrl = (url: string): string | null => {
@@ -76,13 +79,26 @@ export function AppCard({
     }
   };
 
-  const handleCopyUrl = async (e: React.MouseEvent) => {
+  const handleCopyUrl = async (e: React.MouseEvent, urlType: "local" | "remote") => {
     e.preventDefault();
     e.stopPropagation();
-    if (primaryUrl) {
-      await navigator.clipboard.writeText(primaryUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    const url = urlType === "local" ? app.localUrl : app.remoteUrl;
+    if (url) {
+      await navigator.clipboard.writeText(url);
+      setCopiedType(urlType);
+      setTimeout(() => setCopiedType(null), 2000);
+    }
+  };
+
+  const handleOpenUrl = (e: React.MouseEvent, urlType: "local" | "remote") => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = urlType === "local" ? app.localUrl : app.remoteUrl;
+    if (url) {
+      const normalized = normalizeUrl(url);
+      if (normalized) {
+        window.open(normalized, "_blank", "noopener,noreferrer");
+      }
     }
   };
 
@@ -182,9 +198,32 @@ export function AppCard({
               </p>
             )}
             {app.description && viewMode === "list" && (
-              <p className="text-sm text-muted-foreground truncate hidden sm:block">
+              <p className="text-sm text-muted-foreground truncate hidden sm:block flex-1">
                 {app.description}
               </p>
+            )}
+            {/* URL quick access in list view */}
+            {hasBothUrls && viewMode === "list" && (
+              <div className="flex items-center gap-1 ml-auto">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={(e) => handleOpenUrl(e, "local")}
+                  title="Open Local"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={(e) => handleOpenUrl(e, "remote")}
+                  title="Open Remote"
+                >
+                  <Globe className="h-4 w-4" />
+                </Button>
+              </div>
             )}
             {app.category && viewMode === "grid" && (
               <Badge
@@ -194,6 +233,29 @@ export function AppCard({
               >
                 {app.category.name}
               </Badge>
+            )}
+            {/* URL quick access buttons - show when both URLs available */}
+            {hasBothUrls && viewMode === "grid" && (
+              <div className="mt-2 flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={(e) => handleOpenUrl(e, "local")}
+                >
+                  <Home className="h-3 w-3 mr-1" />
+                  Local
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={(e) => handleOpenUrl(e, "remote")}
+                >
+                  <Globe className="h-3 w-3 mr-1" />
+                  Remote
+                </Button>
+              </div>
             )}
           </div>
 
@@ -212,19 +274,40 @@ export function AppCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={handleOpenApp}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open in new tab
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyUrl}>
-                <Copy className="mr-2 h-4 w-4" />
-                {copied ? "Copied!" : "Copy URL"}
-              </DropdownMenuItem>
+              {/* Local URL options */}
+              {hasLocalUrl && (
+                <>
+                  <DropdownMenuItem onClick={(e) => handleOpenUrl(e, "local")}>
+                    <Home className="mr-2 h-4 w-4" />
+                    {hasBothUrls ? "Open Local" : "Open in new tab"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleCopyUrl(e, "local")}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    {copiedType === "local" ? "Copied!" : hasBothUrls ? "Copy Local URL" : "Copy URL"}
+                  </DropdownMenuItem>
+                </>
+              )}
+              {/* Remote URL options */}
+              {hasRemoteUrl && (
+                <>
+                  <DropdownMenuItem onClick={(e) => handleOpenUrl(e, "remote")}>
+                    <Globe className="mr-2 h-4 w-4" />
+                    {hasBothUrls ? "Open Remote" : "Open in new tab"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleCopyUrl(e, "remote")}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    {copiedType === "remote" ? "Copied!" : hasBothUrls ? "Copy Remote URL" : "Copy URL"}
+                  </DropdownMenuItem>
+                </>
+              )}
               {app.notes && onViewNotes && (
-                <DropdownMenuItem onClick={() => onViewNotes(app)}>
-                  <StickyNote className="mr-2 h-4 w-4" />
-                  View notes
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onViewNotes(app)}>
+                    <StickyNote className="mr-2 h-4 w-4" />
+                    View notes
+                  </DropdownMenuItem>
+                </>
               )}
               <DropdownMenuSeparator />
               {onEdit && (
