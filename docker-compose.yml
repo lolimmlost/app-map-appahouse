@@ -1,0 +1,173 @@
+# ============================================================================
+# App Map Docker Compose Configuration
+# ============================================================================
+# This file contains three deployment options:
+#   1. FULL STACK (App Map + Docker Socket Proxy) - Recommended for Docker-on-Docker
+#   2. STANDALONE APP MAP - For direct Docker socket access
+#   3. STANDALONE DOCKER PROXY - If you just need the proxy for other services
+#
+# Usage:
+#   Full stack:        docker compose up -d
+#   App Map only:      docker compose up -d app-map postgres
+#   Proxy only:        docker compose up -d docker-proxy
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # FULL STACK: App Map + Docker Socket Proxy (Recommended)
+  # ==========================================================================
+  # Use this configuration when running App Map inside Docker and need
+  # to monitor other Docker containers on the host.
+
+  app-map:
+    build: .
+    container_name: app-map
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://appmap:appmap@postgres:5432/appmap
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-in-production}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      # Docker integration - point to the socket proxy
+      # Configure in App Map: Add Docker integration with URL http://docker-proxy:2375
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-map-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: app-map-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=appmap
+      - POSTGRES_PASSWORD=appmap
+      - POSTGRES_DB=appmap
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appmap -d appmap"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-map-network
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: docker-proxy
+    restart: unless-stopped
+    environment:
+      # Read-only access for monitoring
+      - CONTAINERS=1      # List and inspect containers
+      - IMAGES=1          # List images
+      - INFO=1            # Docker system info
+      - NETWORKS=1        # List networks
+      - VOLUMES=1         # List volumes
+      - VERSION=1         # Docker version
+      # Write access - uncomment to enable container control
+      # - POST=1          # Allow POST requests (start/stop/restart)
+      # - CONTAINERS_START=1
+      # - CONTAINERS_STOP=1
+      # - CONTAINERS_RESTART=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-map-network
+    # Security: Only expose internally, not to host
+    # If you need external access, uncomment:
+    # ports:
+    #   - "2375:2375"
+
+  # ==========================================================================
+  # STANDALONE APP MAP (profiles: standalone)
+  # ==========================================================================
+  # Use this if you want to mount the Docker socket directly into App Map
+  # or don't need Docker monitoring at all.
+  #
+  # Usage: docker compose --profile standalone up -d
+
+  app-map-standalone:
+    build: .
+    container_name: app-map-standalone
+    restart: unless-stopped
+    profiles:
+      - standalone
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://appmap:appmap@postgres-standalone:5432/appmap
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-in-production}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+    volumes:
+      # Direct Docker socket access (less secure but simpler)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      postgres-standalone:
+        condition: service_healthy
+    networks:
+      - app-map-standalone-network
+
+  postgres-standalone:
+    image: postgres:16-alpine
+    container_name: app-map-postgres-standalone
+    restart: unless-stopped
+    profiles:
+      - standalone
+    environment:
+      - POSTGRES_USER=appmap
+      - POSTGRES_PASSWORD=appmap
+      - POSTGRES_DB=appmap
+    volumes:
+      - postgres-standalone-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appmap -d appmap"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-map-standalone-network
+
+  # ==========================================================================
+  # STANDALONE DOCKER PROXY (profiles: proxy-only)
+  # ==========================================================================
+  # Use this if you just need the Docker socket proxy for other services.
+  #
+  # Usage: docker compose --profile proxy-only up -d
+
+  docker-proxy-standalone:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: docker-proxy-standalone
+    restart: unless-stopped
+    profiles:
+      - proxy-only
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - INFO=1
+      - NETWORKS=1
+      - VOLUMES=1
+      - VERSION=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      # Expose to host for external access
+      - "2375:2375"
+    networks:
+      - docker-proxy-network
+
+networks:
+  app-map-network:
+    driver: bridge
+  app-map-standalone-network:
+    driver: bridge
+  docker-proxy-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  postgres-standalone-data:

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+
+# Build output
+.output
+dist
+.vinxi
+
+# Development
+.tanstack
+.vite
+
+# Environment files (build may need these, but include via compose)
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files
+coverage
+.nyc_output
+
+# Documentation
+*.md
+!README.md
+
+# Docker files (don't copy into image)
+Dockerfile
+docker-compose*.yml
+.dockerignore
