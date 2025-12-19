@@ -12,6 +12,7 @@ export type AppWithCategory = App & {
 interface QuickLinksBarProps {
   apps: AppWithCategory[];
   healthStatuses?: Record<string, HealthStatus>;
+  healthBarStyle?: "dot" | "border" | "none";
   className?: string;
 }
 
@@ -22,9 +23,17 @@ const healthColors: Record<HealthStatus, string> = {
   checking: "bg-yellow-500 animate-pulse",
 };
 
+const healthBorderColors: Record<HealthStatus, string> = {
+  online: "border-green-500",
+  offline: "border-red-500",
+  unknown: "border-gray-400",
+  checking: "border-yellow-500",
+};
+
 export function QuickLinksBar({
   apps,
   healthStatuses = {},
+  healthBarStyle = "dot",
   className,
 }: QuickLinksBarProps) {
   if (apps.length === 0) {
@@ -72,10 +81,16 @@ export function QuickLinksBar({
         return (
           <div
             key={app.id}
-            className="relative flex items-center gap-0.5 rounded-lg border bg-card p-1 shadow-sm"
+            className={cn(
+              "relative flex items-center gap-0.5 rounded-lg border bg-card p-1 shadow-sm",
+              healthBarStyle === "border" && healthStatus && [
+                "border-2",
+                healthBorderColors[healthStatus]
+              ]
+            )}
           >
-            {/* Health indicator */}
-            {healthStatus && (
+            {/* Health indicator - dot style */}
+            {healthBarStyle === "dot" && healthStatus && (
               <div
                 className={cn(
                   "absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border border-background",

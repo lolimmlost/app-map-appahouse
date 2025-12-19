@@ -9,6 +9,7 @@ import { WidgetGrid } from "@/components/widgets";
 import { getApps, createApp, updateApp, deleteApp, pinApp } from "@/lib/server/apps";
 import { getCategories } from "@/lib/server/categories";
 import { getTags } from "@/lib/server/tags";
+import { getUserSettings } from "@/lib/server/user-settings";
 import { useHealthStatus } from "@/hooks/use-health-status";
 import type { App } from "@/database/schema/apps";
 
@@ -50,6 +51,14 @@ function DashboardPage() {
   const { data: tagsData } = useQuery({
     queryKey: ["tags"],
     queryFn: () => getTags(),
+    enabled: !!session?.user,
+    staleTime: 60000,
+  });
+
+  // Fetch user settings
+  const { data: settingsData } = useQuery({
+    queryKey: ["user-settings"],
+    queryFn: () => getUserSettings(),
     enabled: !!session?.user,
     staleTime: 60000,
   });
@@ -175,6 +184,7 @@ function DashboardPage() {
   const apps = appsData?.apps ?? [];
   const categories = categoriesData?.categories ?? [];
   const tags = tagsData?.tags ?? [];
+  const healthBarStyle = settingsData?.settings?.healthBarStyle ?? "dot";
 
   return (
     <main className="container mx-auto flex flex-col gap-6 p-6">
@@ -266,6 +276,7 @@ function DashboardPage() {
         <QuickLinksBar
           apps={apps.filter(app => app.pinned)}
           healthStatuses={healthStatuses}
+          healthBarStyle={healthBarStyle}
         />
       )}
 
@@ -281,7 +292,7 @@ function DashboardPage() {
         <AppGrid
           apps={apps}
           healthStatuses={healthStatuses}
-          healthBarStyle="dot"
+          healthBarStyle={healthBarStyle}
           columns={4}
           viewMode={viewMode}
           groupByCategory={groupByCategory}
