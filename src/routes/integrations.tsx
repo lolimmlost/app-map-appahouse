@@ -525,21 +525,30 @@ function IntegrationsPage() {
             </div>
 
             {/* Username/Password for some integrations */}
-            {(formData.type === "proxmox" || formData.type === "portainer") && (
+            {(formData.type === "proxmox" || formData.type === "portainer" || formData.type === "jellyfin") && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">
+                    {formData.type === "jellyfin" ? "Jellyfin Username" : "Username"}
+                  </Label>
                   <Input
                     id="username"
                     value={formData.username}
                     onChange={(e) =>
                       setFormData({ ...formData, username: e.target.value })
                     }
-                    placeholder="admin"
+                    placeholder={formData.type === "jellyfin" ? "Your Jellyfin username" : "admin"}
                   />
+                  {formData.type === "jellyfin" && (
+                    <p className="text-xs text-muted-foreground">
+                      For Sessions/Now Playing to work, use username/password instead of API key
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">
+                    {formData.type === "jellyfin" ? "Jellyfin Password" : "Password"}
+                  </Label>
                   <Input
                     id="password"
                     type="password"

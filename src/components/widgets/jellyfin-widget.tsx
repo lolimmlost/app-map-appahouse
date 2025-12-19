@@ -76,13 +76,14 @@ export function JellyfinWidget({ widget, onEdit, onDelete }: JellyfinWidgetProps
   const [formMaxItems, setFormMaxItems] = useState(maxItems);
 
   // Fetch active sessions (now playing) via server proxy
-  const { data: sessionsData, isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
+  const { data: sessionsData, isLoading: sessionsLoading, error: sessionsError, refetch: refetchSessions } = useQuery({
     queryKey: ["jellyfin-sessions", widget.id, integration?.id],
     queryFn: async (): Promise<JellyfinSession[]> => {
       if (!integration?.id || !showNowPlaying) return [];
       const sessions: JellyfinSession[] = await getJellyfinSessions({ data: { integrationId: integration.id } });
-      // Filter to only sessions with something playing
-      return sessions.filter((s) => s.NowPlayingItem);
+      // Filter to only sessions with something playing (check both null and undefined)
+      if (!Array.isArray(sessions)) return [];
+      return sessions.filter((s) => s.NowPlayingItem && s.NowPlayingItem.Name);
     },
     enabled: !!integration?.id && showNowPlaying,
     refetchInterval: (config.refreshInterval || 15) * 1000,
@@ -92,11 +93,13 @@ export function JellyfinWidget({ widget, onEdit, onDelete }: JellyfinWidgetProps
   });
 
   // Fetch recently added items via server proxy
-  const { data: recentData, isLoading: recentLoading, refetch: refetchRecent } = useQuery({
+  const { data: recentData, isLoading: recentLoading, error: recentError, refetch: refetchRecent } = useQuery({
     queryKey: ["jellyfin-recent", widget.id, integration?.id],
     queryFn: async (): Promise<JellyfinItem[]> => {
       if (!integration?.id || !showRecentlyAdded) return [];
-      return getJellyfinLatest({ data: { integrationId: integration.id, limit: maxItems } });
+      const items = await getJellyfinLatest({ data: { integrationId: integration.id, limit: maxItems } });
+      if (!Array.isArray(items)) return [];
+      return items;
     },
     enabled: !!integration?.id && showRecentlyAdded,
     refetchInterval: (config.refreshInterval || 120) * 1000,
@@ -247,7 +250,14 @@ export function JellyfinWidget({ widget, onEdit, onDelete }: JellyfinWidgetProps
           </div>
         }
       >
-        {isLoading && !sessionsData && !recentData ? (
+        {(sessionsError || recentError) ? (
+          <div className="text-sm text-destructive text-center py-4">
+            <p>Failed to connect to Jellyfin</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {(sessionsError as Error)?.message || (recentError as Error)?.message || "Unknown error"}
+            </p>
+          </div>
+        ) : isLoading && !sessionsData && !recentData ? (
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="h-12 bg-muted animate-pulse rounded" />
