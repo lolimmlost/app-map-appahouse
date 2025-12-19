@@ -451,14 +451,24 @@ export const getJellyfinSessions = createServerFn({ method: "POST" }).handler(
     if (!integration) throw new Error("Integration not found");
 
     // Get access token (supports both API key and username/password auth)
-    const auth = await getJellyfinAccessToken(integration);
+    let auth = await getJellyfinAccessToken(integration);
     if (!auth) throw new Error("No authentication configured for Jellyfin");
 
     const headers = getJellyfinHeaders(auth.token);
     const url = `${integration.url}/Sessions?ActiveWithinSeconds=960`;
 
     // ActiveWithinSeconds=960 filters to sessions active in last 16 minutes
-    const response = await fetch(url, { headers });
+    let response = await fetch(url, { headers });
+
+    // If 401, clear cache and retry with fresh auth
+    if (response.status === 401) {
+      jellyfinTokenCache.delete(integration.id);
+      auth = await getJellyfinAccessToken(integration);
+      if (!auth) throw new Error("No authentication configured for Jellyfin");
+      const freshHeaders = getJellyfinHeaders(auth.token);
+      response = await fetch(url, { headers: freshHeaders });
+    }
+
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     const data = await response.json();
     // Handle both array response and wrapped response
@@ -481,28 +491,42 @@ export const getJellyfinLatest = createServerFn({ method: "POST" }).handler(
 
     if (!integration) throw new Error("Integration not found");
 
+    // Helper function to fetch with current auth
+    const fetchLatest = async (auth: { token: string; userId: string }) => {
+      const headers = getJellyfinHeaders(auth.token);
+
+      // Use cached userId if available from auth, otherwise fetch it
+      let userId = auth.userId;
+      if (!userId) {
+        const userResponse = await fetch(`${integration.url}/Users/Me`, { headers });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          userId = userData.Id;
+        }
+      }
+
+      // Fetch latest items - include UserId if available for better results
+      const url = userId
+        ? `${integration.url}/Users/${userId}/Items/Latest?Limit=${ctx.data.limit}&IncludeItemTypes=Movie,Series,Episode&Fields=DateCreated,ProductionYear`
+        : `${integration.url}/Items/Latest?Limit=${ctx.data.limit}&IncludeItemTypes=Movie,Series,Episode&Fields=DateCreated,ProductionYear`;
+
+      return fetch(url, { headers });
+    };
+
     // Get access token (supports both API key and username/password auth)
-    const auth = await getJellyfinAccessToken(integration);
+    let auth = await getJellyfinAccessToken(integration);
     if (!auth) throw new Error("No authentication configured for Jellyfin");
 
-    const headers = getJellyfinHeaders(auth.token);
+    let response = await fetchLatest(auth);
 
-    // Use cached userId if available from auth, otherwise fetch it
-    let userId = auth.userId;
-    if (!userId) {
-      const userResponse = await fetch(`${integration.url}/Users/Me`, { headers });
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        userId = userData.Id;
-      }
+    // If 401, clear cache and retry with fresh auth
+    if (response.status === 401) {
+      jellyfinTokenCache.delete(integration.id);
+      auth = await getJellyfinAccessToken(integration);
+      if (!auth) throw new Error("No authentication configured for Jellyfin");
+      response = await fetchLatest(auth);
     }
 
-    // Fetch latest items - include UserId if available for better results
-    const url = userId
-      ? `${integration.url}/Users/${userId}/Items/Latest?Limit=${ctx.data.limit}&IncludeItemTypes=Movie,Series,Episode&Fields=DateCreated,ProductionYear`
-      : `${integration.url}/Items/Latest?Limit=${ctx.data.limit}&IncludeItemTypes=Movie,Series,Episode&Fields=DateCreated,ProductionYear`;
-
-    const response = await fetch(url, { headers });
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     const data = await response.json();
     // Handle both array response and wrapped response
