@@ -1,8 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
-import { Activity, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Activity, CheckCircle, XCircle, AlertCircle, Settings, ExternalLink, Clock } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { getUptimeKumaStatus } from "@/lib/server/widget-proxy";
+import { updateWidget } from "@/lib/server/widgets";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
 import type { Integration } from "@/database/schema/integrations";
 
@@ -15,8 +31,10 @@ interface UptimeKumaWidgetProps {
 type Monitor = {
   id: number;
   name: string;
-  status: number; // 0 = down, 1 = up, 2 = pending
+  status: number; // 0 = down, 1 = up, 2 = pending, 3 = maintenance
   uptime?: number;
+  ping?: number | null;
+  avgPing?: number | null;
 };
 
 type StatusPageData = {
@@ -27,31 +45,63 @@ type StatusPageData = {
 };
 
 export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const queryClient = useQueryClient();
+
   const config = widget.config || {};
   const integration = widget.integration;
   const showOnlyDown = config.showOnlyDown ?? false;
   const maxItems = config.maxItems ?? 10;
+  const statusPageSlug = config.statusPageSlug || "default";
+
+  // Settings form state
+  const [formTitle, setFormTitle] = useState(config.title || "Uptime Kuma");
+  const [formSlug, setFormSlug] = useState(statusPageSlug);
+  const [formShowOnlyDown, setFormShowOnlyDown] = useState(showOnlyDown);
+  const [formMaxItems, setFormMaxItems] = useState(maxItems);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["uptime-kuma", widget.id, integration?.id],
+    queryKey: ["uptime-kuma", widget.id, integration?.id, statusPageSlug],
     queryFn: async (): Promise<StatusPageData | null> => {
-      if (!integration?.url) return null;
-
-      const slug = config.statusPageSlug || "default";
-      const response = await fetch(`${integration.url}/api/status-page/${slug}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
-      }
-
-      return response.json();
+      if (!integration?.id) return null;
+      return getUptimeKumaStatus({
+        data: {
+          integrationId: integration.id,
+          statusPageSlug,
+        },
+      });
     },
-    enabled: !!integration?.url && !!integration?.id,
+    enabled: !!integration?.id,
     refetchInterval: (config.refreshInterval || 60) * 1000,
     staleTime: 30000,
     retry: 1,
     refetchOnWindowFocus: false,
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (newConfig: WidgetConfig) =>
+      updateWidget({
+        data: {
+          id: widget.id,
+          config: newConfig,
+        },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["widgets"] });
+      queryClient.invalidateQueries({ queryKey: ["uptime-kuma", widget.id] });
+      setSettingsOpen(false);
+    },
+  });
+
+  const handleSaveSettings = () => {
+    updateMutation.mutate({
+      ...config,
+      title: formTitle,
+      statusPageSlug: formSlug,
+      showOnlyDown: formShowOnlyDown,
+      maxItems: formMaxItems,
+    });
+  };
 
   const allMonitors = data?.publicGroupList?.flatMap((group) => group.monitorList) || [];
   const filteredMonitors = showOnlyDown
@@ -69,6 +119,8 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 0:
         return <XCircle className="h-4 w-4 text-red-500" />;
+      case 3:
+        return <AlertCircle className="h-4 w-4 text-blue-500" />;
       default:
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
     }
@@ -77,11 +129,19 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 1:
-        return <Badge variant="outline" className="border-green-500 text-green-500">Up</Badge>;
+        return <Badge variant="outline" className="border-green-500 text-green-500 text-xs">Up</Badge>;
       case 0:
-        return <Badge variant="outline" className="border-red-500 text-red-500">Down</Badge>;
+        return <Badge variant="outline" className="border-red-500 text-red-500 text-xs">Down</Badge>;
+      case 3:
+        return <Badge variant="outline" className="border-blue-500 text-blue-500 text-xs">Maint</Badge>;
       default:
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-500">Pending</Badge>;
+        return <Badge variant="outline" className="border-yellow-500 text-yellow-500 text-xs">Pending</Badge>;
+    }
+  };
+
+  const handleOpenDashboard = () => {
+    if (integration?.url) {
+      window.open(integration.url, "_blank");
     }
   };
 
@@ -102,90 +162,218 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
   }
 
   return (
-    <WidgetContainer
-      widget={widget}
-      title={config.title || "Uptime Kuma"}
-      icon={<Activity className="h-4 w-4" />}
-      isLoading={isLoading}
-      onRefresh={() => refetch()}
-      onEdit={onEdit}
-      onDelete={onDelete}
-    >
-      {error ? (
-        <div className="text-sm text-destructive text-center py-4">
-          Failed to load status
-        </div>
-      ) : isLoading ? (
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-8 bg-muted animate-pulse rounded" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* Summary */}
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <CheckCircle className="h-3 w-3 text-green-500" />
-                {upCount}
+    <>
+      <WidgetContainer
+        widget={widget}
+        title={config.title || "Uptime Kuma"}
+        icon={<Activity className="h-4 w-4" />}
+        isLoading={isLoading}
+        onRefresh={() => refetch()}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        headerActions={
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleOpenDashboard}
+              title="Open Uptime Kuma"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings className="h-3 w-3" />
+            </Button>
+          </div>
+        }
+      >
+        {error ? (
+          <div className="text-sm text-destructive text-center py-4">
+            Failed to load status. Check status page slug.
+          </div>
+        ) : isLoading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-8 bg-muted animate-pulse rounded" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Summary */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  {upCount}
+                </span>
+                {downCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <XCircle className="h-3 w-3 text-red-500" />
+                    {downCount}
+                  </span>
+                )}
+                {pendingCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                    {pendingCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-muted-foreground">
+                {allMonitors.length} monitors
               </span>
-              {downCount > 0 && (
-                <span className="flex items-center gap-1">
-                  <XCircle className="h-3 w-3 text-red-500" />
-                  {downCount}
-                </span>
-              )}
-              {pendingCount > 0 && (
-                <span className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3 text-yellow-500" />
-                  {pendingCount}
-                </span>
-              )}
             </div>
-            <span className="text-muted-foreground">
-              {allMonitors.length} monitors
-            </span>
+
+            {/* Monitor List */}
+            {displayMonitors.length > 0 ? (
+              <div className="space-y-1.5">
+                {displayMonitors.map((monitor) => (
+                  <div
+                    key={monitor.id}
+                    className={cn(
+                      "p-2 rounded-md",
+                      monitor.status === 0 && "bg-red-500/10",
+                      monitor.status === 1 && "bg-muted/50",
+                      monitor.status === 2 && "bg-yellow-500/10",
+                      monitor.status === 3 && "bg-blue-500/10"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {getStatusIcon(monitor.status)}
+                        <span className="text-sm truncate font-medium">{monitor.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {monitor.ping !== null && monitor.ping !== undefined && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {monitor.ping}ms
+                          </span>
+                        )}
+                        {getStatusBadge(monitor.status)}
+                      </div>
+                    </div>
+                    {monitor.uptime !== undefined && monitor.uptime > 0 && (
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <Progress
+                          value={monitor.uptime}
+                          className={cn(
+                            "h-1.5 flex-1",
+                            monitor.uptime >= 99 && "[&>div]:bg-green-500",
+                            monitor.uptime >= 95 && monitor.uptime < 99 && "[&>div]:bg-yellow-500",
+                            monitor.uptime < 95 && "[&>div]:bg-red-500"
+                          )}
+                        />
+                        <span className="text-xs text-muted-foreground min-w-[45px] text-right">
+                          {monitor.uptime.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : showOnlyDown ? (
+              <div className="text-sm text-muted-foreground text-center py-2">
+                All services operational
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-2">
+                No monitors found
+              </div>
+            )}
+
+            {filteredMonitors.length > maxItems && (
+              <div className="text-xs text-muted-foreground text-center">
+                +{filteredMonitors.length - maxItems} more
+              </div>
+            )}
+          </div>
+        )}
+      </WidgetContainer>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uptime Kuma Settings</DialogTitle>
+            <DialogDescription>
+              Configure the status page display
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="uk-title">Title</Label>
+              <Input
+                id="uk-title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="Uptime Kuma"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="uk-slug">Status Page Slug</Label>
+              <Input
+                id="uk-slug"
+                value={formSlug}
+                onChange={(e) => setFormSlug(e.target.value)}
+                placeholder="default"
+              />
+              <p className="text-xs text-muted-foreground">
+                The slug from your Uptime Kuma status page URL
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="uk-max">Max Items</Label>
+              <Input
+                id="uk-max"
+                type="number"
+                min={1}
+                max={50}
+                value={formMaxItems}
+                onChange={(e) => setFormMaxItems(parseInt(e.target.value) || 10)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="uk-down-only">Show Only Down</Label>
+                <p className="text-sm text-muted-foreground">
+                  Only display services that are down
+                </p>
+              </div>
+              <Switch
+                id="uk-down-only"
+                checked={formShowOnlyDown}
+                onCheckedChange={setFormShowOnlyDown}
+              />
+            </div>
           </div>
 
-          {/* Monitor List */}
-          {displayMonitors.length > 0 ? (
-            <div className="space-y-1.5">
-              {displayMonitors.map((monitor) => (
-                <div
-                  key={monitor.id}
-                  className={cn(
-                    "flex items-center justify-between p-2 rounded-md",
-                    monitor.status === 0 && "bg-red-500/10",
-                    monitor.status === 1 && "bg-muted/50",
-                    monitor.status === 2 && "bg-yellow-500/10"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {getStatusIcon(monitor.status)}
-                    <span className="text-sm truncate">{monitor.name}</span>
-                  </div>
-                  {getStatusBadge(monitor.status)}
-                </div>
-              ))}
-            </div>
-          ) : showOnlyDown ? (
-            <div className="text-sm text-muted-foreground text-center py-2">
-              All services operational
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground text-center py-2">
-              No monitors found
-            </div>
-          )}
-
-          {filteredMonitors.length > maxItems && (
-            <div className="text-xs text-muted-foreground text-center">
-              +{filteredMonitors.length - maxItems} more
-            </div>
-          )}
-        </div>
-      )}
-    </WidgetContainer>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSettingsOpen(false)}
+              disabled={updateMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveSettings}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

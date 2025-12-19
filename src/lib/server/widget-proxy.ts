@@ -272,6 +272,88 @@ export const getLidarrCalendar = createServerFn({ method: "POST" }).handler(
   }
 );
 
+// Uptime Kuma-specific endpoints
+export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string; statusPageSlug?: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const slug = ctx.data.statusPageSlug || "default";
+
+    // Fetch both status page config and heartbeat data
+    const [statusResponse, heartbeatResponse] = await Promise.all([
+      fetch(`${integration.url}/api/status-page/${slug}`),
+      fetch(`${integration.url}/api/status-page/heartbeat/${slug}`),
+    ]);
+
+    if (!statusResponse.ok) throw new Error(`HTTP ${statusResponse.status}`);
+
+    const data = await statusResponse.json();
+
+    // Try to get heartbeat data from separate endpoint
+    let heartbeatList: Record<string, Array<{ status: number }>> = {};
+    if (heartbeatResponse.ok) {
+      const heartbeatData = await heartbeatResponse.json();
+      heartbeatList = heartbeatData.heartbeatList || heartbeatData || {};
+    }
+
+    // Fallback to heartbeatList from main response if separate endpoint didn't work
+    if (Object.keys(heartbeatList).length === 0 && data.heartbeatList) {
+      heartbeatList = data.heartbeatList;
+    }
+
+    // Process publicGroupList to add status from heartbeats
+    if (data.publicGroupList) {
+      for (const group of data.publicGroupList) {
+        if (group.monitorList) {
+          for (const monitor of group.monitorList) {
+            // Get the latest heartbeat for this monitor
+            // Try both number and string keys since Uptime Kuma uses string keys
+            const heartbeats = heartbeatList[monitor.id] || heartbeatList[String(monitor.id)] || [];
+
+            if (Array.isArray(heartbeats) && heartbeats.length > 0) {
+              // Get the most recent heartbeat (last in array)
+              const latestHeartbeat = heartbeats[heartbeats.length - 1];
+              // Uptime Kuma status: 0 = down, 1 = up, 2 = pending, 3 = maintenance
+              monitor.status = latestHeartbeat.status ?? 2;
+              monitor.ping = latestHeartbeat.ping ?? null;
+
+              // Calculate uptime percentage from heartbeats
+              const upHeartbeats = heartbeats.filter((h: { status: number }) => h.status === 1).length;
+              monitor.uptime = heartbeats.length > 0 ? (upHeartbeats / heartbeats.length) * 100 : 0;
+
+              // Get average response time
+              const pings = heartbeats
+                .filter((h: { ping?: number }) => h.ping !== undefined && h.ping !== null)
+                .map((h: { ping: number }) => h.ping);
+              monitor.avgPing = pings.length > 0 ? Math.round(pings.reduce((a: number, b: number) => a + b, 0) / pings.length) : null;
+            } else {
+              // No heartbeat data - check if monitor already has status from sendInfo
+              // Some versions include status directly on the monitor object
+              if (monitor.status === undefined) {
+                monitor.status = 2; // pending
+              }
+              monitor.uptime = 0;
+              monitor.ping = null;
+              monitor.avgPing = null;
+            }
+          }
+        }
+      }
+    }
+
+    return data;
+  }
+);
+
 // Jellyfin-specific endpoints
 export const getJellyfinSessions = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
