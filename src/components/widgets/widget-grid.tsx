@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { Plus, Clock, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container } from "lucide-react";
+import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +22,7 @@ import { LidarrWidget } from "./lidarr-widget";
 import { JellyfinWidget } from "./jellyfin-widget";
 import { SystemStatsWidget } from "./system-stats-widget";
 import { DockerWidget } from "./docker-widget";
+import { WeatherWidget } from "./weather-widget";
 import { getWidgets, createWidget, deleteWidget } from "@/lib/server/widgets";
 import { getIntegrations } from "@/lib/server/integrations";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
@@ -42,6 +43,13 @@ const WIDGET_TYPES = [
     name: "Clock",
     description: "Display current time and date",
     icon: Clock,
+    requiresIntegration: false,
+  },
+  {
+    type: "weather" as const,
+    name: "Weather",
+    description: "Current weather conditions",
+    icon: Cloud,
     requiresIntegration: false,
   },
   {
@@ -219,6 +227,8 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
     switch (widget.type) {
       case "clock":
         return <ClockWidget key={widget.id} {...commonProps} />;
+      case "weather":
+        return <WeatherWidget key={widget.id} {...commonProps} />;
       case "system_stats":
         return <SystemStatsWidget key={widget.id} {...commonProps} />;
       case "uptime_kuma":
@@ -246,9 +256,9 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="h-40 bg-muted animate-pulse rounded-lg" />
+      <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="break-inside-avoid mb-4 h-40 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
     );
@@ -365,8 +375,12 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
           No widgets yet. Add one to get started!
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {widgets.map(renderWidget)}
+        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 [column-fill:_balance]">
+          {widgets.map((widget) => (
+            <div key={widget.id} className="break-inside-avoid mb-4">
+              {renderWidget(widget)}
+            </div>
+          ))}
         </div>
       )}
     </div>

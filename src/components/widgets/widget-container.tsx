@@ -37,7 +37,7 @@ export function WidgetContainer({
   className,
 }: WidgetContainerProps) {
   return (
-    <Card className={cn("group relative h-full", className)}>
+    <Card className={cn("group relative", className)}>
       {title && (
         <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
