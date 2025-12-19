@@ -215,7 +215,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
 
             {/* Disks */}
             {showDisk && stats.disks.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-3 pt-2 mt-2 border-t border-border/50">
                 {stats.disks.map((disk, index) => (
                   <div key={disk.mount || index} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
