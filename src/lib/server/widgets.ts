@@ -93,14 +93,14 @@ export const createWidget = createServerFn({ method: "POST" }).handler(
 );
 
 type UpdateWidgetData = {
-  id: string;
-  data: Partial<{
-    type: Widget["type"];
-    integrationId: string | null;
-    position: WidgetPosition;
-    config: WidgetConfig;
-    sortOrder: number;
-  }>;
+  data: {
+    id: string;
+    config?: WidgetConfig;
+    type?: Widget["type"];
+    integrationId?: string | null;
+    position?: WidgetPosition;
+    sortOrder?: number;
+  };
 };
 
 // Update an existing widget
@@ -109,13 +109,15 @@ export const updateWidget = createServerFn({ method: "POST" }).handler(
     const session = await getSession();
     if (!session?.user) throw new Error("Unauthorized");
 
+    const { id, ...updateData } = ctx.data;
+
     // If integrationId is being updated, verify it belongs to the user
-    if (ctx.data.integrationId) {
+    if (updateData.integrationId) {
       const [integration] = await db
         .select()
         .from(integrations)
         .where(and(
-          eq(integrations.id, ctx.data.integrationId),
+          eq(integrations.id, updateData.integrationId),
           eq(integrations.userId, session.user.id)
         ))
         .limit(1);
@@ -126,10 +128,10 @@ export const updateWidget = createServerFn({ method: "POST" }).handler(
     const [updatedWidget] = await db
       .update(widgets)
       .set({
-        ...ctx.data,
+        ...updateData,
         updatedAt: new Date(),
       })
-      .where(and(eq(widgets.id, ctx.id), eq(widgets.userId, session.user.id)))
+      .where(and(eq(widgets.id, id), eq(widgets.userId, session.user.id)))
       .returning();
 
     if (!updatedWidget) throw new Error("Widget not found");

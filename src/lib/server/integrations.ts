@@ -65,8 +65,10 @@ export const createIntegration = createServerFn({ method: "POST" }).handler(
 );
 
 type UpdateIntegrationData = {
-  id: string;
-  data: Partial<Omit<NewIntegration, "id" | "userId" | "createdAt">>;
+  data: {
+    id: string;
+    data: Partial<Omit<NewIntegration, "id" | "userId" | "createdAt">>;
+  };
 };
 
 // Update an existing integration
@@ -75,13 +77,15 @@ export const updateIntegration = createServerFn({ method: "POST" }).handler(
     const session = await getSession();
     if (!session?.user) throw new Error("Unauthorized");
 
+    const { id, data } = ctx.data;
+
     const [updatedIntegration] = await db
       .update(integrations)
       .set({
-        ...ctx.data,
+        ...data,
         updatedAt: new Date(),
       })
-      .where(and(eq(integrations.id, ctx.id), eq(integrations.userId, session.user.id)))
+      .where(and(eq(integrations.id, id), eq(integrations.userId, session.user.id)))
       .returning();
 
     if (!updatedIntegration) throw new Error("Integration not found");
@@ -151,9 +155,16 @@ async function testIntegrationConnection(
 
       case "radarr":
       case "sonarr":
-      case "lidarr":
-        // *arr apps use X-Api-Key header
+        // Radarr/Sonarr use API v3
         testUrl = `${integration.url}/api/v3/system/status`;
+        if (integration.apiKey) {
+          headers["X-Api-Key"] = integration.apiKey;
+        }
+        break;
+
+      case "lidarr":
+        // Lidarr uses API v1
+        testUrl = `${integration.url}/api/v1/system/status`;
         if (integration.apiKey) {
           headers["X-Api-Key"] = integration.apiKey;
         }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
@@ -11,10 +11,18 @@ import {
   getDefaultColors,
 } from "@/lib/theme-presets";
 
+const STORAGE_KEY = "appmap-custom-theme";
+
 export type CustomThemeData = {
   presetId: string;
   lightOverrides: Partial<ThemeColors>;
   darkOverrides: Partial<ThemeColors>;
+};
+
+const defaultThemeData: CustomThemeData = {
+  presetId: "default",
+  lightOverrides: {},
+  darkOverrides: {},
 };
 
 // Apply CSS variables to the document root
@@ -36,14 +44,34 @@ function clearCssVariables() {
   });
 }
 
+// Get from localStorage
+function getStoredTheme(): CustomThemeData | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error("Error reading theme from localStorage:", e);
+  }
+  return null;
+}
+
+// Save to localStorage
+function setStoredTheme(data: CustomThemeData) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("Error saving theme to localStorage:", e);
+  }
+}
+
 // Parse stored customTheme from database
 function parseCustomTheme(stored: Record<string, string> | null | undefined): CustomThemeData {
   if (!stored) {
-    return {
-      presetId: "default",
-      lightOverrides: {},
-      darkOverrides: {},
-    };
+    return defaultThemeData;
   }
 
   return {
@@ -67,7 +95,12 @@ export function useCustomTheme() {
   const { resolvedTheme } = useTheme();
   const queryClient = useQueryClient();
 
-  // Fetch user settings
+  // Initialize from localStorage immediately
+  const [localThemeData, setLocalThemeData] = useState<CustomThemeData>(() => {
+    return getStoredTheme() || defaultThemeData;
+  });
+
+  // Fetch user settings from database
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ["userSettings"],
     queryFn: () => getUserSettings(),
@@ -75,10 +108,22 @@ export function useCustomTheme() {
     staleTime: 30000,
   });
 
-  // Parse the current theme data
-  const customThemeData = useMemo(() => {
+  // Parse the database theme data
+  const dbThemeData = useMemo(() => {
     return parseCustomTheme(settingsData?.settings?.customTheme as Record<string, string> | undefined);
   }, [settingsData?.settings?.customTheme]);
+
+  // Sync localStorage with database when database data loads
+  useEffect(() => {
+    if (settingsData?.settings?.customTheme) {
+      // Database has theme data, use it and update localStorage
+      setLocalThemeData(dbThemeData);
+      setStoredTheme(dbThemeData);
+    }
+  }, [settingsData?.settings?.customTheme, dbThemeData]);
+
+  // Use localThemeData as the source of truth (it's synced with DB when available)
+  const customThemeData = localThemeData;
 
   // Get the current preset
   const currentPreset = useMemo(() => {
@@ -132,7 +177,10 @@ export function useCustomTheme() {
           : { darkOverrides: { ...customThemeData.darkOverrides, [key]: value } }),
       };
 
-      // Apply immediately for live preview
+      // Update local state and localStorage immediately for live preview
+      setLocalThemeData(newData);
+      setStoredTheme(newData);
+
       if (typeof window !== "undefined") {
         const currentMode = resolvedTheme === "dark" ? "dark" : "light";
         if (currentMode === mode) {
@@ -154,6 +202,10 @@ export function useCustomTheme() {
         darkOverrides: {},
       };
 
+      // Update local state and localStorage immediately
+      setLocalThemeData(newData);
+      setStoredTheme(newData);
+
       // Apply the preset colors immediately
       if (typeof window !== "undefined") {
         const preset = getPresetById(presetId);
@@ -164,21 +216,28 @@ export function useCustomTheme() {
         }
       }
 
-      if (saveImmediately) {
+      if (saveImmediately && session?.user) {
         saveMutation.mutate(newData);
       }
 
       return newData;
     },
-    [resolvedTheme, saveMutation]
+    [resolvedTheme, saveMutation, session?.user]
   );
 
-  // Save current theme configuration
+  // Save current theme configuration to database
   const saveTheme = useCallback(
     (data: CustomThemeData) => {
-      saveMutation.mutate(data);
+      // Always update localStorage
+      setLocalThemeData(data);
+      setStoredTheme(data);
+
+      // Save to database if logged in
+      if (session?.user) {
+        saveMutation.mutate(data);
+      }
     },
-    [saveMutation]
+    [saveMutation, session?.user]
   );
 
   // Reset to default theme
@@ -189,12 +248,19 @@ export function useCustomTheme() {
       darkOverrides: {},
     };
 
+    // Update local state and localStorage
+    setLocalThemeData(defaultData);
+    setStoredTheme(defaultData);
+
     clearCssVariables();
     const mode = resolvedTheme === "dark" ? "dark" : "light";
     applyCssVariables(getDefaultColors(mode), mode);
 
-    saveMutation.mutate(defaultData);
-  }, [resolvedTheme, saveMutation]);
+    // Save to database if logged in
+    if (session?.user) {
+      saveMutation.mutate(defaultData);
+    }
+  }, [resolvedTheme, saveMutation, session?.user]);
 
   return {
     // Current state

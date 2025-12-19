@@ -18,6 +18,8 @@ import {
   Activity,
   Container,
   MonitorCog,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,6 +155,7 @@ function IntegrationsPage() {
   const [editingIntegration, setEditingIntegration] = useState<Integration | null>(null);
   const [formData, setFormData] = useState<IntegrationFormData>(initialFormData);
   const [testResults, setTestResults] = useState<Record<string, { loading: boolean; success?: boolean; message?: string }>>({});
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Fetch integrations
   const { data: integrationsData, isLoading } = useQuery({
@@ -185,15 +188,17 @@ function IntegrationsPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: IntegrationFormData }) =>
       updateIntegration({
-        id,
         data: {
-          type: data.type,
-          name: data.name,
-          url: data.url,
-          apiKey: data.apiKey || null,
-          username: data.username || null,
-          password: data.password || null,
-          enabled: data.enabled,
+          id,
+          data: {
+            type: data.type,
+            name: data.name,
+            url: data.url,
+            apiKey: data.apiKey || null,
+            username: data.username || null,
+            password: data.password || null,
+            enabled: data.enabled,
+          },
         },
       }),
     onSuccess: () => {
@@ -263,6 +268,7 @@ function IntegrationsPage() {
     setFormOpen(false);
     setEditingIntegration(null);
     setFormData(initialFormData);
+    setShowApiKey(false);
   };
 
   const handleOpenForm = () => {
@@ -274,10 +280,10 @@ function IntegrationsPage() {
   // Show login prompt if not authenticated
   if (!isSessionPending && !session?.user) {
     return (
-      <main className="container mx-auto flex flex-col items-center justify-center gap-6 p-6 min-h-[60vh]">
+      <main className="container mx-auto flex flex-col items-center justify-center gap-6 p-4 sm:p-6 min-h-[60vh]">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Integrations</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Sign in to manage your integrations
           </p>
         </div>
@@ -292,17 +298,17 @@ function IntegrationsPage() {
   };
 
   return (
-    <main className="container mx-auto flex flex-col gap-6 p-6">
+    <main className="container mx-auto flex flex-col gap-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Integrations</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Connect your homelab services
           </p>
         </div>
 
-        <Button onClick={handleOpenForm}>
+        <Button onClick={handleOpenForm} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Integration
         </Button>
@@ -387,10 +393,11 @@ function IntegrationsPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="flex-1 sm:flex-none"
                       onClick={() => testMutation.mutate(integration.id)}
                       disabled={testResult?.loading}
                     >
@@ -491,13 +498,30 @@ function IntegrationsPage() {
             {/* API Key */}
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={formData.apiKey}
-                onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                placeholder="Enter API key if required"
-              />
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showApiKey ? "text" : "password"}
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                  placeholder="Enter API key if required"
+                  autoComplete="off"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
 
             {/* Username/Password for some integrations */}

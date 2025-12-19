@@ -30,6 +30,7 @@ export type WidgetConfig = {
   timezone?: string;
   showSeconds?: boolean;
   format24h?: boolean;
+  dateFormat?: "full" | "long" | "medium" | "short" | "none";
   // Weather widget
   location?: string;
   units?: "metric" | "imperial";
