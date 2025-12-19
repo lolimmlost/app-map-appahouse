@@ -20,6 +20,8 @@ import {
   MonitorCog,
   Eye,
   EyeOff,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -482,17 +484,46 @@ function IntegrationsPage() {
               />
             </div>
 
-            {/* URL */}
+            {/* URL with HTTP/HTTPS toggle */}
             <div className="space-y-2">
               <Label htmlFor="url">URL *</Label>
-              <Input
-                id="url"
-                type="url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                placeholder="http://192.168.1.100:7878"
-                required
-              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={formData.url.startsWith("https://") ? "default" : "outline"}
+                  size="sm"
+                  className="shrink-0 px-3"
+                  onClick={() => {
+                    const url = formData.url;
+                    if (url.startsWith("http://")) {
+                      setFormData({ ...formData, url: url.replace("http://", "https://") });
+                    } else if (url.startsWith("https://")) {
+                      setFormData({ ...formData, url: url.replace("https://", "http://") });
+                    } else if (url) {
+                      setFormData({ ...formData, url: "https://" + url });
+                    }
+                  }}
+                  title={formData.url.startsWith("https://") ? "Using HTTPS (secure)" : "Using HTTP (insecure)"}
+                >
+                  {formData.url.startsWith("https://") ? (
+                    <Lock className="h-4 w-4" />
+                  ) : (
+                    <Unlock className="h-4 w-4" />
+                  )}
+                </Button>
+                <Input
+                  id="url"
+                  type="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  placeholder="http://192.168.1.100:7878"
+                  required
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Click the {formData.url.startsWith("https://") ? <Lock className="h-3 w-3 inline" /> : <Unlock className="h-3 w-3 inline" />} button to toggle between HTTP and HTTPS
+              </p>
             </div>
 
             {/* API Key */}
