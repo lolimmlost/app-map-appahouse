@@ -46,6 +46,8 @@ export type WidgetConfig = {
   showRecentlyAdded?: boolean;
   // Docker widget
   showContainers?: string[];
+  showAllContainers?: boolean;
+  showHostInfo?: boolean;
   // Iframe widget
   url?: string;
   // Bookmarks widget

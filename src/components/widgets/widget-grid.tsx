@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { Plus, Clock, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server } from "lucide-react";
+import { Plus, Clock, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import { SonarrWidget } from "./sonarr-widget";
 import { LidarrWidget } from "./lidarr-widget";
 import { JellyfinWidget } from "./jellyfin-widget";
 import { SystemStatsWidget } from "./system-stats-widget";
+import { DockerWidget } from "./docker-widget";
 import { getWidgets, createWidget, deleteWidget } from "@/lib/server/widgets";
 import { getIntegrations } from "@/lib/server/integrations";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
@@ -89,6 +90,14 @@ const WIDGET_TYPES = [
     icon: Play,
     requiresIntegration: true,
     integrationType: "jellyfin",
+  },
+  {
+    type: "docker" as const,
+    name: "Docker",
+    description: "Container status & management",
+    icon: Container,
+    requiresIntegration: true,
+    integrationType: "docker",
   },
   {
     type: "bookmarks" as const,
@@ -222,6 +231,8 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
         return <LidarrWidget key={widget.id} {...commonProps} />;
       case "jellyfin":
         return <JellyfinWidget key={widget.id} {...commonProps} />;
+      case "docker":
+        return <DockerWidget key={widget.id} {...commonProps} />;
       case "bookmarks":
         return <BookmarksWidget key={widget.id} {...commonProps} />;
       case "iframe":

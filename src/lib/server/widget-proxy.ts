@@ -533,3 +533,140 @@ export const getJellyfinLatest = createServerFn({ method: "POST" }).handler(
     return [];
   }
 );
+
+// Docker-specific endpoints
+export const getDockerContainers = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string; all?: boolean } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      // Docker API endpoint for containers
+      // all=true shows stopped containers too
+      const allParam = ctx.data.all ? "true" : "false";
+      const url = `${integration.url}/containers/json?all=${allParam}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+export const getDockerContainerStats = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string; containerId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      // Get one-shot stats (stream=false)
+      const url = `${integration.url}/containers/${ctx.data.containerId}/stats?stream=false`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+export const getDockerInfo = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const url = `${integration.url}/info`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
