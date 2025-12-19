@@ -15,6 +15,7 @@ export const apps = pgTable("apps", {
   categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   sortOrder: integer("sort_order").default(0),
+  pinned: boolean("pinned").default(false),
   healthCheckEnabled: boolean("health_check_enabled").default(false),
   healthCheckType: healthCheckTypeEnum("health_check_type").default("http"),
   healthCheckUrl: text("health_check_url"),

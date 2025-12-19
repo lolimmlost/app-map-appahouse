@@ -19,6 +19,7 @@ interface AppGridProps {
   onEditApp?: (app: App) => void;
   onDeleteApp?: (app: App) => void;
   onViewNotes?: (app: App) => void;
+  onPinApp?: (app: App, pinned: boolean) => void;
 }
 
 export function AppGrid({
@@ -31,6 +32,7 @@ export function AppGrid({
   onEditApp,
   onDeleteApp,
   onViewNotes,
+  onPinApp,
 }: AppGridProps) {
   const groupedApps = useMemo(() => {
     if (!groupByCategory) {
@@ -121,6 +123,7 @@ export function AppGrid({
                 onEdit={onEditApp}
                 onDelete={onDeleteApp}
                 onViewNotes={onViewNotes}
+                onPin={onPinApp}
               />
             ))}
           </div>

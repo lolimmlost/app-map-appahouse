@@ -4,9 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
-import { AppGrid, AppForm, AppNotesDialog, type AppFormData } from "@/components/apps";
+import { AppGrid, AppForm, AppNotesDialog, QuickLinksBar, type AppFormData } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
-import { getApps, createApp, updateApp, deleteApp } from "@/lib/server/apps";
+import { getApps, createApp, updateApp, deleteApp, pinApp } from "@/lib/server/apps";
 import { getCategories } from "@/lib/server/categories";
 import { getTags } from "@/lib/server/tags";
 import { useHealthStatus } from "@/hooks/use-health-status";
@@ -112,6 +112,15 @@ function DashboardPage() {
     },
   });
 
+  // Pin app mutation
+  const pinMutation = useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
+      pinApp({ data: { id, pinned } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["apps"] });
+    },
+  });
+
   const handleSubmit = (data: AppFormData) => {
     if (editingApp) {
       updateMutation.mutate({ id: editingApp.id, data });
@@ -133,6 +142,10 @@ function DashboardPage() {
 
   const handleViewNotes = (app: App) => {
     setNotesApp(app);
+  };
+
+  const handlePin = (app: App, pinned: boolean) => {
+    pinMutation.mutate({ id: app.id, pinned });
   };
 
   const handleCloseForm = (open: boolean) => {
@@ -248,6 +261,14 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Quick Links */}
+      {apps.filter(app => app.pinned).length > 0 && (
+        <QuickLinksBar
+          apps={apps.filter(app => app.pinned)}
+          healthStatuses={healthStatuses}
+        />
+      )}
+
       {/* Widgets Section */}
       <WidgetGrid />
 
@@ -267,6 +288,7 @@ function DashboardPage() {
           onEditApp={handleEdit}
           onDeleteApp={handleDelete}
           onViewNotes={handleViewNotes}
+          onPinApp={handlePin}
         />
       )}
 

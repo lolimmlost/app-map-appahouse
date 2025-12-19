@@ -155,3 +155,35 @@ export const reorderApps = createServerFn({ method: "POST" }).handler(
     return { success: true };
   }
 );
+
+export const pinApp = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { id: string; pinned: boolean } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [updatedApp] = await db
+      .update(apps)
+      .set({ pinned: ctx.data.pinned, updatedAt: new Date() })
+      .where(and(eq(apps.id, ctx.data.id), eq(apps.userId, session.user.id)))
+      .returning();
+
+    if (!updatedApp) throw new Error("App not found");
+
+    return updatedApp;
+  }
+);
+
+export const getPinnedApps = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session?.user) return { apps: [] };
+
+  const pinnedApps = await db.query.apps.findMany({
+    where: and(eq(apps.userId, session.user.id), eq(apps.pinned, true)),
+    orderBy: [asc(apps.sortOrder), asc(apps.name)],
+    with: {
+      category: true,
+    },
+  });
+
+  return { apps: pinnedApps };
+});

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, MoreVertical, Pencil, Trash2, StickyNote, Home, Globe } from "lucide-react";
+import { Copy, MoreVertical, Pencil, Trash2, StickyNote, Home, Globe, Pin, PinOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ interface AppCardProps {
   onEdit?: (app: App) => void;
   onDelete?: (app: App) => void;
   onViewNotes?: (app: App) => void;
+  onPin?: (app: App, pinned: boolean) => void;
 }
 
 const healthColors: Record<HealthStatus, string> = {
@@ -51,6 +52,7 @@ export function AppCard({
   onEdit,
   onDelete,
   onViewNotes,
+  onPin,
 }: AppCardProps) {
   const [copiedType, setCopiedType] = useState<"local" | "remote" | null>(null);
 
@@ -306,6 +308,24 @@ export function AppCard({
                   <DropdownMenuItem onClick={() => onViewNotes(app)}>
                     <StickyNote className="mr-2 h-4 w-4" />
                     View notes
+                  </DropdownMenuItem>
+                </>
+              )}
+              {onPin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onPin(app, !app.pinned)}>
+                    {app.pinned ? (
+                      <>
+                        <PinOff className="mr-2 h-4 w-4" />
+                        Unpin from Quick Links
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="mr-2 h-4 w-4" />
+                        Pin to Quick Links
+                      </>
+                    )}
                   </DropdownMenuItem>
                 </>
               )}
