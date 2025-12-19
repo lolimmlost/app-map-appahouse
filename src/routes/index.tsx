@@ -262,6 +262,7 @@ function DashboardPage() {
           healthStatuses={healthStatuses}
           healthBarStyle="dot"
           columns={4}
+          viewMode={viewMode}
           groupByCategory={groupByCategory}
           onEditApp={handleEdit}
           onDeleteApp={handleDelete}

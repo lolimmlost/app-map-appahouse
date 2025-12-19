@@ -23,6 +23,7 @@ interface AppCardProps {
   };
   healthStatus?: HealthStatus;
   healthBarStyle?: "dot" | "border" | "none";
+  viewMode?: "grid" | "list";
   onEdit?: (app: App) => void;
   onDelete?: (app: App) => void;
   onViewNotes?: (app: App) => void;
@@ -46,6 +47,7 @@ export function AppCard({
   app,
   healthStatus = "unknown",
   healthBarStyle = "dot",
+  viewMode = "grid",
   onEdit,
   onDelete,
   onViewNotes,
@@ -116,23 +118,32 @@ export function AppCard({
       )}
       onClick={handleOpenApp}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className={cn("p-4", viewMode === "list" && "p-3")}>
+        <div className={cn(
+          "flex items-start gap-3",
+          viewMode === "list" && "items-center"
+        )}>
           {/* App Icon */}
           <div className="relative flex-shrink-0">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+            <div className={cn(
+              "flex items-center justify-center rounded-lg bg-muted",
+              viewMode === "list" ? "h-10 w-10" : "h-12 w-12"
+            )}>
               {app.icon ? (
                 app.icon.startsWith("http") ? (
                   <img
                     src={app.icon}
                     alt={app.name}
-                    className="h-8 w-8 object-contain"
+                    className={cn(viewMode === "list" ? "h-6 w-6" : "h-8 w-8", "object-contain")}
                   />
                 ) : (
-                  <span className="text-2xl">{app.icon}</span>
+                  <span className={cn(viewMode === "list" ? "text-xl" : "text-2xl")}>{app.icon}</span>
                 )
               ) : (
-                <span className="text-lg font-semibold text-muted-foreground">
+                <span className={cn(
+                  "font-semibold text-muted-foreground",
+                  viewMode === "list" ? "text-base" : "text-lg"
+                )}>
                   {app.name.charAt(0).toUpperCase()}
                 </span>
               )}
@@ -149,19 +160,33 @@ export function AppCard({
           </div>
 
           {/* App Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold truncate">{app.name}</h3>
+          <div className={cn(
+            "flex-1 min-w-0",
+            viewMode === "list" && "flex items-center gap-4"
+          )}>
+            <div className={cn(
+              "flex items-center gap-2",
+              viewMode === "list" && "flex-shrink-0"
+            )}>
+              <h3 className={cn(
+                "font-semibold truncate",
+                viewMode === "list" && "text-sm"
+              )}>{app.name}</h3>
               {app.notes && (
                 <StickyNote className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               )}
             </div>
-            {app.description && (
+            {app.description && viewMode === "grid" && (
               <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
                 {app.description}
               </p>
             )}
-            {app.category && (
+            {app.description && viewMode === "list" && (
+              <p className="text-sm text-muted-foreground truncate hidden sm:block">
+                {app.description}
+              </p>
+            )}
+            {app.category && viewMode === "grid" && (
               <Badge
                 variant="secondary"
                 className="mt-2 text-xs"
@@ -178,7 +203,10 @@ export function AppCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                className={cn(
+                  "h-8 w-8 transition-opacity",
+                  viewMode === "list" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -218,8 +246,8 @@ export function AppCard({
           </DropdownMenu>
         </div>
 
-        {/* Tags */}
-        {app.tags && app.tags.length > 0 && (
+        {/* Tags - only show in grid view */}
+        {viewMode === "grid" && app.tags && app.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
             {app.tags.map((tag) => (
               <Badge

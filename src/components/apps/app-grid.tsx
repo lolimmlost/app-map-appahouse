@@ -14,6 +14,7 @@ interface AppGridProps {
   healthStatuses?: Record<string, HealthStatus>;
   healthBarStyle?: "dot" | "border" | "none";
   columns?: number;
+  viewMode?: "grid" | "list";
   groupByCategory?: boolean;
   onEditApp?: (app: App) => void;
   onDeleteApp?: (app: App) => void;
@@ -25,6 +26,7 @@ export function AppGrid({
   healthStatuses = {},
   healthBarStyle = "dot",
   columns = 4,
+  viewMode = "grid",
   groupByCategory = true,
   onEditApp,
   onDeleteApp,
@@ -69,12 +71,12 @@ export function AppGrid({
   }, [apps, groupByCategory]);
 
   const gridClasses = cn(
-    "grid gap-4",
-    columns === 2 && "grid-cols-1 sm:grid-cols-2",
-    columns === 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-    columns === 4 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-    columns === 5 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
-    columns === 6 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+    viewMode === "list" ? "flex flex-col gap-2" : "grid gap-4",
+    viewMode === "grid" && columns === 2 && "grid-cols-1 sm:grid-cols-2",
+    viewMode === "grid" && columns === 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    viewMode === "grid" && columns === 4 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+    viewMode === "grid" && columns === 5 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
+    viewMode === "grid" && columns === 6 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
   );
 
   if (apps.length === 0) {
@@ -90,7 +92,7 @@ export function AppGrid({
 
   return (
     <div className="space-y-8">
-      {groupedApps.map((group, groupIndex) => (
+      {groupedApps.map((group) => (
         <div key={group.category?.id ?? "uncategorized"}>
           {groupByCategory && (
             <div className="flex items-center gap-2 mb-4">
@@ -115,6 +117,7 @@ export function AppGrid({
                 app={app}
                 healthStatus={healthStatuses[app.id] ?? "unknown"}
                 healthBarStyle={healthBarStyle}
+                viewMode={viewMode}
                 onEdit={onEditApp}
                 onDelete={onDeleteApp}
                 onViewNotes={onViewNotes}
