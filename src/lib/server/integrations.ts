@@ -190,6 +190,18 @@ async function testIntegrationConnection(
         testUrl = `${integration.url}/api/status`;
         break;
 
+      case "glances":
+        // Glances API version/status
+        testUrl = `${integration.url}/api/3/version`;
+        if (integration.password) {
+          // Glances uses HTTP Basic Auth if password is set
+          const authStr = integration.username
+            ? `${integration.username}:${integration.password}`
+            : `glances:${integration.password}`;
+          headers["Authorization"] = `Basic ${Buffer.from(authStr).toString("base64")}`;
+        }
+        break;
+
       default:
         // Generic HTTP check
         break;

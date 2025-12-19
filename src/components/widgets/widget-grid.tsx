@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { Plus, Clock, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle } from "lucide-react";
+import { Plus, Clock, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { RadarrWidget } from "./radarr-widget";
 import { SonarrWidget } from "./sonarr-widget";
 import { LidarrWidget } from "./lidarr-widget";
 import { JellyfinWidget } from "./jellyfin-widget";
+import { SystemStatsWidget } from "./system-stats-widget";
 import { getWidgets, createWidget, deleteWidget } from "@/lib/server/widgets";
 import { getIntegrations } from "@/lib/server/integrations";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
@@ -40,6 +41,13 @@ const WIDGET_TYPES = [
     name: "Clock",
     description: "Display current time and date",
     icon: Clock,
+    requiresIntegration: false,
+  },
+  {
+    type: "system_stats" as const,
+    name: "System Stats",
+    description: "CPU, RAM, and Disk usage",
+    icon: Server,
     requiresIntegration: false,
   },
   {
@@ -202,6 +210,8 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
     switch (widget.type) {
       case "clock":
         return <ClockWidget key={widget.id} {...commonProps} />;
+      case "system_stats":
+        return <SystemStatsWidget key={widget.id} {...commonProps} />;
       case "uptime_kuma":
         return <UptimeKumaWidget key={widget.id} {...commonProps} />;
       case "radarr":

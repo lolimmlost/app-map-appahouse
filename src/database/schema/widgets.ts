@@ -52,6 +52,11 @@ export type WidgetConfig = {
   bookmarks?: Array<{ name: string; url: string; icon?: string }>;
   // Notes widget
   content?: string;
+  // System Stats widget
+  showCpu?: boolean;
+  showRam?: boolean;
+  showDisk?: boolean;
+  diskPaths?: string[];
   // Generic
   title?: string;
   refreshInterval?: number;

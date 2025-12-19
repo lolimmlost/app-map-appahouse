@@ -11,6 +11,7 @@ export const integrationTypeEnum = pgEnum("integration_type", [
   "docker",
   "proxmox",
   "portainer",
+  "glances",
 ]);
 
 export const integrations = pgTable("integrations", {

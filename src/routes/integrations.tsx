@@ -22,6 +22,7 @@ import {
   EyeOff,
   Lock,
   Unlock,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +72,8 @@ type IntegrationType =
   | "jellyfin"
   | "docker"
   | "proxmox"
-  | "portainer";
+  | "portainer"
+  | "glances";
 
 const integrationTypes: {
   value: IntegrationType;
@@ -126,6 +128,12 @@ const integrationTypes: {
     label: "Portainer",
     icon: <Container className="h-4 w-4" />,
     description: "Container management UI",
+  },
+  {
+    value: "glances",
+    label: "Glances",
+    icon: <Gauge className="h-4 w-4" />,
+    description: "System monitoring (remote)",
   },
 ];
 
@@ -556,7 +564,7 @@ function IntegrationsPage() {
             </div>
 
             {/* Username/Password for some integrations */}
-            {(formData.type === "proxmox" || formData.type === "portainer" || formData.type === "jellyfin") && (
+            {(formData.type === "proxmox" || formData.type === "portainer" || formData.type === "jellyfin" || formData.type === "glances") && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="username">
