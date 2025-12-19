@@ -41,16 +41,45 @@ export const Route = createRootRoute({
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        background: #09090b;
+                        background: linear-gradient(135deg, #09090b 0%, #0c0c14 50%, #09090b 100%);
                         overflow: hidden;
-                        transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+                        transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+                    /* Background grid pattern */
+                    #app-loader::before {
+                        content: '';
+                        position: absolute;
+                        inset: 0;
+                        background-image:
+                            linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+                        background-size: 50px 50px;
+                        animation: loader-grid-move 20s linear infinite;
+                    }
+                    @keyframes loader-grid-move {
+                        0% { transform: translate(0, 0); }
+                        100% { transform: translate(50px, 50px); }
+                    }
+                    /* Ambient glow */
+                    #app-loader::after {
+                        content: '';
+                        position: absolute;
+                        width: 600px;
+                        height: 600px;
+                        background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(147, 51, 234, 0.08) 30%, transparent 70%);
+                        border-radius: 50%;
+                        animation: loader-glow-pulse 4s ease-in-out infinite;
+                    }
+                    @keyframes loader-glow-pulse {
+                        0%, 100% { transform: scale(1); opacity: 0.6; }
+                        50% { transform: scale(1.15); opacity: 1; }
                     }
                     /* Fallback: auto-hide loader after 5 seconds in case React fails to mount */
                     @keyframes app-loader-fallback-hide {
                         to { opacity: 0; visibility: hidden; pointer-events: none; }
                     }
                     #app-loader {
-                        animation: app-loader-fallback-hide 0.4s ease-out 5s forwards;
+                        animation: app-loader-fallback-hide 0.5s cubic-bezier(0.4, 0, 0.2, 1) 5s forwards;
                     }
                     #app-loader.hidden {
                         animation: none;
@@ -58,34 +87,84 @@ export const Route = createRootRoute({
                         visibility: hidden;
                         pointer-events: none;
                     }
-                    #app-loader .loader-icon {
-                        width: 64px;
-                        height: 64px;
-                        margin-bottom: 24px;
-                        color: #a1a1aa;
+                    /* Logo container */
+                    #app-loader .loader-logo-container {
+                        position: relative;
+                        z-index: 1;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        animation: loader-content-fade-in 0.8s ease-out;
                     }
-                    #app-loader .loader-spinner {
-                        width: 48px;
-                        height: 48px;
-                        border: 3px solid #27272a;
-                        border-top-color: #3b82f6;
-                        border-radius: 50%;
-                        animation: app-loader-spin 0.8s linear infinite;
+                    @keyframes loader-content-fade-in {
+                        from { opacity: 0; transform: translateY(20px); }
+                        to { opacity: 1; transform: translateY(0); }
                     }
+                    /* Grid icon with animated tiles */
+                    #app-loader .loader-grid-icon {
+                        width: 88px;
+                        height: 88px;
+                        display: grid;
+                        grid-template-columns: 38px 38px;
+                        grid-template-rows: 38px 38px;
+                        gap: 8px;
+                        margin-bottom: 32px;
+                    }
+                    #app-loader .loader-tile {
+                        width: 38px;
+                        height: 38px;
+                        min-width: 38px;
+                        min-height: 38px;
+                        border-radius: 10px;
+                        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+                        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+                        animation: loader-tile-pulse 2s ease-in-out infinite;
+                    }
+                    #app-loader .loader-tile:nth-child(1) { animation-delay: 0s; }
+                    #app-loader .loader-tile:nth-child(2) { animation-delay: 0.15s; }
+                    #app-loader .loader-tile:nth-child(3) { animation-delay: 0.3s; }
+                    #app-loader .loader-tile:nth-child(4) { animation-delay: 0.45s; }
+                    @keyframes loader-tile-pulse {
+                        0%, 100% { transform: scale(1); opacity: 0.7; }
+                        50% { transform: scale(0.92); opacity: 1; }
+                    }
+                    /* Progress bar */
+                    #app-loader .loader-progress-container {
+                        width: 180px;
+                        height: 6px;
+                        background: rgba(255, 255, 255, 0.15);
+                        border-radius: 6px;
+                        overflow: hidden;
+                        margin-bottom: 28px;
+                    }
+                    #app-loader .loader-progress-bar {
+                        height: 100%;
+                        width: 100%;
+                        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+                        border-radius: 6px;
+                        transform-origin: left center;
+                        animation: loader-progress-fill 500ms ease-out forwards;
+                    }
+                    @keyframes loader-progress-fill {
+                        from { transform: scaleX(0); }
+                        to { transform: scaleX(1); }
+                    }
+                    /* App name with gradient */
                     #app-loader .loader-text {
-                        margin-top: 20px;
-                        font-size: 18px;
-                        font-weight: 600;
-                        color: #fafafa;
-                        letter-spacing: 0.05em;
+                        font-size: 28px;
+                        font-weight: 700;
+                        background: linear-gradient(135deg, #fafafa 0%, #a1a1aa 100%);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                        letter-spacing: 0.02em;
+                        margin-bottom: 8px;
                     }
                     #app-loader .loader-subtext {
-                        margin-top: 8px;
-                        font-size: 13px;
+                        font-size: 14px;
                         color: #71717a;
-                    }
-                    @keyframes app-loader-spin {
-                        to { transform: rotate(360deg); }
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
                     }
                     /* Prevent body scroll and completely hide content until hydrated */
                     html:not(.hydrated),
@@ -140,26 +219,86 @@ function RootDocument() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: '#09090b',
+                    background: 'linear-gradient(135deg, #09090b 0%, #0c0c14 50%, #09090b 100%)',
                 }}>
-                    {/* Layout Grid Icon */}
-                    <svg className="loader-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
-                    </svg>
-                    <div className="loader-spinner" />
-                    <div className="loader-text">App Map</div>
-                    <div className="loader-subtext">Homelab Dashboard</div>
+                    <div className="loader-logo-container" style={{
+                        position: 'relative',
+                        zIndex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}>
+                        {/* Animated grid tiles */}
+                        <div className="loader-grid-icon" style={{
+                            width: '88px',
+                            height: '88px',
+                            display: 'grid',
+                            gridTemplateColumns: '38px 38px',
+                            gridTemplateRows: '38px 38px',
+                            gap: '8px',
+                            marginBottom: '32px',
+                        }}>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
+                        </div>
+                        {/* Progress bar */}
+                        <div style={{
+                            width: '180px',
+                            height: '6px',
+                            background: 'rgba(255, 255, 255, 0.15)',
+                            borderRadius: '6px',
+                            overflow: 'hidden',
+                            marginBottom: '28px',
+                        }}>
+                            <div id="loader-progress" style={{
+                                height: '6px',
+                                width: '100%',
+                                background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                                borderRadius: '6px',
+                                transformOrigin: 'left center',
+                                transform: 'scaleX(0)',
+                                transition: 'transform 500ms ease-out',
+                            }}></div>
+                        </div>
+                        <div className="loader-text" style={{
+                            fontSize: '28px',
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #fafafa 0%, #a1a1aa 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            letterSpacing: '0.02em',
+                            marginBottom: '8px',
+                        }}>App Map</div>
+                        <div className="loader-subtext" style={{
+                            fontSize: '14px',
+                            color: '#71717a',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                        }}>Homelab Dashboard</div>
+                    </div>
                 </div>
-                {/* Set loader height dynamically for mobile browsers */}
+                {/* Set loader height and trigger progress bar animation */}
                 <script dangerouslySetInnerHTML={{ __html: `
                     (function() {
                         var loader = document.getElementById('app-loader');
                         if (loader) {
                             loader.style.height = window.innerHeight + 'px';
                             loader.style.minHeight = window.innerHeight + 'px';
+                        }
+                        // Trigger progress bar animation after a brief delay
+                        var progress = document.getElementById('loader-progress');
+                        if (progress) {
+                            // Force a reflow to ensure the initial state is rendered
+                            progress.offsetHeight;
+                            // Use requestAnimationFrame for reliable animation start
+                            requestAnimationFrame(function() {
+                                requestAnimationFrame(function() {
+                                    progress.style.transform = 'scaleX(1)';
+                                });
+                            });
                         }
                     })();
                 `}} />

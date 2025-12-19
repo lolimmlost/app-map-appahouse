@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, timestamp, integer, pgEnum, primaryKey } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { users } from "./auth";
 import { categories } from "./categories";
@@ -41,7 +41,9 @@ export const appsRelations = relations(apps, ({ one, many }) => ({
 export const appTags = pgTable("app_tags", {
   appId: text("app_id").notNull().references(() => apps.id, { onDelete: "cascade" }),
   tagId: text("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.appId, table.tagId] }),
+}));
 
 export const tags = pgTable("tags", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

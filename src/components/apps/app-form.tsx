@@ -39,11 +39,13 @@ export type AppFormData = {
   notes: string;
 };
 
+type AppWithTags = App & { tags?: Tag[] };
+
 interface AppFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: AppFormData) => void;
-  app?: App | null;
+  app?: AppWithTags | null;
   categories: Category[];
   tags: Tag[];
   isLoading?: boolean;
@@ -85,7 +87,7 @@ export function AppForm({
         localUrl: app.localUrl ?? "",
         remoteUrl: app.remoteUrl ?? "",
         categoryId: app.categoryId ?? null,
-        tagIds: [], // Will be populated from app.tags if available
+        tagIds: app.tags?.map((t) => t.id) ?? [],
         healthCheckEnabled: app.healthCheckEnabled ?? false,
         healthCheckType: app.healthCheckType ?? "http",
         healthCheckUrl: app.healthCheckUrl ?? "",
