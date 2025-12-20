@@ -1,9 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, asc } from "drizzle-orm";
+import { Agent } from "undici";
 import { db } from "@/database/db";
 import { integrations, type NewIntegration, type Integration } from "@/database/schema/integrations";
 import { auth } from "@/lib/auth";
+
+// Create an undici agent that ignores SSL certificate errors
+const insecureAgent = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
+});
 
 async function getSession() {
   const request = getRequest();
@@ -183,6 +191,13 @@ async function testIntegrationConnection(
       case "proxmox":
         // Proxmox API version
         testUrl = `${integration.url}/api2/json/version`;
+        // Proxmox uses API token format: PVEAPIToken=USER@REALM!TOKENID=SECRET
+        if (integration.apiKey && integration.username) {
+          headers["Authorization"] = `PVEAPIToken=${integration.username}=${integration.apiKey}`;
+        } else if (integration.apiKey) {
+          // If only apiKey is provided, assume it's the full token
+          headers["Authorization"] = `PVEAPIToken=${integration.apiKey}`;
+        }
         break;
 
       case "portainer":
@@ -202,16 +217,33 @@ async function testIntegrationConnection(
         }
         break;
 
+      case "truenas":
+        // TrueNAS Scale REST API
+        testUrl = `${integration.url}/api/v2.0/system/info`;
+        if (integration.apiKey) {
+          headers["Authorization"] = `Bearer ${integration.apiKey}`;
+        }
+        break;
+
       default:
         // Generic HTTP check
         break;
     }
 
-    const response = await fetch(testUrl, {
+    // Build fetch options
+    const fetchOptions: RequestInit & { dispatcher?: Agent } = {
       method: "GET",
       headers,
       signal: controller.signal,
-    });
+    };
+
+    // Use insecure dispatcher for self-signed certificates if allowInsecure is enabled
+    if (integration.allowInsecure && testUrl.startsWith("https://")) {
+      // @ts-expect-error - dispatcher is undici-specific but works with Node.js fetch
+      fetchOptions.dispatcher = insecureAgent;
+    }
+
+    const response = await fetch(testUrl, fetchOptions);
 
     clearTimeout(timeoutId);
 

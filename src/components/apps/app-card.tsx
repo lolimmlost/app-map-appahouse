@@ -10,6 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import type { App, Tag } from "@/database/schema/apps";
 import type { Category } from "@/database/schema/categories";
@@ -125,17 +132,102 @@ export function AppCard({
 
   const hasValidUrl = primaryUrl && normalizeUrl(primaryUrl);
 
-  return (
-    <Card
-      className={cn(
-        "group relative transition-all",
-        hasValidUrl && "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
-        !hasValidUrl && "opacity-75",
-        healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
-        borderClass
+  // Shared menu items for both context menu and dropdown
+  const menuItems = (
+    <>
+      {/* Open options */}
+      {hasLocalUrl && (
+        <ContextMenuItem onClick={(e) => handleOpenUrl(e as unknown as React.MouseEvent, "local")}>
+          <Home className="mr-2 h-4 w-4" />
+          {hasBothUrls ? "Open Local" : "Open in new tab"}
+        </ContextMenuItem>
       )}
-      onClick={handleOpenApp}
-    >
+      {hasRemoteUrl && (
+        <ContextMenuItem onClick={(e) => handleOpenUrl(e as unknown as React.MouseEvent, "remote")}>
+          <Globe className="mr-2 h-4 w-4" />
+          {hasBothUrls ? "Open Remote" : "Open in new tab"}
+        </ContextMenuItem>
+      )}
+
+      {/* Copy URL options */}
+      {(hasLocalUrl || hasRemoteUrl) && <ContextMenuSeparator />}
+      {hasLocalUrl && (
+        <ContextMenuItem onClick={(e) => handleCopyUrl(e as unknown as React.MouseEvent, "local")}>
+          <Copy className="mr-2 h-4 w-4" />
+          {hasBothUrls ? "Copy Local URL" : "Copy URL"}
+        </ContextMenuItem>
+      )}
+      {hasRemoteUrl && (
+        <ContextMenuItem onClick={(e) => handleCopyUrl(e as unknown as React.MouseEvent, "remote")}>
+          <Copy className="mr-2 h-4 w-4" />
+          {hasBothUrls ? "Copy Remote URL" : "Copy URL"}
+        </ContextMenuItem>
+      )}
+
+      {/* Notes */}
+      {app.notes && onViewNotes && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => onViewNotes(app)}>
+            <StickyNote className="mr-2 h-4 w-4" />
+            View notes
+          </ContextMenuItem>
+        </>
+      )}
+
+      {/* Pin/Unpin */}
+      {onPin && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => onPin(app, !app.pinned)}>
+            {app.pinned ? (
+              <>
+                <PinOff className="mr-2 h-4 w-4" />
+                Unpin from Quick Links
+              </>
+            ) : (
+              <>
+                <Pin className="mr-2 h-4 w-4" />
+                Pin to Quick Links
+              </>
+            )}
+          </ContextMenuItem>
+        </>
+      )}
+
+      {/* Edit & Delete */}
+      <ContextMenuSeparator />
+      {onEdit && (
+        <ContextMenuItem onClick={() => onEdit(app)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Edit
+        </ContextMenuItem>
+      )}
+      {onDelete && (
+        <ContextMenuItem
+          onClick={() => onDelete(app)}
+          className="text-destructive focus:text-destructive"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </ContextMenuItem>
+      )}
+    </>
+  );
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <Card
+          className={cn(
+            "group relative transition-all",
+            hasValidUrl && "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
+            !hasValidUrl && "opacity-75",
+            healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
+            borderClass
+          )}
+          onClick={handleOpenApp}
+        >
       <CardContent className={cn("p-4", viewMode === "list" && "p-3")}>
         <div className={cn(
           "flex items-start gap-3",
@@ -365,6 +457,11 @@ export function AppCard({
           </div>
         )}
       </CardContent>
-    </Card>
+        </Card>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {menuItems}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

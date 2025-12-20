@@ -21,6 +21,8 @@ export const apps = pgTable("apps", {
   healthCheckUrl: text("health_check_url"),
   uptimeKumaMonitorId: text("uptime_kuma_monitor_id"),
   dockerContainerId: text("docker_container_id"),
+  truenasAppId: text("truenas_app_id"),
+  discoverySource: text("discovery_source"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

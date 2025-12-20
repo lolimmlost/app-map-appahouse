@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity } from "lucide-react";
+import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
 import { AppGrid, AppForm, AppNotesDialog, QuickLinksBar, type AppFormData } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
+import { ServiceDiscoveryDialog } from "@/components/discovery";
 import { getApps, createApp, updateApp, deleteApp, pinApp } from "@/lib/server/apps";
 import { getCategories } from "@/lib/server/categories";
 import { getTags } from "@/lib/server/tags";
@@ -22,6 +23,7 @@ function DashboardPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<App | null>(null);
   const [notesApp, setNotesApp] = useState<App | null>(null);
+  const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [groupByCategory, setGroupByCategory] = useState(true);
 
@@ -74,6 +76,7 @@ function DashboardPage() {
           localUrl: data.localUrl || null,
           remoteUrl: data.remoteUrl || null,
           categoryId: data.categoryId,
+          tagIds: data.tagIds,
           healthCheckEnabled: data.healthCheckEnabled,
           healthCheckType: data.healthCheckType,
           healthCheckUrl: data.healthCheckUrl || null,
@@ -99,6 +102,7 @@ function DashboardPage() {
           localUrl: data.localUrl || null,
           remoteUrl: data.remoteUrl || null,
           categoryId: data.categoryId,
+          tagIds: data.tagIds,
           healthCheckEnabled: data.healthCheckEnabled,
           healthCheckType: data.healthCheckType,
           healthCheckUrl: data.healthCheckUrl || null,
@@ -260,6 +264,25 @@ function DashboardPage() {
             Group by Category
           </Button>
 
+          {/* Discover button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="sm:hidden"
+            onClick={() => setDiscoveryOpen(true)}
+            title="Discover Services"
+          >
+            <Radar className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="hidden sm:flex"
+            onClick={() => setDiscoveryOpen(true)}
+          >
+            <Radar className="h-4 w-4 mr-2" />
+            Discover
+          </Button>
+
           {/* Add app button */}
           <Button size="icon" className="sm:hidden" onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -319,6 +342,12 @@ function DashboardPage() {
         open={!!notesApp}
         onOpenChange={(open) => !open && setNotesApp(null)}
         app={notesApp}
+      />
+
+      {/* Service Discovery Dialog */}
+      <ServiceDiscoveryDialog
+        open={discoveryOpen}
+        onOpenChange={setDiscoveryOpen}
       />
     </main>
   );

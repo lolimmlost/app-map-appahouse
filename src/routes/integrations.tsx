@@ -23,6 +23,9 @@ import {
   Lock,
   Unlock,
   Gauge,
+  HardDrive,
+  ShieldOff,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +76,8 @@ type IntegrationType =
   | "docker"
   | "proxmox"
   | "portainer"
-  | "glances";
+  | "glances"
+  | "truenas";
 
 const integrationTypes: {
   value: IntegrationType;
@@ -121,19 +125,28 @@ const integrationTypes: {
     value: "proxmox",
     label: "Proxmox",
     icon: <MonitorCog className="h-4 w-4" />,
-    description: "Virtualization platform",
+    description: "Coming soon",
+    disabled: true,
   },
   {
     value: "portainer",
     label: "Portainer",
     icon: <Container className="h-4 w-4" />,
-    description: "Container management UI",
+    description: "Coming soon",
+    disabled: true,
   },
   {
     value: "glances",
     label: "Glances",
     icon: <Gauge className="h-4 w-4" />,
-    description: "System monitoring (remote)",
+    description: "Coming soon",
+    disabled: true,
+  },
+  {
+    value: "truenas",
+    label: "TrueNAS",
+    icon: <HardDrive className="h-4 w-4" />,
+    description: "TrueNAS Scale apps & storage",
   },
 ];
 
@@ -145,6 +158,7 @@ type IntegrationFormData = {
   username: string;
   password: string;
   enabled: boolean;
+  allowInsecure: boolean;
 };
 
 const initialFormData: IntegrationFormData = {
@@ -155,6 +169,134 @@ const initialFormData: IntegrationFormData = {
   username: "",
   password: "",
   enabled: true,
+  allowInsecure: false,
+};
+
+// Dynamic help text and placeholders per integration type
+const integrationHelp: Record<IntegrationType, {
+  urlPlaceholder: string;
+  urlHelp?: string;
+  apiKeyPlaceholder: string;
+  apiKeyHelp?: string;
+  usernamePlaceholder?: string;
+  usernameHelp?: string;
+  passwordPlaceholder?: string;
+  instructions: string[];
+}> = {
+  uptime_kuma: {
+    urlPlaceholder: "http://192.168.1.100:3001",
+    apiKeyPlaceholder: "Not required",
+    instructions: [
+      "Enter your Uptime Kuma URL (default port 3001)",
+      "No API key needed - uses public status page API",
+      "Make sure your status page is accessible",
+    ],
+  },
+  radarr: {
+    urlPlaceholder: "http://192.168.1.100:7878",
+    apiKeyPlaceholder: "Your Radarr API key",
+    apiKeyHelp: "Settings → General → API Key",
+    instructions: [
+      "Open Radarr → Settings → General",
+      "Copy the API Key from the Security section",
+      "Default port is 7878",
+    ],
+  },
+  sonarr: {
+    urlPlaceholder: "http://192.168.1.100:8989",
+    apiKeyPlaceholder: "Your Sonarr API key",
+    apiKeyHelp: "Settings → General → API Key",
+    instructions: [
+      "Open Sonarr → Settings → General",
+      "Copy the API Key from the Security section",
+      "Default port is 8989",
+    ],
+  },
+  lidarr: {
+    urlPlaceholder: "http://192.168.1.100:8686",
+    apiKeyPlaceholder: "Your Lidarr API key",
+    apiKeyHelp: "Settings → General → API Key",
+    instructions: [
+      "Open Lidarr → Settings → General",
+      "Copy the API Key from the Security section",
+      "Default port is 8686",
+    ],
+  },
+  jellyfin: {
+    urlPlaceholder: "http://192.168.1.100:8096",
+    apiKeyPlaceholder: "API key (optional)",
+    apiKeyHelp: "Dashboard → API Keys → Add",
+    usernamePlaceholder: "Your Jellyfin username",
+    usernameHelp: "Required for Now Playing feature",
+    instructions: [
+      "For basic stats: Use API key from Dashboard → API Keys",
+      "For Now Playing: Use username + password instead",
+      "Default port is 8096",
+    ],
+  },
+  docker: {
+    urlPlaceholder: "http://192.168.1.100:2375",
+    urlHelp: "Docker API endpoint",
+    apiKeyPlaceholder: "Not required",
+    instructions: [
+      "Enable Docker TCP socket in daemon.json:",
+      '  {"hosts": ["tcp://0.0.0.0:2375"]}',
+      "⚠️ Secure with TLS in production",
+      "Or use socket proxy like Tecnativa/docker-socket-proxy",
+    ],
+  },
+  proxmox: {
+    urlPlaceholder: "https://192.168.1.100:8006",
+    urlHelp: "Proxmox web UI URL",
+    apiKeyPlaceholder: "Token secret (UUID)",
+    apiKeyHelp: "Datacenter → Permissions → API Tokens",
+    usernamePlaceholder: "user@realm!tokenid",
+    usernameHelp: "e.g., root@pam!mytoken",
+    instructions: [
+      "Go to Datacenter → Permissions → API Tokens",
+      "Add token for your user (e.g., root@pam)",
+      "Copy Token ID → API Token ID field",
+      "Copy Secret → API Key field",
+      "Enable 'Allow Insecure' for self-signed certs",
+    ],
+  },
+  portainer: {
+    urlPlaceholder: "http://192.168.1.100:9000",
+    apiKeyPlaceholder: "Access token",
+    apiKeyHelp: "User Settings → Access Tokens",
+    instructions: [
+      "Open Portainer → User Settings",
+      "Go to Access Tokens → Add access token",
+      "Copy the generated token",
+      "Default port is 9000 (or 9443 for HTTPS)",
+    ],
+  },
+  glances: {
+    urlPlaceholder: "http://192.168.1.100:61208",
+    urlHelp: "Glances web server URL",
+    apiKeyPlaceholder: "Not required",
+    usernamePlaceholder: "glances",
+    usernameHelp: "Only if password protected",
+    instructions: [
+      "Install: apt install glances",
+      "Run: glances -w (starts on port 61208)",
+      "For password: glances -w --password",
+      "Username/password only needed if protected",
+    ],
+  },
+  truenas: {
+    urlPlaceholder: "http://192.168.1.100",
+    urlHelp: "TrueNAS web UI (no port needed)",
+    apiKeyPlaceholder: "TrueNAS API key",
+    apiKeyHelp: "User menu → API Keys",
+    instructions: [
+      "Click your username (top right)",
+      "Select API Keys → Add",
+      "Give it a name and save",
+      "Copy the key (shown only once!)",
+      "Used for service discovery",
+    ],
+  },
 };
 
 function IntegrationsPage() {
@@ -186,6 +328,7 @@ function IntegrationsPage() {
           username: data.username || null,
           password: data.password || null,
           enabled: data.enabled,
+          allowInsecure: data.allowInsecure,
         },
       }),
     onSuccess: () => {
@@ -208,6 +351,7 @@ function IntegrationsPage() {
             username: data.username || null,
             password: data.password || null,
             enabled: data.enabled,
+            allowInsecure: data.allowInsecure,
           },
         },
       }),
@@ -264,6 +408,7 @@ function IntegrationsPage() {
       username: integration.username ?? "",
       password: integration.password ?? "",
       enabled: integration.enabled ?? true,
+      allowInsecure: integration.allowInsecure ?? false,
     });
     setFormOpen(true);
   };
@@ -442,7 +587,7 @@ function IntegrationsPage() {
 
       {/* Integration Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {editingIntegration ? "Edit Integration" : "Add Integration"}
@@ -454,7 +599,30 @@ function IntegrationsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-6 lg:grid-cols-[1fr,280px]">
+            {/* Instructions Panel - shows on right on large screens, top on mobile */}
+            <div className="order-first lg:order-last">
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium text-sm">
+                    {integrationTypes.find(t => t.value === formData.type)?.label} Setup
+                  </span>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {integrationHelp[formData.type]?.instructions.map((instruction, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-muted-foreground/60 select-none">{i + 1}.</span>
+                      <span>{instruction}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div>
+              <form onSubmit={handleSubmit} className="space-y-4">
             {/* Type Selection */}
             <div className="space-y-2">
               <Label htmlFor="type">Service Type</Label>
@@ -469,10 +637,19 @@ function IntegrationsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {integrationTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
+                    <SelectItem
+                      key={type.value}
+                      value={type.value}
+                      disabled={"disabled" in type && type.disabled}
+                    >
                       <div className="flex items-center gap-2">
                         {type.icon}
                         <span>{type.label}</span>
+                        {"disabled" in type && type.disabled && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            Coming soon
+                          </Badge>
+                        )}
                       </div>
                     </SelectItem>
                   ))}
@@ -524,13 +701,15 @@ function IntegrationsPage() {
                   type="url"
                   value={formData.url}
                   onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder="http://192.168.1.100:7878"
+                  placeholder={integrationHelp[formData.type]?.urlPlaceholder || "http://192.168.1.100:8080"}
                   required
                   className="flex-1"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Click the {formData.url.startsWith("https://") ? <Lock className="h-3 w-3 inline" /> : <Unlock className="h-3 w-3 inline" />} button to toggle between HTTP and HTTPS
+                {integrationHelp[formData.type]?.urlHelp || (
+                  <>Click the {formData.url.startsWith("https://") ? <Lock className="h-3 w-3 inline" /> : <Unlock className="h-3 w-3 inline" />} to toggle HTTP/HTTPS</>
+                )}
               </p>
             </div>
 
@@ -543,7 +722,7 @@ function IntegrationsPage() {
                   type={showApiKey ? "text" : "password"}
                   value={formData.apiKey}
                   onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  placeholder="Enter API key if required"
+                  placeholder={integrationHelp[formData.type]?.apiKeyPlaceholder || "Enter API key"}
                   autoComplete="off"
                   className="pr-10"
                 />
@@ -561,6 +740,11 @@ function IntegrationsPage() {
                   )}
                 </Button>
               </div>
+              {integrationHelp[formData.type]?.apiKeyHelp && (
+                <p className="text-xs text-muted-foreground">
+                  {integrationHelp[formData.type].apiKeyHelp}
+                </p>
+              )}
             </div>
 
             {/* Username/Password for some integrations */}
@@ -568,7 +752,7 @@ function IntegrationsPage() {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="username">
-                    {formData.type === "jellyfin" ? "Jellyfin Username" : "Username"}
+                    {formData.type === "proxmox" ? "API Token ID" : formData.type === "jellyfin" ? "Jellyfin Username" : "Username"}
                   </Label>
                   <Input
                     id="username"
@@ -576,28 +760,30 @@ function IntegrationsPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, username: e.target.value })
                     }
-                    placeholder={formData.type === "jellyfin" ? "Your Jellyfin username" : "admin"}
+                    placeholder={integrationHelp[formData.type]?.usernamePlaceholder || "admin"}
                   />
-                  {formData.type === "jellyfin" && (
+                  {integrationHelp[formData.type]?.usernameHelp && (
                     <p className="text-xs text-muted-foreground">
-                      For Sessions/Now Playing to work, use username/password instead of API key
+                      {integrationHelp[formData.type].usernameHelp}
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    {formData.type === "jellyfin" ? "Jellyfin Password" : "Password"}
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    placeholder="Enter password"
-                  />
-                </div>
+                {formData.type !== "proxmox" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">
+                      {formData.type === "jellyfin" ? "Jellyfin Password" : "Password"}
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      placeholder="Enter password"
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -617,6 +803,28 @@ function IntegrationsPage() {
                 }
               />
             </div>
+
+            {/* Allow Insecure Switch - show for HTTPS URLs */}
+            {formData.url.startsWith("https://") && (
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allowInsecure" className="flex items-center gap-2">
+                    <ShieldOff className="h-4 w-4 text-yellow-500" />
+                    Allow Insecure
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Accept self-signed or invalid SSL certificates
+                  </p>
+                </div>
+                <Switch
+                  id="allowInsecure"
+                  checked={formData.allowInsecure}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, allowInsecure: checked })
+                  }
+                />
+              </div>
+            )}
 
             <DialogFooter>
               <Button
@@ -643,7 +851,9 @@ function IntegrationsPage() {
                   : "Add Integration"}
               </Button>
             </DialogFooter>
-          </form>
+              </form>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </main>

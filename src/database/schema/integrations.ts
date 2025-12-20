@@ -12,6 +12,7 @@ export const integrationTypeEnum = pgEnum("integration_type", [
   "proxmox",
   "portainer",
   "glances",
+  "truenas",
 ]);
 
 export const integrations = pgTable("integrations", {
@@ -23,6 +24,7 @@ export const integrations = pgTable("integrations", {
   username: text("username"),
   password: text("password"),
   enabled: boolean("enabled").default(true),
+  allowInsecure: boolean("allow_insecure").default(false),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
