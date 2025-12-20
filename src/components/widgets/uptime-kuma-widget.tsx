@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -166,12 +165,12 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
     if (!heartbeats || heartbeats.length === 0) return null;
 
     return (
-      <div className="flex items-center gap-0.5 h-3" title="Recent heartbeats">
+      <div className="flex items-center gap-px h-4 flex-1" title="Recent heartbeats">
         {heartbeats.map((hb, i) => (
           <div
             key={i}
             className={cn(
-              "w-1 h-full rounded-sm transition-all",
+              "flex-1 h-full rounded-[2px] min-w-[3px] max-w-[6px] transition-all",
               hb.status === 1 && "bg-green-500",
               hb.status === 0 && "bg-red-500",
               hb.status === 2 && "bg-yellow-500",
@@ -324,25 +323,36 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
                         {getStatusBadge(monitor.status)}
                       </div>
                     </div>
-                    {/* Heartbeat Graph */}
+                    {/* Heartbeat Graph with Uptime */}
                     {showHeartbeatGraph && monitor.recentHeartbeats && monitor.recentHeartbeats.length > 0 && (
-                      <div className="mt-1.5">
+                      <div className="mt-1.5 flex items-center gap-2">
                         <HeartbeatGraph heartbeats={monitor.recentHeartbeats} />
+                        {monitor.uptime !== undefined && monitor.uptime > 0 && (
+                          <span
+                            className={cn(
+                              "text-xs font-medium min-w-[45px] text-right",
+                              monitor.uptime >= 99 && "text-green-500",
+                              monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
+                              monitor.uptime < 95 && "text-red-500"
+                            )}
+                          >
+                            {monitor.uptime.toFixed(1)}%
+                          </span>
+                        )}
                       </div>
                     )}
-                    {monitor.uptime !== undefined && monitor.uptime > 0 && (
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <Progress
-                          value={monitor.uptime}
+                    {/* Show uptime percentage without heartbeats if graph disabled but uptime exists */}
+                    {!showHeartbeatGraph && monitor.uptime !== undefined && monitor.uptime > 0 && (
+                      <div className="mt-1.5 flex items-center justify-end">
+                        <span
                           className={cn(
-                            "h-1.5 flex-1",
-                            monitor.uptime >= 99 && "[&>div]:bg-green-500",
-                            monitor.uptime >= 95 && monitor.uptime < 99 && "[&>div]:bg-yellow-500",
-                            monitor.uptime < 95 && "[&>div]:bg-red-500"
+                            "text-xs font-medium",
+                            monitor.uptime >= 99 && "text-green-500",
+                            monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
+                            monitor.uptime < 95 && "text-red-500"
                           )}
-                        />
-                        <span className="text-xs text-muted-foreground min-w-[45px] text-right">
-                          {monitor.uptime.toFixed(1)}%
+                        >
+                          {monitor.uptime.toFixed(1)}% uptime
                         </span>
                       </div>
                     )}

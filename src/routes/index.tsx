@@ -201,27 +201,29 @@ function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-2">
           {/* Refresh health button */}
           <Button
             variant="outline"
             size="icon"
+            className="h-11 w-11 sm:h-9 sm:w-9"
             onClick={() => refreshHealth()}
             disabled={isHealthLoading}
             title="Refresh health status"
           >
-            <Activity className={`h-4 w-4 ${isHealthLoading ? "animate-pulse" : ""}`} />
+            <Activity className={`h-5 w-5 sm:h-4 sm:w-4 ${isHealthLoading ? "animate-pulse" : ""}`} />
           </Button>
 
           {/* Refresh apps button */}
           <Button
             variant="outline"
             size="icon"
+            className="h-11 w-11 sm:h-9 sm:w-9"
             onClick={() => refetchApps()}
             disabled={isAppsLoading}
             title="Refresh apps"
           >
-            <RefreshCw className={`h-4 w-4 ${isAppsLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-5 w-5 sm:h-4 sm:w-4 ${isAppsLoading ? "animate-spin" : ""}`} />
           </Button>
 
           {/* View toggle */}
@@ -229,18 +231,18 @@ function DashboardPage() {
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="icon"
-              className="rounded-r-none"
+              className="rounded-r-none h-11 w-11 sm:h-9 sm:w-9"
               onClick={() => setViewMode("grid")}
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="h-5 w-5 sm:h-4 sm:w-4" />
             </Button>
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="icon"
-              className="rounded-l-none"
+              className="rounded-l-none h-11 w-11 sm:h-9 sm:w-9"
               onClick={() => setViewMode("list")}
             >
-              <List className="h-4 w-4" />
+              <List className="h-5 w-5 sm:h-4 sm:w-4" />
             </Button>
           </div>
 
@@ -248,11 +250,11 @@ function DashboardPage() {
           <Button
             variant={groupByCategory ? "secondary" : "outline"}
             size="icon"
-            className="sm:hidden"
+            className="sm:hidden h-11 w-11"
             onClick={() => setGroupByCategory(!groupByCategory)}
             title="Group by Category"
           >
-            <Settings2 className="h-4 w-4" />
+            <Settings2 className="h-5 w-5" />
           </Button>
           <Button
             variant={groupByCategory ? "secondary" : "outline"}
@@ -268,11 +270,11 @@ function DashboardPage() {
           <Button
             variant="outline"
             size="icon"
-            className="sm:hidden"
+            className="sm:hidden h-11 w-11"
             onClick={() => setDiscoveryOpen(true)}
             title="Discover Services"
           >
-            <Radar className="h-4 w-4" />
+            <Radar className="h-5 w-5" />
           </Button>
           <Button
             variant="outline"
@@ -284,8 +286,8 @@ function DashboardPage() {
           </Button>
 
           {/* Add app button */}
-          <Button size="icon" className="sm:hidden" onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4" />
+          <Button size="icon" className="sm:hidden h-11 w-11" onClick={() => setFormOpen(true)}>
+            <Plus className="h-5 w-5" />
           </Button>
           <Button className="hidden sm:flex" onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

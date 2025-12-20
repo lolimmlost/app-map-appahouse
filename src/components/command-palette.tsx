@@ -158,7 +158,7 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden"
+        className="md:hidden h-10 w-10"
         onClick={() => setOpen(true)}
       >
         <Search className="h-5 w-5" />

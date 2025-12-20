@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { AppCard, type HealthStatus } from "./app-card";
+import { SwipeableCard } from "./swipeable-card";
 import type { App, Tag } from "@/database/schema/apps";
 import type { Category } from "@/database/schema/categories";
 import { cn } from "@/lib/utils";
@@ -114,17 +115,23 @@ export function AppGrid({
           )}
           <div className={gridClasses}>
             {group.apps.map((app) => (
-              <AppCard
+              <SwipeableCard
                 key={app.id}
-                app={app}
-                healthStatus={healthStatuses[app.id] ?? "unknown"}
-                healthBarStyle={healthBarStyle}
-                viewMode={viewMode}
-                onEdit={onEditApp}
-                onDelete={onDeleteApp}
-                onViewNotes={onViewNotes}
-                onPin={onPinApp}
-              />
+                onDelete={onDeleteApp ? () => onDeleteApp(app) : undefined}
+                onPin={onPinApp ? () => onPinApp(app, !app.pinned) : undefined}
+                isPinned={app.pinned ?? false}
+              >
+                <AppCard
+                  app={app}
+                  healthStatus={healthStatuses[app.id] ?? "unknown"}
+                  healthBarStyle={healthBarStyle}
+                  viewMode={viewMode}
+                  onEdit={onEditApp}
+                  onDelete={onDeleteApp}
+                  onViewNotes={onViewNotes}
+                  onPin={onPinApp}
+                />
+              </SwipeableCard>
             ))}
           </div>
         </div>

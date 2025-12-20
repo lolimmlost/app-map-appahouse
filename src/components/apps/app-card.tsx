@@ -228,31 +228,31 @@ export function AppCard({
           )}
           onClick={handleOpenApp}
         >
-      <CardContent className={cn("p-4", viewMode === "list" && "p-3")}>
+      <CardContent className={cn("p-4 sm:p-4 p-5", viewMode === "list" && "p-3 sm:p-3 p-4")}>
         <div className={cn(
-          "flex items-start gap-3",
+          "flex items-start gap-3 sm:gap-3 gap-4",
           viewMode === "list" && "items-center"
         )}>
           {/* App Icon */}
           <div className="relative flex-shrink-0">
             <div className={cn(
               "flex items-center justify-center rounded-lg bg-muted",
-              viewMode === "list" ? "h-10 w-10" : "h-12 w-12"
+              viewMode === "list" ? "h-12 w-12 sm:h-10 sm:w-10" : "h-14 w-14 sm:h-12 sm:w-12"
             )}>
               {app.icon ? (
                 app.icon.startsWith("http") ? (
                   <img
                     src={app.icon}
                     alt={app.name}
-                    className={cn(viewMode === "list" ? "h-6 w-6" : "h-8 w-8", "object-contain")}
+                    className={cn(viewMode === "list" ? "h-7 w-7 sm:h-6 sm:w-6" : "h-9 w-9 sm:h-8 sm:w-8", "object-contain")}
                   />
                 ) : (
-                  <span className={cn(viewMode === "list" ? "text-xl" : "text-2xl")}>{app.icon}</span>
+                  <span className={cn(viewMode === "list" ? "text-2xl sm:text-xl" : "text-3xl sm:text-2xl")}>{app.icon}</span>
                 )
               ) : (
                 <span className={cn(
                   "font-semibold text-muted-foreground",
-                  viewMode === "list" ? "text-base" : "text-lg"
+                  viewMode === "list" ? "text-lg sm:text-base" : "text-xl sm:text-lg"
                 )}>
                   {app.name.charAt(0).toUpperCase()}
                 </span>
@@ -298,24 +298,24 @@ export function AppCard({
             )}
             {/* URL quick access in list view */}
             {hasBothUrls && viewMode === "list" && (
-              <div className="flex items-center gap-1 ml-auto">
+              <div className="flex items-center gap-2 sm:gap-1 ml-auto">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-10 w-10 sm:h-7 sm:w-7"
                   onClick={(e) => handleOpenUrl(e, "local")}
                   title="Open Local"
                 >
-                  <Home className="h-4 w-4" />
+                  <Home className="h-5 w-5 sm:h-4 sm:w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-10 w-10 sm:h-7 sm:w-7"
                   onClick={(e) => handleOpenUrl(e, "remote")}
                   title="Open Remote"
                 >
-                  <Globe className="h-4 w-4" />
+                  <Globe className="h-5 w-5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             )}
@@ -330,23 +330,23 @@ export function AppCard({
             )}
             {/* URL quick access buttons - show when both URLs available */}
             {hasBothUrls && viewMode === "grid" && (
-              <div className="mt-2 flex items-center gap-1">
+              <div className="mt-3 sm:mt-2 flex items-center gap-2 sm:gap-1">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-9 sm:h-7 px-3 sm:px-2 text-sm sm:text-xs"
                   onClick={(e) => handleOpenUrl(e, "local")}
                 >
-                  <Home className="h-3 w-3 mr-1" />
+                  <Home className="h-4 w-4 sm:h-3 sm:w-3 mr-1.5 sm:mr-1" />
                   Local
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-9 sm:h-7 px-3 sm:px-2 text-sm sm:text-xs"
                   onClick={(e) => handleOpenUrl(e, "remote")}
                 >
-                  <Globe className="h-3 w-3 mr-1" />
+                  <Globe className="h-4 w-4 sm:h-3 sm:w-3 mr-1.5 sm:mr-1" />
                   Remote
                 </Button>
               </div>
@@ -360,11 +360,11 @@ export function AppCard({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-8 w-8 transition-opacity",
-                  viewMode === "list" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  "h-10 w-10 sm:h-8 sm:w-8 transition-opacity",
+                  viewMode === "list" ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                 )}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical className="h-5 w-5 sm:h-4 sm:w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>

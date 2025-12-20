@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserButton } from "@daveyplate/better-auth-ui";
 import { Link } from "@tanstack/react-router";
-import { Map, Settings, Tags, Layers, Menu, Plug } from "lucide-react";
+import { Map, Settings, Tags, Layers, Menu, Plug, LayoutGrid } from "lucide-react";
 import { ModeToggle } from "./mode-toggle";
 import { Button } from "./ui/button";
 import { CommandPalette } from "./command-palette";
@@ -18,6 +18,7 @@ export function Header() {
 
   const navItems = [
     { to: "/", icon: Layers, label: "Dashboard" },
+    { to: "/apps", icon: LayoutGrid, label: "Apps" },
     { to: "/categories", icon: Tags, label: "Categories" },
     { to: "/integrations", icon: Plug, label: "Integrations" },
     { to: "/settings", icon: Settings, label: "Settings" },
@@ -28,13 +29,13 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-12 justify-between border-b bg-background/60 px-safe-or-4 backdrop-blur md:h-14 md:px-safe-or-6">
+    <header className="sticky top-0 z-50 flex h-14 justify-between border-b bg-background/60 px-safe-or-4 backdrop-blur md:h-14 md:px-safe-or-6">
       <div className="flex items-center gap-4 md:gap-6">
         {/* Mobile hamburger menu */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="md:hidden h-11 w-11">
+              <Menu className="h-6 w-6" />
               <span className="sr-only">Open menu</span>
             </Button>
           </SheetTrigger>
@@ -45,13 +46,13 @@ export function Header() {
                 App Map
               </SheetTitle>
             </SheetHeader>
-            <nav className="mt-6 flex flex-col gap-1">
+            <nav className="mt-6 flex flex-col gap-2">
               {navItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
                   onClick={handleNavClick}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent"
                 >
                   <item.icon className="h-5 w-5" />
                   {item.label}
@@ -79,7 +80,7 @@ export function Header() {
         </nav>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 sm:gap-2">
         <CommandPalette />
         <ModeToggle />
         <UserButton size="icon" />

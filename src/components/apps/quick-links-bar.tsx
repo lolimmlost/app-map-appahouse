@@ -68,7 +68,7 @@ export function QuickLinksBar({
   };
 
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
+    <div className={cn("flex flex-wrap gap-2 sm:gap-2 gap-3", className)}>
       {apps.map((app) => {
         const hasLocalUrl = !!app.localUrl?.trim();
         const hasRemoteUrl = !!app.remoteUrl?.trim();
@@ -82,7 +82,7 @@ export function QuickLinksBar({
           <div
             key={app.id}
             className={cn(
-              "relative flex items-center gap-0.5 rounded-lg border bg-card p-1 shadow-sm",
+              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-lg border bg-card p-1 sm:p-1 p-1.5 shadow-sm",
               healthBarStyle === "border" && healthStatus && [
                 "border-2",
                 healthBorderColors[healthStatus]
@@ -93,17 +93,17 @@ export function QuickLinksBar({
             {healthBarStyle === "dot" && healthStatus && (
               <div
                 className={cn(
-                  "absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border border-background",
+                  "absolute -right-1 -top-1 h-2.5 w-2.5 sm:h-2.5 sm:w-2.5 h-3 w-3 rounded-full border border-background",
                   healthColors[healthStatus]
                 )}
               />
             )}
 
-            {/* App icon/name button */}
+            {/* App icon/name button - larger touch target on mobile */}
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 gap-1.5"
+              className="h-10 sm:h-8 px-2.5 sm:px-2 gap-2 sm:gap-1.5"
               onClick={() => handleOpenUrl(primaryUrl)}
               title={app.name}
             >
@@ -112,42 +112,42 @@ export function QuickLinksBar({
                   <img
                     src={app.icon}
                     alt={app.name}
-                    className="h-4 w-4 object-contain"
+                    className="h-5 w-5 sm:h-4 sm:w-4 object-contain"
                   />
                 ) : (
-                  <span className="text-sm">{app.icon}</span>
+                  <span className="text-base sm:text-sm">{app.icon}</span>
                 )
               ) : (
-                <span className="h-4 w-4 flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted rounded">
+                <span className="h-5 w-5 sm:h-4 sm:w-4 flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted rounded">
                   {app.name.charAt(0).toUpperCase()}
                 </span>
               )}
-              <span className="text-xs font-medium max-w-[80px] truncate">
+              <span className="text-sm sm:text-xs font-medium max-w-[100px] sm:max-w-[80px] truncate">
                 {app.name}
               </span>
             </Button>
 
-            {/* Show separate buttons when both URLs available */}
+            {/* Show separate buttons when both URLs available - larger on mobile */}
             {hasBothUrls && (
               <>
-                <div className="h-4 w-px bg-border" />
+                <div className="h-5 sm:h-4 w-px bg-border" />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-9 w-9 sm:h-7 sm:w-7"
                   onClick={() => handleOpenUrl(app.localUrl)}
                   title="Local"
                 >
-                  <Home className="h-3.5 w-3.5" />
+                  <Home className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-9 w-9 sm:h-7 sm:w-7"
                   onClick={() => handleOpenUrl(app.remoteUrl)}
                   title="Remote"
                 >
-                  <Globe className="h-3.5 w-3.5" />
+                  <Globe className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 </Button>
               </>
             )}
