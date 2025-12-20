@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import { db } from "@/database/db";
 import { apps, appTags, type NewApp } from "@/database/schema";
 import { auth } from "@/lib/auth";
+import { getIconUrl } from "./icons";
 
 async function getSession() {
   const request = getRequest();
@@ -187,3 +188,112 @@ export const getPinnedApps = createServerFn({ method: "GET" }).handler(async () 
 
   return { apps: pinnedApps };
 });
+
+// Bulk delete apps
+export const bulkDeleteApps = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { ids: string[] } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const { ids } = ctx.data;
+    if (!ids.length) return { deleted: 0 };
+
+    // First delete app tags
+    await db.delete(appTags).where(inArray(appTags.appId, ids));
+
+    // Then delete apps (only those belonging to this user)
+    const result = await db
+      .delete(apps)
+      .where(and(inArray(apps.id, ids), eq(apps.userId, session.user.id)));
+
+    return { deleted: ids.length };
+  }
+);
+
+// Bulk update category
+export const bulkUpdateCategory = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { ids: string[]; categoryId: string | null } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const { ids, categoryId } = ctx.data;
+    if (!ids.length) return { updated: 0 };
+
+    await db
+      .update(apps)
+      .set({ categoryId, updatedAt: new Date() })
+      .where(and(inArray(apps.id, ids), eq(apps.userId, session.user.id)));
+
+    return { updated: ids.length };
+  }
+);
+
+// Bulk toggle health check
+export const bulkToggleHealthCheck = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { ids: string[]; enabled: boolean } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const { ids, enabled } = ctx.data;
+    if (!ids.length) return { updated: 0 };
+
+    await db
+      .update(apps)
+      .set({ healthCheckEnabled: enabled, updatedAt: new Date() })
+      .where(and(inArray(apps.id, ids), eq(apps.userId, session.user.id)));
+
+    return { updated: ids.length };
+  }
+);
+
+// Refresh icons for apps (detect icons based on name)
+export const refreshAppIcons = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { ids: string[] } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const { ids } = ctx.data;
+    if (!ids.length) return { updated: 0, icons: [] };
+
+    // Get the apps to refresh
+    const appsToRefresh = await db.query.apps.findMany({
+      where: and(inArray(apps.id, ids), eq(apps.userId, session.user.id)),
+    });
+
+    const updatedIcons: { id: string; name: string; icon: string | null }[] = [];
+
+    for (const app of appsToRefresh) {
+      const iconUrl = getIconUrl(app.name);
+      if (iconUrl) {
+        await db
+          .update(apps)
+          .set({ icon: iconUrl, updatedAt: new Date() })
+          .where(eq(apps.id, app.id));
+        updatedIcons.push({ id: app.id, name: app.name, icon: iconUrl });
+      }
+    }
+
+    return { updated: updatedIcons.length, icons: updatedIcons };
+  }
+);
+
+// Update app sort order (for drag and drop reordering)
+export const updateAppOrder = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { orderedIds: string[] } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const { orderedIds } = ctx.data;
+    if (!orderedIds.length) return { updated: 0 };
+
+    // Update each app's sortOrder based on its position in the array
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(apps)
+        .set({ sortOrder: i, updatedAt: new Date() })
+        .where(and(eq(apps.id, orderedIds[i]), eq(apps.userId, session.user.id)));
+    }
+
+    return { updated: orderedIds.length };
+  }
+);

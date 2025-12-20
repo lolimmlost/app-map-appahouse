@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar } from "lucide-react";
+import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
-import { AppGrid, AppForm, AppNotesDialog, QuickLinksBar, type AppFormData } from "@/components/apps";
+import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, type AppFormData } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
 import { ServiceDiscoveryDialog } from "@/components/discovery";
-import { getApps, createApp, updateApp, deleteApp, pinApp } from "@/lib/server/apps";
+import { getApps, createApp, updateApp, deleteApp, pinApp, updateAppOrder } from "@/lib/server/apps";
 import { getCategories } from "@/lib/server/categories";
 import { getTags } from "@/lib/server/tags";
 import { getUserSettings } from "@/lib/server/user-settings";
@@ -26,6 +26,7 @@ function DashboardPage() {
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [groupByCategory, setGroupByCategory] = useState(true);
+  const [reorderMode, setReorderMode] = useState(false);
 
   // Health status polling
   const { healthStatuses, isLoading: isHealthLoading, refreshHealth } = useHealthStatus(
@@ -134,6 +135,15 @@ function DashboardPage() {
     },
   });
 
+  // Reorder apps mutation
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) =>
+      updateAppOrder({ data: { orderedIds } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["apps"] });
+    },
+  });
+
   const handleSubmit = (data: AppFormData) => {
     if (editingApp) {
       updateMutation.mutate({ id: editingApp.id, data });
@@ -159,6 +169,18 @@ function DashboardPage() {
 
   const handlePin = (app: App, pinned: boolean) => {
     pinMutation.mutate({ id: app.id, pinned });
+  };
+
+  const handleReorder = (orderedIds: string[]) => {
+    reorderMutation.mutate(orderedIds);
+  };
+
+  const toggleReorderMode = () => {
+    if (!reorderMode) {
+      // Entering reorder mode - disable grouping
+      setGroupByCategory(false);
+    }
+    setReorderMode(!reorderMode);
   };
 
   const handleCloseForm = (open: boolean) => {
@@ -246,12 +268,33 @@ function DashboardPage() {
             </Button>
           </div>
 
+          {/* Reorder toggle */}
+          <Button
+            variant={reorderMode ? "secondary" : "outline"}
+            size="icon"
+            className="sm:hidden h-11 w-11"
+            onClick={toggleReorderMode}
+            title={reorderMode ? "Exit Reorder Mode" : "Reorder Apps"}
+          >
+            <GripVertical className="h-5 w-5" />
+          </Button>
+          <Button
+            variant={reorderMode ? "secondary" : "outline"}
+            size="sm"
+            className="hidden sm:flex"
+            onClick={toggleReorderMode}
+          >
+            <GripVertical className="h-4 w-4 mr-2" />
+            {reorderMode ? "Done" : "Reorder"}
+          </Button>
+
           {/* Group toggle */}
           <Button
             variant={groupByCategory ? "secondary" : "outline"}
             size="icon"
             className="sm:hidden h-11 w-11"
             onClick={() => setGroupByCategory(!groupByCategory)}
+            disabled={reorderMode}
             title="Group by Category"
           >
             <Settings2 className="h-5 w-5" />
@@ -261,6 +304,7 @@ function DashboardPage() {
             size="sm"
             className="hidden sm:flex"
             onClick={() => setGroupByCategory(!groupByCategory)}
+            disabled={reorderMode}
           >
             <Settings2 className="h-4 w-4 mr-2" />
             Group by Category
@@ -306,12 +350,31 @@ function DashboardPage() {
       )}
 
       {/* Widgets Section */}
-      <WidgetGrid />
+      <WidgetGrid reorderMode={reorderMode} />
 
       {/* App Grid */}
       {isAppsLoading ? (
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : reorderMode ? (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Drag apps to reorder. Changes are saved automatically.
+          </p>
+          <SortableAppGrid
+            apps={apps.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))}
+            healthStatuses={healthStatuses}
+            healthBarStyle={healthBarStyle}
+            columns={4}
+            viewMode={viewMode}
+            onEditApp={handleEdit}
+            onDeleteApp={handleDelete}
+            onViewNotes={handleViewNotes}
+            onPinApp={handlePin}
+            onReorder={handleReorder}
+            reorderEnabled={true}
+          />
         </div>
       ) : (
         <AppGrid

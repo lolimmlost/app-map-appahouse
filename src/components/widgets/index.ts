@@ -1,5 +1,6 @@
 export { WidgetContainer } from "./widget-container";
 export { WidgetGrid } from "./widget-grid";
+export { TopStatusBar } from "./top-status-bar";
 export { ClockWidget } from "./clock-widget";
 export { WeatherWidget } from "./weather-widget";
 export { SystemStatsWidget } from "./system-stats-widget";

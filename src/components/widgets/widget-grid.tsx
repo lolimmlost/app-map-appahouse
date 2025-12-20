@@ -1,8 +1,28 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +45,7 @@ import { DockerWidget } from "./docker-widget";
 import { TrueNASWidget } from "./truenas-widget";
 import { WeatherWidget } from "./weather-widget";
 import { TopStatusBar } from "./top-status-bar";
-import { getWidgets, createWidget, deleteWidget } from "@/lib/server/widgets";
+import { getWidgets, createWidget, deleteWidget, updateWidgetOrder } from "@/lib/server/widgets";
 import { getIntegrations } from "@/lib/server/integrations";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
 import type { Integration } from "@/database/schema/integrations";
@@ -40,6 +60,59 @@ type WidgetWithIntegration = Widget & {
 
 interface WidgetGridProps {
   onEditWidget?: (widget: Widget) => void;
+  reorderMode?: boolean;
+}
+
+// Sortable widget wrapper
+function SortableWidget({
+  widget,
+  children,
+  reorderMode,
+}: {
+  widget: WidgetWithIntegration;
+  children: React.ReactNode;
+  reorderMode: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widget.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  if (!reorderMode) {
+    return <div>{children}</div>;
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative group/sortable-widget",
+        isDragging && "opacity-50 z-50"
+      )}
+    >
+      {/* Drag handle overlay */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute inset-0 z-10 cursor-grab active:cursor-grabbing flex items-start justify-end p-2 opacity-0 group-hover/sortable-widget:opacity-100 transition-opacity"
+      >
+        <div className="bg-background/90 rounded-md p-1.5 shadow-sm border">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 const WIDGET_TYPES = [
@@ -145,11 +218,24 @@ const WIDGET_TYPES = [
 
 type SelectedWidgetType = typeof WIDGET_TYPES[number] | null;
 
-export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
+export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedWidgetType, setSelectedWidgetType] = useState<SelectedWidgetType>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [localWidgets, setLocalWidgets] = useState<WidgetWithIntegration[]>([]);
   const queryClient = useQueryClient();
   const { data: session } = useAuthenticate();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const { data: widgetsData, isLoading } = useQuery({
     queryKey: ["widgets"],
@@ -165,8 +251,21 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
     staleTime: 30000,
   });
 
-  const widgets = (widgetsData?.widgets || []) as WidgetWithIntegration[];
+  const widgetsFromQuery = (widgetsData?.widgets || []) as WidgetWithIntegration[];
   const integrations = integrationsData?.integrations || [];
+
+  // Keep local state in sync with query data
+  useState(() => {
+    setLocalWidgets(widgetsFromQuery);
+  });
+
+  // Update local widgets when query data changes
+  if (widgetsFromQuery.length !== localWidgets.length ||
+      widgetsFromQuery.some((w, i) => localWidgets[i]?.id !== w.id)) {
+    setLocalWidgets(widgetsFromQuery);
+  }
+
+  const widgets = reorderMode ? localWidgets : widgetsFromQuery;
 
   const createMutation = useMutation({
     mutationFn: (data: { type: Widget["type"]; integrationId?: string }) =>
@@ -191,6 +290,34 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
       queryClient.invalidateQueries({ queryKey: ["widgets"] });
     },
   });
+
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) =>
+      updateWidgetOrder({ data: { orderedIds } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["widgets"] });
+    },
+  });
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (over && active.id !== over.id) {
+      const oldIndex = localWidgets.findIndex((w) => w.id === active.id);
+      const newIndex = localWidgets.findIndex((w) => w.id === over.id);
+
+      const newWidgets = arrayMove(localWidgets, oldIndex, newIndex);
+      setLocalWidgets(newWidgets);
+
+      // Save the new order
+      reorderMutation.mutate(newWidgets.map((w) => w.id));
+    }
+  };
 
   // Don't render if not authenticated - must be AFTER all hooks
   if (!session?.user) {
@@ -284,9 +411,9 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
     return (
       <div className="space-y-4">
         <div className="h-16 bg-muted animate-pulse rounded-lg" />
-        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="break-inside-avoid mb-4 h-40 bg-muted animate-pulse rounded-lg" />
+            <div key={i} className="h-40 bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
       </div>
@@ -414,13 +541,39 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
           No widgets yet. Add one to get started!
         </div>
       ) : gridWidgets.length > 0 ? (
-        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 [column-fill:_balance]">
-          {gridWidgets.map((widget) => (
-            <div key={widget.id} className="break-inside-avoid mb-4">
-              {renderWidget(widget)}
-            </div>
-          ))}
-        </div>
+        reorderMode ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={gridWidgets.map((w) => w.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-max">
+                {gridWidgets.map((widget) => (
+                  <SortableWidget key={widget.id} widget={widget} reorderMode={reorderMode}>
+                    {renderWidget(widget)}
+                  </SortableWidget>
+                ))}
+              </div>
+            </SortableContext>
+            <DragOverlay>
+              {activeId ? (
+                <div className="opacity-90 shadow-xl">
+                  {renderWidget(gridWidgets.find((w) => w.id === activeId)!)}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-max">
+            {gridWidgets.map((widget) => (
+              <SortableWidget key={widget.id} widget={widget} reorderMode={reorderMode}>
+                {renderWidget(widget)}
+              </SortableWidget>
+            ))}
+          </div>
+        )
       ) : null}
     </div>
   );

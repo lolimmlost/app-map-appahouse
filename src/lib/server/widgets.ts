@@ -181,3 +181,24 @@ export const deleteWidget = createServerFn({ method: "POST" }).handler(
     return { success: true };
   }
 );
+
+// Update widget sort order (for drag and drop reordering)
+export const updateWidgetOrder = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { orderedIds: string[] } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const { orderedIds } = ctx.data;
+    if (!orderedIds.length) return { updated: 0 };
+
+    // Update each widget's sortOrder based on its position in the array
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(widgets)
+        .set({ sortOrder: i, updatedAt: new Date() })
+        .where(and(eq(widgets.id, orderedIds[i]), eq(widgets.userId, session.user.id)));
+    }
+
+    return { updated: orderedIds.length };
+  }
+);
