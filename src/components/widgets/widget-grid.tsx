@@ -20,7 +20,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database, GripVertical } from "lucide-react";
+import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database, GripVertical, LayoutGrid, Columns } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -63,18 +63,48 @@ interface WidgetGridProps {
   reorderMode?: boolean;
 }
 
-// For CSS columns layout, we use break-inside-avoid to prevent widgets from breaking across columns
-// The size setting now primarily affects internal layout (2-col grids inside widgets when wider)
+type LayoutMode = "masonry" | "grid";
 
-// Sortable widget wrapper
-function SortableWidget({
+// Get column span classes for grid layout based on widget size
+function getWidgetSizeClasses(size?: "small" | "medium" | "large" | "full"): string {
+  switch (size) {
+    case "full":
+      return "md:col-span-2 lg:col-span-3 xl:col-span-4";
+    case "large":
+      return "md:col-span-2 lg:col-span-3";
+    case "medium":
+      return "md:col-span-2";
+    case "small":
+    default:
+      return "col-span-1";
+  }
+}
+
+// Simple widget wrapper for non-reorder mode
+function WidgetWrapper({
   widget,
   children,
-  reorderMode,
+  layoutMode,
 }: {
   widget: WidgetWithIntegration;
   children: React.ReactNode;
-  reorderMode: boolean;
+  layoutMode: LayoutMode;
+}) {
+  const sizeClasses = layoutMode === "grid" ? getWidgetSizeClasses(widget.config?.size) : "";
+  const layoutClasses = layoutMode === "masonry" ? "break-inside-avoid" : "";
+
+  return <div className={cn(layoutClasses, sizeClasses)}>{children}</div>;
+}
+
+// Sortable widget wrapper for reorder mode
+function SortableWidget({
+  widget,
+  children,
+  layoutMode,
+}: {
+  widget: WidgetWithIntegration;
+  children: React.ReactNode;
+  layoutMode: LayoutMode;
 }) {
   const {
     attributes,
@@ -90,16 +120,17 @@ function SortableWidget({
     transition,
   };
 
-  if (!reorderMode) {
-    return <div className="break-inside-avoid">{children}</div>;
-  }
+  const sizeClasses = layoutMode === "grid" ? getWidgetSizeClasses(widget.config?.size) : "";
+  const layoutClasses = layoutMode === "masonry" ? "break-inside-avoid" : "";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative group/sortable-widget break-inside-avoid",
+        "relative group/sortable-widget",
+        layoutClasses,
+        sizeClasses,
         isDragging && "opacity-50 z-50"
       )}
     >
@@ -226,6 +257,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
   const [selectedWidgetType, setSelectedWidgetType] = useState<SelectedWidgetType>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [localWidgets, setLocalWidgets] = useState<WidgetWithIntegration[]>([]);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("masonry");
   const queryClient = useQueryClient();
   const { data: session } = useAuthenticate();
 
@@ -257,18 +289,20 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
   const widgetsFromQuery = (widgetsData?.widgets || []) as WidgetWithIntegration[];
   const integrations = integrationsData?.integrations || [];
 
-  // Keep local state in sync with query data
-  useState(() => {
-    setLocalWidgets(widgetsFromQuery);
-  });
-
-  // Update local widgets when query data changes
+  // Keep local state in sync with query data (for order tracking during reorder)
+  // Only sync when widget count or IDs change
   if (widgetsFromQuery.length !== localWidgets.length ||
       widgetsFromQuery.some((w, i) => localWidgets[i]?.id !== w.id)) {
     setLocalWidgets(widgetsFromQuery);
   }
 
-  const widgets = reorderMode ? localWidgets : widgetsFromQuery;
+  // In reorder mode, use localWidgets order but with fresh data from query
+  // This ensures we have the drag order but up-to-date config (like size)
+  const widgets = reorderMode
+    ? localWidgets
+        .map(lw => widgetsFromQuery.find(w => w.id === lw.id))
+        .filter((w): w is WidgetWithIntegration => w !== undefined)
+    : widgetsFromQuery;
 
   const createMutation = useMutation({
     mutationFn: (data: { type: Widget["type"]; integrationId?: string }) =>
@@ -456,7 +490,28 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
         {gridWidgets.length > 0 && (
           <h2 className="text-lg font-semibold">Widgets</h2>
         )}
-        <div className={gridWidgets.length === 0 ? "ml-auto" : ""}>
+        <div className={cn("flex items-center gap-2", gridWidgets.length === 0 ? "ml-auto" : "")}>
+          {/* Layout mode toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={layoutMode === "masonry" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setLayoutMode("masonry")}
+              className="rounded-r-none h-8 px-2"
+              title="Masonry layout (compact, no size control)"
+            >
+              <Columns className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={layoutMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setLayoutMode("grid")}
+              className="rounded-l-none h-8 px-2"
+              title="Grid layout (supports widget sizing)"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
           <Dialog open={addDialogOpen} onOpenChange={handleDialogClose}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
@@ -573,9 +628,13 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={gridWidgets.map((w) => w.id)} strategy={rectSortingStrategy}>
-              <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+              <div className={cn(
+                layoutMode === "masonry"
+                  ? "columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
+                  : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start"
+              )}>
                 {gridWidgets.map((widget) => (
-                  <SortableWidget key={widget.id} widget={widget} reorderMode={reorderMode}>
+                  <SortableWidget key={widget.id} widget={widget} layoutMode={layoutMode}>
                     {renderWidget(widget)}
                   </SortableWidget>
                 ))}
@@ -590,11 +649,15 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
             </DragOverlay>
           </DndContext>
         ) : (
-          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+          <div className={cn(
+            layoutMode === "masonry"
+              ? "columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
+              : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start"
+          )}>
             {gridWidgets.map((widget) => (
-              <SortableWidget key={widget.id} widget={widget} reorderMode={reorderMode}>
+              <WidgetWrapper key={widget.id} widget={widget} layoutMode={layoutMode}>
                 {renderWidget(widget)}
-              </SortableWidget>
+              </WidgetWrapper>
             ))}
           </div>
         )

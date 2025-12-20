@@ -1,0 +1,1 @@
+ALTER TABLE "integrations" ADD COLUMN "allow_insecure" boolean DEFAULT false;
