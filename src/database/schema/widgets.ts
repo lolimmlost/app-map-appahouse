@@ -13,6 +13,7 @@ export const widgetTypeEnum = pgEnum("widget_type", [
   "lidarr",
   "jellyfin",
   "docker",
+  "truenas",
   "iframe",
   "bookmarks",
   "notes",
@@ -37,13 +38,21 @@ export type WidgetConfig = {
   // Uptime Kuma widget
   statusPageSlug?: string;
   showOnlyDown?: boolean;
-  // *arr widgets
+  showHeartbeatGraph?: boolean;
+  showIncidents?: boolean;
+  showResponseTime?: boolean;
+  // *arr widgets (Radarr, Sonarr, Lidarr)
   showQueue?: boolean;
   showCalendar?: boolean;
+  showDiskSpace?: boolean;
+  showHealth?: boolean;
+  defaultExpanded?: boolean;
   maxItems?: number;
   // Jellyfin widget
   showNowPlaying?: boolean;
   showRecentlyAdded?: boolean;
+  showLibraryStats?: boolean;
+  showServerInfo?: boolean;
   // Docker widget
   showContainers?: string[];
   showAllContainers?: boolean;
@@ -58,7 +67,15 @@ export type WidgetConfig = {
   showCpu?: boolean;
   showRam?: boolean;
   showDisk?: boolean;
+  showNetwork?: boolean;
+  showTemperatures?: boolean;
+  showProcesses?: boolean;
   diskPaths?: string[];
+  // TrueNAS widget
+  showPools?: boolean;
+  showDisks?: boolean;
+  showApps?: boolean;
+  showNetworkInterfaces?: boolean;
   // Generic
   title?: string;
   refreshInterval?: number;

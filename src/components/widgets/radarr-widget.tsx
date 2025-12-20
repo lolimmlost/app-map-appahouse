@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Film, Download, Calendar, AlertCircle, Settings, ExternalLink } from "lucide-react";
+import { Film, Download, Calendar, AlertCircle, Settings, ExternalLink, ChevronDown, ChevronUp, HardDrive, AlertTriangle, CheckCircle } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { getRadarrMovies, getRadarrQueue, getRadarrCalendar } from "@/lib/server/widget-proxy";
+import { getRadarrMovies, getRadarrQueue, getRadarrCalendar, getRadarrDiskSpace, getRadarrHealth } from "@/lib/server/widget-proxy";
 import { updateWidget } from "@/lib/server/widgets";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
 import type { Integration } from "@/database/schema/integrations";
@@ -57,21 +61,42 @@ type RadarrCalendarItem = {
   hasFile?: boolean;
 };
 
+type DiskSpace = {
+  path: string;
+  label: string;
+  freeSpace: number;
+  totalSpace: number;
+};
+
+type HealthIssue = {
+  source: string;
+  type: string;
+  message: string;
+  wikiUrl?: string;
+};
+
 export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
 
   const config = widget.config || {};
   const integration = widget.integration;
   const showQueue = config.showQueue ?? true;
   const showCalendar = config.showCalendar ?? true;
+  const showDiskSpace = config.showDiskSpace ?? true;
+  const showHealth = config.showHealth ?? true;
   const maxItems = config.maxItems ?? 5;
+  const defaultExpanded = config.defaultExpanded ?? false;
 
   // Settings form state
   const [formTitle, setFormTitle] = useState(config.title || "Radarr");
   const [formShowQueue, setFormShowQueue] = useState(showQueue);
   const [formShowCalendar, setFormShowCalendar] = useState(showCalendar);
+  const [formShowDiskSpace, setFormShowDiskSpace] = useState(showDiskSpace);
+  const [formShowHealth, setFormShowHealth] = useState(showHealth);
   const [formMaxItems, setFormMaxItems] = useState(maxItems);
+  const [formDefaultExpanded, setFormDefaultExpanded] = useState(defaultExpanded);
 
   const updateMutation = useMutation({
     mutationFn: (newConfig: WidgetConfig) =>
@@ -86,6 +111,8 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
       queryClient.invalidateQueries({ queryKey: ["radarr-missing", widget.id] });
       queryClient.invalidateQueries({ queryKey: ["radarr-queue", widget.id] });
       queryClient.invalidateQueries({ queryKey: ["radarr-calendar", widget.id] });
+      queryClient.invalidateQueries({ queryKey: ["radarr-diskspace", widget.id] });
+      queryClient.invalidateQueries({ queryKey: ["radarr-health", widget.id] });
       setSettingsOpen(false);
     },
   });
@@ -96,7 +123,10 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
       title: formTitle,
       showQueue: formShowQueue,
       showCalendar: formShowCalendar,
+      showDiskSpace: formShowDiskSpace,
+      showHealth: formShowHealth,
       maxItems: formMaxItems,
+      defaultExpanded: formDefaultExpanded,
     });
   };
 
@@ -149,15 +179,47 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
     refetchOnWindowFocus: false,
   });
 
-  const isLoading = missingLoading || queueLoading || calendarLoading;
+  // Fetch disk space
+  const { data: diskSpaceData, isLoading: diskSpaceLoading, refetch: refetchDiskSpace } = useQuery({
+    queryKey: ["radarr-diskspace", widget.id, integration?.id],
+    queryFn: async (): Promise<DiskSpace[]> => {
+      if (!integration?.id || !showDiskSpace) return [];
+      return getRadarrDiskSpace({ data: { integrationId: integration.id } });
+    },
+    enabled: !!integration?.id && showDiskSpace,
+    refetchInterval: (config.refreshInterval || 300) * 1000,
+    staleTime: 120000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch health issues
+  const { data: healthData, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
+    queryKey: ["radarr-health", widget.id, integration?.id],
+    queryFn: async (): Promise<HealthIssue[]> => {
+      if (!integration?.id || !showHealth) return [];
+      return getRadarrHealth({ data: { integrationId: integration.id } });
+    },
+    enabled: !!integration?.id && showHealth,
+    refetchInterval: (config.refreshInterval || 300) * 1000,
+    staleTime: 120000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const isLoading = missingLoading || queueLoading || calendarLoading || diskSpaceLoading || healthLoading;
   const missing = missingData || [];
   const queue = queueData || [];
   const calendar = calendarData || [];
+  const diskSpace = diskSpaceData || [];
+  const health = healthData || [];
 
   const handleRefresh = () => {
     refetchMissing();
     if (showQueue) refetchQueue();
     if (showCalendar) refetchCalendar();
+    if (showDiskSpace) refetchDiskSpace();
+    if (showHealth) refetchHealth();
   };
 
   const formatTimeLeft = (timeleft?: string) => {
@@ -242,164 +304,213 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
       >
         {isLoading && !missingData && !queueData && !calendarData ? (
           <div className="space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-8 bg-muted animate-pulse rounded" />
-            ))}
+            <div className="h-8 bg-muted animate-pulse rounded" />
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
+          <Collapsible open={expanded || defaultExpanded} onOpenChange={setExpanded}>
+            {/* Compact Summary - Always Visible */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-sm flex-wrap">
                 <span className="flex items-center gap-1">
                   <AlertCircle className="h-3 w-3 text-yellow-500" />
-                  {missing.length} wanted
+                  <span className="font-medium">{missing.length}</span> wanted
                 </span>
-                {showQueue && queue.length > 0 && (
+                {showQueue && (
                   <span className="flex items-center gap-1">
                     <Download className="h-3 w-3 text-blue-500" />
-                    {queue.length} in queue
+                    <span className="font-medium">{queue.length}</span> queue
+                  </span>
+                )}
+                {showCalendar && calendar.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-purple-500" />
+                    <span className="font-medium">{calendar.length}</span> upcoming
+                  </span>
+                )}
+                {showHealth && (
+                  <span className="flex items-center gap-1">
+                    {health.length > 0 ? (
+                      <>
+                        <AlertTriangle className="h-3 w-3 text-orange-500" />
+                        <span className="font-medium text-orange-500">{health.length}</span>
+                      </>
+                    ) : (
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                    )}
                   </span>
                 )}
               </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                  {expanded || defaultExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
             </div>
 
-            {/* Queue */}
-            {showQueue && queue.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Download className="h-3 w-3" /> Queue
-                </div>
-                {queue.map((item) => {
-                  const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
-                  const timeLeft = formatTimeLeft(item.timeleft);
-                  const quality = item.quality?.quality?.name;
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
-                      onClick={() => item.movie?.id && handleOpenMovie(item.movie.id)}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm truncate block font-medium">
+            {/* Expanded Details */}
+            <CollapsibleContent className="space-y-3 pt-3">
+              {/* Queue */}
+              {showQueue && queue.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Download className="h-3 w-3" /> Queue
+                  </div>
+                  {queue.map((item) => {
+                    const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
+                    const timeLeft = formatTimeLeft(item.timeleft);
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+                        onClick={() => item.movie?.id && handleOpenMovie(item.movie.id)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm truncate flex-1 font-medium">
                             {item.movie?.title || item.title}
                           </span>
-                          {item.movie?.year && (
-                            <span className="text-xs text-muted-foreground">
-                              {item.movie.year}
-                            </span>
-                          )}
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 ml-2">
-                          {quality && (
-                            <Badge variant="outline" className="text-xs">
-                              {quality}
-                            </Badge>
-                          )}
-                        </div>
+                        <Progress value={progress} className="h-1" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={progress} className="h-1.5 flex-1" />
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-fit">
-                          <span>{progress.toFixed(0)}%</span>
-                          {timeLeft && (
-                            <span className="text-muted-foreground">• {timeLeft}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {formatSize(item.size - item.sizeleft)} / {formatSize(item.size)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Wanted/Missing */}
-            {missing.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Wanted
+                    );
+                  })}
                 </div>
-                {missing.map((movie) => (
-                  <div
-                    key={movie.id}
-                    className="flex items-center justify-between p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
-                    onClick={() => handleOpenMovie(movie.id)}
-                  >
-                    <span className="text-sm truncate flex-1 font-medium">{movie.title}</span>
-                    <Badge variant="outline" className="ml-2">
-                      {movie.year}
-                    </Badge>
+              )}
+
+              {/* Wanted/Missing */}
+              {missing.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Wanted
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Calendar */}
-            {showCalendar && calendar.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> Upcoming
-                </div>
-                {calendar.map((movie) => {
-                  const releaseDate = movie.digitalRelease || movie.physicalRelease || movie.inCinemas;
-                  const date = releaseDate ? new Date(releaseDate) : null;
-                  const isToday = date?.toDateString() === new Date().toDateString();
-                  const releaseType = movie.digitalRelease
-                    ? "Digital"
-                    : movie.physicalRelease
-                    ? "Physical"
-                    : "Cinema";
-                  return (
+                  {missing.slice(0, 3).map((movie) => (
                     <div
                       key={movie.id}
-                      className={cn(
-                        "flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-muted/80 transition-colors",
-                        movie.hasFile ? "bg-green-500/10" : "bg-muted/50"
-                      )}
+                      className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
                       onClick={() => handleOpenMovie(movie.id)}
                     >
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm truncate block font-medium">{movie.title}</span>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{movie.year}</span>
-                          <span>•</span>
-                          <span>{releaseType}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-2">
-                        {movie.hasFile && (
-                          <Badge variant="outline" className="border-green-500 text-green-500 text-xs">
-                            Downloaded
-                          </Badge>
+                      <span className="truncate flex-1">{movie.title}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{movie.year}</span>
+                    </div>
+                  ))}
+                  {missing.length > 3 && (
+                    <div className="text-xs text-muted-foreground text-center">
+                      +{missing.length - 3} more
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Calendar */}
+              {showCalendar && calendar.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" /> Upcoming
+                  </div>
+                  {calendar.slice(0, 3).map((movie) => {
+                    const releaseDate = movie.digitalRelease || movie.physicalRelease || movie.inCinemas;
+                    const date = releaseDate ? new Date(releaseDate) : null;
+                    return (
+                      <div
+                        key={movie.id}
+                        className={cn(
+                          "flex items-center justify-between p-1.5 rounded-md cursor-pointer hover:bg-muted/80 transition-colors text-sm",
+                          movie.hasFile ? "bg-green-500/10" : "bg-muted/50"
                         )}
+                        onClick={() => handleOpenMovie(movie.id)}
+                      >
+                        <span className="truncate flex-1">{movie.title}</span>
                         {date && (
-                          <Badge variant={isToday ? "default" : "secondary"}>
-                            {isToday
-                              ? "Today"
-                              : date.toLocaleDateString(undefined, {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                          </Badge>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                          </span>
                         )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Disk Space */}
+              {showDiskSpace && diskSpace.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <HardDrive className="h-3 w-3" /> Disk Space
+                  </div>
+                  {diskSpace.map((disk, idx) => {
+                    const usedSpace = disk.totalSpace - disk.freeSpace;
+                    const usedPercent = disk.totalSpace > 0 ? (usedSpace / disk.totalSpace) * 100 : 0;
+                    const isLow = usedPercent > 90;
+                    const isWarning = usedPercent > 75;
+                    return (
+                      <div key={idx} className="p-2 rounded-md bg-muted/50">
+                        <div className="flex items-center justify-between mb-1 text-sm">
+                          <span className="truncate flex-1">{disk.label || disk.path}</span>
+                          <span className={cn(
+                            "text-xs",
+                            isLow ? "text-red-500" : isWarning ? "text-yellow-500" : "text-muted-foreground"
+                          )}>
+                            {formatSize(disk.freeSpace)} free
+                          </span>
+                        </div>
+                        <Progress
+                          value={usedPercent}
+                          className={cn(
+                            "h-1.5",
+                            isLow ? "[&>div]:bg-red-500" : isWarning ? "[&>div]:bg-yellow-500" : ""
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Health Issues */}
+              {showHealth && health.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> Health Issues
+                  </div>
+                  {health.slice(0, 3).map((issue, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "p-2 rounded-md text-sm",
+                        issue.type === "error" ? "bg-red-500/10" : "bg-yellow-500/10"
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className={cn(
+                          "h-3 w-3 mt-0.5 shrink-0",
+                          issue.type === "error" ? "text-red-500" : "text-yellow-500"
+                        )} />
+                        <span className="text-xs">{issue.message}</span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                  {health.length > 3 && (
+                    <div className="text-xs text-muted-foreground text-center">
+                      +{health.length - 3} more issues
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {/* Empty state */}
-            {missing.length === 0 && queue.length === 0 && calendar.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-2">
-                No movies to display
-              </div>
-            )}
-          </div>
+              {/* Empty state */}
+              {missing.length === 0 && queue.length === 0 && calendar.length === 0 && health.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-2">
+                  All clear!
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         )}
       </WidgetContainer>
 
@@ -460,6 +571,48 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
                 id="radarr-calendar"
                 checked={formShowCalendar}
                 onCheckedChange={setFormShowCalendar}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="radarr-diskspace">Show Disk Space</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display storage usage
+                </p>
+              </div>
+              <Switch
+                id="radarr-diskspace"
+                checked={formShowDiskSpace}
+                onCheckedChange={setFormShowDiskSpace}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="radarr-health">Show Health</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display system health issues
+                </p>
+              </div>
+              <Switch
+                id="radarr-health"
+                checked={formShowHealth}
+                onCheckedChange={setFormShowHealth}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="radarr-expanded">Expanded by Default</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show details without clicking
+                </p>
+              </div>
+              <Switch
+                id="radarr-expanded"
+                checked={formDefaultExpanded}
+                onCheckedChange={setFormDefaultExpanded}
               />
             </div>
           </div>

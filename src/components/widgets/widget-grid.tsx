@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container } from "lucide-react";
+import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,11 +22,16 @@ import { LidarrWidget } from "./lidarr-widget";
 import { JellyfinWidget } from "./jellyfin-widget";
 import { SystemStatsWidget } from "./system-stats-widget";
 import { DockerWidget } from "./docker-widget";
+import { TrueNASWidget } from "./truenas-widget";
 import { WeatherWidget } from "./weather-widget";
+import { TopStatusBar } from "./top-status-bar";
 import { getWidgets, createWidget, deleteWidget } from "@/lib/server/widgets";
 import { getIntegrations } from "@/lib/server/integrations";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
 import type { Integration } from "@/database/schema/integrations";
+
+// Widget types that should appear in the top status bar instead of the grid
+const STATUS_BAR_WIDGET_TYPES = ["clock", "weather"] as const;
 
 type WidgetWithIntegration = Widget & {
   config: WidgetConfig;
@@ -106,6 +111,14 @@ const WIDGET_TYPES = [
     icon: Container,
     requiresIntegration: true,
     integrationType: "docker",
+  },
+  {
+    type: "truenas" as const,
+    name: "TrueNAS",
+    description: "Pool, disk & app status",
+    icon: Database,
+    requiresIntegration: true,
+    integrationType: "truenas",
   },
   {
     type: "bookmarks" as const,
@@ -243,6 +256,8 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
         return <JellyfinWidget key={widget.id} {...commonProps} />;
       case "docker":
         return <DockerWidget key={widget.id} {...commonProps} />;
+      case "truenas":
+        return <TrueNASWidget key={widget.id} {...commonProps} />;
       case "bookmarks":
         return <BookmarksWidget key={widget.id} {...commonProps} />;
       case "iframe":
@@ -254,27 +269,50 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
     }
   };
 
+  // Separate status bar widgets from regular widgets
+  const statusBarWidgets = widgets.filter((w) =>
+    STATUS_BAR_WIDGET_TYPES.includes(w.type as typeof STATUS_BAR_WIDGET_TYPES[number])
+  );
+  const gridWidgets = widgets.filter(
+    (w) => !STATUS_BAR_WIDGET_TYPES.includes(w.type as typeof STATUS_BAR_WIDGET_TYPES[number])
+  );
+
+  const clockWidget = statusBarWidgets.find((w) => w.type === "clock") || null;
+  const weatherWidget = statusBarWidgets.find((w) => w.type === "weather") || null;
+
   if (isLoading) {
     return (
-      <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="break-inside-avoid mb-4 h-40 bg-muted animate-pulse rounded-lg" />
-        ))}
+      <div className="space-y-4">
+        <div className="h-16 bg-muted animate-pulse rounded-lg" />
+        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="break-inside-avoid mb-4 h-40 bg-muted animate-pulse rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Top Status Bar - Clock & Weather */}
+      {(clockWidget || weatherWidget) && (
+        <TopStatusBar clockWidget={clockWidget} weatherWidget={weatherWidget} />
+      )}
+
+      {/* Widgets Section Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Widgets</h2>
-        <Dialog open={addDialogOpen} onOpenChange={handleDialogClose}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Widget
-            </Button>
-          </DialogTrigger>
+        {gridWidgets.length > 0 && (
+          <h2 className="text-lg font-semibold">Widgets</h2>
+        )}
+        <div className={gridWidgets.length === 0 ? "ml-auto" : ""}>
+          <Dialog open={addDialogOpen} onOpenChange={handleDialogClose}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Widget
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             {!selectedWidgetType ? (
               <>
@@ -367,22 +405,23 @@ export function WidgetGrid({ onEditWidget }: WidgetGridProps) {
               </>
             )}
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
-      {widgets.length === 0 ? (
+      {gridWidgets.length === 0 && !clockWidget && !weatherWidget ? (
         <div className="text-center py-8 text-muted-foreground">
           No widgets yet. Add one to get started!
         </div>
-      ) : (
+      ) : gridWidgets.length > 0 ? (
         <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 [column-fill:_balance]">
-          {widgets.map((widget) => (
+          {gridWidgets.map((widget) => (
             <div key={widget.id} className="break-inside-avoid mb-4">
               {renderWidget(widget)}
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

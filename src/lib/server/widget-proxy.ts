@@ -150,6 +150,46 @@ export const getSonarrWanted = createServerFn({ method: "POST" }).handler(
   }
 );
 
+export const getSonarrDiskSpace = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const url = `${integration.url}/api/v3/diskspace?apikey=${integration.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+);
+
+export const getSonarrHealth = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const url = `${integration.url}/api/v3/health?apikey=${integration.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+);
+
 // Radarr-specific endpoints
 export const getRadarrMovies = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
@@ -211,6 +251,46 @@ export const getRadarrCalendar = createServerFn({ method: "POST" }).handler(
   }
 );
 
+export const getRadarrDiskSpace = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const url = `${integration.url}/api/v3/diskspace?apikey=${integration.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+);
+
+export const getRadarrHealth = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const url = `${integration.url}/api/v3/health?apikey=${integration.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+);
+
 // Lidarr-specific endpoints
 export const getLidarrWanted = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; pageSize: number } }) => {
@@ -266,6 +346,46 @@ export const getLidarrCalendar = createServerFn({ method: "POST" }).handler(
     if (!integration) throw new Error("Integration not found");
 
     const url = `${integration.url}/api/v1/calendar?apikey=${integration.apiKey}&start=${ctx.data.start}&end=${ctx.data.end}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+);
+
+export const getLidarrDiskSpace = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const url = `${integration.url}/api/v1/diskspace?apikey=${integration.apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+);
+
+export const getLidarrHealth = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const url = `${integration.url}/api/v1/health?apikey=${integration.apiKey}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
@@ -335,6 +455,33 @@ export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
                 .filter((h: { ping?: number }) => h.ping !== undefined && h.ping !== null)
                 .map((h: { ping: number }) => h.ping);
               monitor.avgPing = pings.length > 0 ? Math.round(pings.reduce((a: number, b: number) => a + b, 0) / pings.length) : null;
+
+              // Include recent heartbeats for the uptime graph (last 30)
+              monitor.recentHeartbeats = heartbeats.slice(-30).map((h: { status: number; ping?: number; time?: string }) => ({
+                status: h.status,
+                ping: h.ping,
+                time: h.time,
+              }));
+
+              // Find recent incidents (transitions from up to down)
+              monitor.incidents = [];
+              for (let i = 1; i < heartbeats.length; i++) {
+                const prev = heartbeats[i - 1];
+                const curr = heartbeats[i];
+                if (prev.status === 1 && curr.status === 0) {
+                  monitor.incidents.push({
+                    time: curr.time,
+                    type: "down",
+                  });
+                } else if (prev.status === 0 && curr.status === 1) {
+                  monitor.incidents.push({
+                    time: curr.time,
+                    type: "recovered",
+                  });
+                }
+              }
+              // Keep only last 5 incidents
+              monitor.incidents = monitor.incidents.slice(-5);
             } else {
               // No heartbeat data - check if monitor already has status from sendInfo
               // Some versions include status directly on the monitor object
@@ -536,6 +683,98 @@ export const getJellyfinLatest = createServerFn({ method: "POST" }).handler(
   }
 );
 
+// Get Jellyfin library statistics
+export const getJellyfinLibraryStats = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const auth = await getJellyfinAccessToken(integration);
+    if (!auth) throw new Error("No authentication configured for Jellyfin");
+
+    const headers = getJellyfinHeaders(auth.token);
+
+    // Fetch item counts by type
+    const fetchCount = async (type: string) => {
+      const url = `${integration.url}/Items/Counts`;
+      const response = await fetch(url, { headers });
+      if (response.ok) {
+        return response.json();
+      }
+      return null;
+    };
+
+    // Get library info
+    const [countsResponse, librariesResponse] = await Promise.all([
+      fetch(`${integration.url}/Items/Counts`, { headers }),
+      fetch(`${integration.url}/Library/VirtualFolders`, { headers }),
+    ]);
+
+    const counts = countsResponse.ok ? await countsResponse.json() : {};
+    const libraries = librariesResponse.ok ? await librariesResponse.json() : [];
+
+    return {
+      movies: counts.MovieCount || 0,
+      series: counts.SeriesCount || 0,
+      episodes: counts.EpisodeCount || 0,
+      music: counts.SongCount || 0,
+      albums: counts.AlbumCount || 0,
+      artists: counts.ArtistCount || 0,
+      books: counts.BookCount || 0,
+      libraries: libraries.map((lib: { Name: string; CollectionType: string; ItemId: string }) => ({
+        name: lib.Name,
+        type: lib.CollectionType,
+        id: lib.ItemId,
+      })),
+    };
+  }
+);
+
+// Get Jellyfin system information
+export const getJellyfinSystemInfo = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const auth = await getJellyfinAccessToken(integration);
+    if (!auth) throw new Error("No authentication configured for Jellyfin");
+
+    const headers = getJellyfinHeaders(auth.token);
+
+    const response = await fetch(`${integration.url}/System/Info`, { headers });
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+    const data = await response.json();
+    return {
+      serverName: data.ServerName,
+      version: data.Version,
+      operatingSystem: data.OperatingSystem,
+      architecture: data.SystemArchitecture,
+      hasUpdateAvailable: data.HasUpdateAvailable,
+      webSocketPortNumber: data.WebSocketPortNumber,
+      canSelfRestart: data.CanSelfRestart,
+      canLaunchWebBrowser: data.CanLaunchWebBrowser,
+      localAddress: data.LocalAddress,
+    };
+  }
+);
+
 // Docker-specific endpoints
 export const getDockerContainers = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; all?: boolean } }) => {
@@ -663,6 +902,346 @@ export const getDockerInfo = createServerFn({ method: "POST" }).handler(
       }
 
       return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+// TrueNAS-specific endpoints
+export type TrueNASApp = {
+  name: string;
+  id: string;
+  state: "RUNNING" | "STOPPED" | "DEPLOYING" | "CRASHED";
+  version: string;
+  human_version?: string;
+  portals?: Record<string, string>;
+  active_workloads?: {
+    containers: number;
+    used_ports: Array<{
+      container_port: number;
+      host_port: number;
+      protocol: string;
+    }>;
+  };
+};
+
+export const getTrueNASApps = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const url = `${integration.url}/api/v2.0/app`;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (integration.apiKey) {
+        headers["Authorization"] = `Bearer ${integration.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data as TrueNASApp[] : [];
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+export const getTrueNASSystemInfo = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const url = `${integration.url}/api/v2.0/system/info`;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (integration.apiKey) {
+        headers["Authorization"] = `Bearer ${integration.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+// TrueNAS Pool status
+export type TrueNASPool = {
+  id: number;
+  name: string;
+  path: string;
+  status: "ONLINE" | "DEGRADED" | "FAULTED" | "OFFLINE" | "REMOVED" | "UNAVAIL";
+  healthy: boolean;
+  is_decrypted: boolean;
+  topology: {
+    data: Array<{
+      type: string;
+      status: string;
+      children: Array<{
+        disk: string;
+        status: string;
+        stats: {
+          read_errors: number;
+          write_errors: number;
+          checksum_errors: number;
+        };
+      }>;
+    }>;
+  };
+  size?: number;
+  allocated?: number;
+  free?: number;
+  scan?: {
+    function: string;
+    state: string;
+    percentage: number;
+    end_time?: { $date: number };
+  };
+};
+
+export const getTrueNASPools = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const url = `${integration.url}/api/v2.0/pool`;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (integration.apiKey) {
+        headers["Authorization"] = `Bearer ${integration.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data as TrueNASPool[] : [];
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+// TrueNAS Disk status
+export type TrueNASDisk = {
+  identifier: string;
+  name: string;
+  serial: string;
+  size: number;
+  type: string;
+  model?: string;
+  rotationrate?: number | null;
+  pool?: string | null;
+  temperature?: number | null;
+  hddstandby?: string;
+  togglesmart?: boolean;
+  smartoptions?: string;
+};
+
+export const getTrueNASDisks = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const url = `${integration.url}/api/v2.0/disk`;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (integration.apiKey) {
+        headers["Authorization"] = `Bearer ${integration.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data as TrueNASDisk[] : [];
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
+    }
+  }
+);
+
+// TrueNAS Network Interfaces
+export type TrueNASInterface = {
+  id: string;
+  name: string;
+  state: {
+    name: string;
+    link_state: "LINK_STATE_UP" | "LINK_STATE_DOWN";
+    active_media_type?: string;
+    active_media_subtype?: string;
+    mtu?: number;
+    aliases?: Array<{
+      address: string;
+      netmask: number;
+      type: string;
+    }>;
+  };
+};
+
+export const getTrueNASInterfaces = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const [integration] = await db
+      .select()
+      .from(integrations)
+      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
+      .limit(1);
+
+    if (!integration) throw new Error("Integration not found");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const url = `${integration.url}/api/v2.0/interface`;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (integration.apiKey) {
+        headers["Authorization"] = `Bearer ${integration.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data as TrueNASInterface[] : [];
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === "AbortError") {

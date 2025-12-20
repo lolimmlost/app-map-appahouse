@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Cpu, HardDrive, MemoryStick, Settings, Server } from "lucide-react";
+import { Cpu, HardDrive, MemoryStick, Settings, Server, Network, Thermometer, Activity } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,9 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
   const showCpu = config.showCpu ?? true;
   const showRam = config.showRam ?? true;
   const showDisk = config.showDisk ?? true;
+  const showNetwork = config.showNetwork ?? false;
+  const showTemperatures = config.showTemperatures ?? false;
+  const showProcesses = config.showProcesses ?? false;
   const refreshInterval = config.refreshInterval ?? 10;
 
   // Settings form state
@@ -72,6 +75,9 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
   const [formShowCpu, setFormShowCpu] = useState(showCpu);
   const [formShowRam, setFormShowRam] = useState(showRam);
   const [formShowDisk, setFormShowDisk] = useState(showDisk);
+  const [formShowNetwork, setFormShowNetwork] = useState(showNetwork);
+  const [formShowTemperatures, setFormShowTemperatures] = useState(showTemperatures);
+  const [formShowProcesses, setFormShowProcesses] = useState(showProcesses);
   const [formRefreshInterval, setFormRefreshInterval] = useState(refreshInterval);
 
   // Fetch system stats
@@ -113,6 +119,9 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
       showCpu: formShowCpu,
       showRam: formShowRam,
       showDisk: formShowDisk,
+      showNetwork: formShowNetwork,
+      showTemperatures: formShowTemperatures,
+      showProcesses: formShowProcesses,
       refreshInterval: formRefreshInterval,
     });
   };
@@ -243,8 +252,83 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
               </div>
             )}
 
+            {/* Network */}
+            {showNetwork && stats.network && stats.network.length > 0 && (
+              <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 text-sm">
+                  <Network className="h-4 w-4 text-muted-foreground" />
+                  <span>Network</span>
+                </div>
+                {stats.network.map((iface) => (
+                  <div
+                    key={iface.name}
+                    className="flex items-center justify-between text-xs bg-muted/30 rounded p-1.5"
+                  >
+                    <span className="font-medium">{iface.name}</span>
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <span>↓ {formatBytes(iface.bytesIn)}</span>
+                      <span>↑ {formatBytes(iface.bytesOut)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Temperatures */}
+            {showTemperatures && stats.temperatures && stats.temperatures.length > 0 && (
+              <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 text-sm">
+                  <Thermometer className="h-4 w-4 text-muted-foreground" />
+                  <span>Temperatures</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {stats.temperatures.map((temp, i) => (
+                    <div
+                      key={`${temp.label}-${i}`}
+                      className={cn(
+                        "text-xs px-2 py-1 rounded",
+                        temp.value >= 80 && "bg-red-500/20 text-red-500",
+                        temp.value >= 60 && temp.value < 80 && "bg-yellow-500/20 text-yellow-500",
+                        temp.value < 60 && "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {temp.label}: {temp.value}°C
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top Processes */}
+            {showProcesses && stats.processes && stats.processes.length > 0 && (
+              <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 text-sm">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <span>Top Processes</span>
+                </div>
+                <div className="space-y-1">
+                  {stats.processes.slice(0, 5).map((proc) => (
+                    <div
+                      key={proc.pid}
+                      className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1"
+                    >
+                      <span className="truncate max-w-[100px] font-medium" title={proc.name}>
+                        {proc.name}
+                      </span>
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <span className={cn(proc.cpu > 50 && "text-yellow-500", proc.cpu > 80 && "text-red-500")}>
+                          CPU: {proc.cpu}%
+                        </span>
+                        <span>MEM: {proc.memory}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* No stats to show */}
-            {!showCpu && !showRam && !showDisk && (
+            {!showCpu && !showRam && !showDisk && !showNetwork && !showTemperatures && !showProcesses && (
               <div className="text-sm text-muted-foreground text-center py-2">
                 No stats enabled. Open settings to configure.
               </div>
@@ -330,6 +414,48 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
                 id="stats-disk"
                 checked={formShowDisk}
                 onCheckedChange={setFormShowDisk}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="stats-network">Show Network</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display network interface I/O
+                </p>
+              </div>
+              <Switch
+                id="stats-network"
+                checked={formShowNetwork}
+                onCheckedChange={setFormShowNetwork}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="stats-temps">Show Temperatures</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display CPU and system temperatures
+                </p>
+              </div>
+              <Switch
+                id="stats-temps"
+                checked={formShowTemperatures}
+                onCheckedChange={setFormShowTemperatures}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="stats-procs">Show Processes</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display top CPU-consuming processes
+                </p>
+              </div>
+              <Switch
+                id="stats-procs"
+                checked={formShowProcesses}
+                onCheckedChange={setFormShowProcesses}
               />
             </div>
           </div>

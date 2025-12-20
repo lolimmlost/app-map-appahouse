@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, CheckCircle, XCircle, AlertCircle, Settings, ExternalLink, Clock } from "lucide-react";
+import { Activity, CheckCircle, XCircle, AlertCircle, Settings, ExternalLink, Clock, AlertTriangle, TrendingUp } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,17 @@ interface UptimeKumaWidgetProps {
   onDelete?: (widget: Widget) => void;
 }
 
+type Heartbeat = {
+  status: number;
+  ping?: number | null;
+  time?: string;
+};
+
+type Incident = {
+  time: string;
+  type: "down" | "recovered";
+};
+
 type Monitor = {
   id: number;
   name: string;
@@ -35,6 +46,8 @@ type Monitor = {
   uptime?: number;
   ping?: number | null;
   avgPing?: number | null;
+  recentHeartbeats?: Heartbeat[];
+  incidents?: Incident[];
 };
 
 type StatusPageData = {
@@ -51,6 +64,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
   const config = widget.config || {};
   const integration = widget.integration;
   const showOnlyDown = config.showOnlyDown ?? false;
+  const showHeartbeatGraph = config.showHeartbeatGraph ?? true;
+  const showIncidents = config.showIncidents ?? true;
+  const showResponseTime = config.showResponseTime ?? true;
   const maxItems = config.maxItems ?? 10;
   const statusPageSlug = config.statusPageSlug || "default";
 
@@ -58,6 +74,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
   const [formTitle, setFormTitle] = useState(config.title || "Uptime Kuma");
   const [formSlug, setFormSlug] = useState(statusPageSlug);
   const [formShowOnlyDown, setFormShowOnlyDown] = useState(showOnlyDown);
+  const [formShowHeartbeatGraph, setFormShowHeartbeatGraph] = useState(showHeartbeatGraph);
+  const [formShowIncidents, setFormShowIncidents] = useState(showIncidents);
+  const [formShowResponseTime, setFormShowResponseTime] = useState(showResponseTime);
   const [formMaxItems, setFormMaxItems] = useState(maxItems);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -99,6 +118,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
       title: formTitle,
       statusPageSlug: formSlug,
       showOnlyDown: formShowOnlyDown,
+      showHeartbeatGraph: formShowHeartbeatGraph,
+      showIncidents: formShowIncidents,
+      showResponseTime: formShowResponseTime,
       maxItems: formMaxItems,
     });
   };
@@ -138,6 +160,49 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
         return <Badge variant="outline" className="border-yellow-500 text-yellow-500 text-xs">Pending</Badge>;
     }
   };
+
+  // Heartbeat graph component - shows mini colored blocks for recent status
+  const HeartbeatGraph = ({ heartbeats }: { heartbeats: Heartbeat[] }) => {
+    if (!heartbeats || heartbeats.length === 0) return null;
+
+    return (
+      <div className="flex items-center gap-0.5 h-3" title="Recent heartbeats">
+        {heartbeats.map((hb, i) => (
+          <div
+            key={i}
+            className={cn(
+              "w-1 h-full rounded-sm transition-all",
+              hb.status === 1 && "bg-green-500",
+              hb.status === 0 && "bg-red-500",
+              hb.status === 2 && "bg-yellow-500",
+              hb.status === 3 && "bg-blue-500"
+            )}
+            title={`${hb.status === 1 ? "Up" : hb.status === 0 ? "Down" : "Pending"}${hb.ping ? ` - ${hb.ping}ms` : ""}`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  // Format relative time for incidents
+  const formatIncidentTime = (timeStr: string) => {
+    const time = new Date(timeStr);
+    const now = new Date();
+    const diffMs = now.getTime() - time.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  // Collect all incidents from all monitors
+  const allIncidents = allMonitors
+    .flatMap((m) => (m.incidents || []).map((inc) => ({ ...inc, monitorName: m.name })))
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .slice(0, 5);
 
   const handleOpenDashboard = () => {
     if (integration?.url) {
@@ -250,8 +315,8 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
                         <span className="text-sm truncate font-medium">{monitor.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {monitor.ping !== null && monitor.ping !== undefined && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
                             <Clock className="h-3 w-3" />
                             {monitor.ping}ms
                           </span>
@@ -259,6 +324,12 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
                         {getStatusBadge(monitor.status)}
                       </div>
                     </div>
+                    {/* Heartbeat Graph */}
+                    {showHeartbeatGraph && monitor.recentHeartbeats && monitor.recentHeartbeats.length > 0 && (
+                      <div className="mt-1.5">
+                        <HeartbeatGraph heartbeats={monitor.recentHeartbeats} />
+                      </div>
+                    )}
                     {monitor.uptime !== undefined && monitor.uptime > 0 && (
                       <div className="mt-1.5 flex items-center gap-2">
                         <Progress
@@ -291,6 +362,38 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
             {filteredMonitors.length > maxItems && (
               <div className="text-xs text-muted-foreground text-center">
                 +{filteredMonitors.length - maxItems} more
+              </div>
+            )}
+
+            {/* Recent Incidents */}
+            {showIncidents && allIncidents.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                  <span className="text-xs font-medium">Recent Incidents</span>
+                </div>
+                <div className="space-y-1">
+                  {allIncidents.map((incident, i) => (
+                    <div
+                      key={`${incident.monitorName}-${incident.time}-${i}`}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {incident.type === "down" ? (
+                          <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                        ) : (
+                          <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
+                        )}
+                        <span className="truncate text-muted-foreground">
+                          {incident.monitorName}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground/70 shrink-0">
+                        {formatIncidentTime(incident.time)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -353,6 +456,48 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
                 id="uk-down-only"
                 checked={formShowOnlyDown}
                 onCheckedChange={setFormShowOnlyDown}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="uk-heartbeat">Heartbeat Graph</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show visual status history per monitor
+                </p>
+              </div>
+              <Switch
+                id="uk-heartbeat"
+                checked={formShowHeartbeatGraph}
+                onCheckedChange={setFormShowHeartbeatGraph}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="uk-incidents">Recent Incidents</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show recent down/recovery events
+                </p>
+              </div>
+              <Switch
+                id="uk-incidents"
+                checked={formShowIncidents}
+                onCheckedChange={setFormShowIncidents}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="uk-response">Response Time</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display ping times for each monitor
+                </p>
+              </div>
+              <Switch
+                id="uk-response"
+                checked={formShowResponseTime}
+                onCheckedChange={setFormShowResponseTime}
               />
             </div>
           </div>
