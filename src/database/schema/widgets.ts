@@ -41,6 +41,7 @@ export type WidgetConfig = {
   showHeartbeatGraph?: boolean;
   showIncidents?: boolean;
   showResponseTime?: boolean;
+  displayMode?: "auto" | "detailed" | "compact";
   // *arr widgets (Radarr, Sonarr, Lidarr)
   showQueue?: boolean;
   showCalendar?: boolean;
@@ -79,6 +80,8 @@ export type WidgetConfig = {
   // Generic
   title?: string;
   refreshInterval?: number;
+  // Layout
+  size?: "small" | "medium" | "large" | "full"; // 1, 2, 3, 4 columns
 };
 
 export const widgets = pgTable("widgets", {

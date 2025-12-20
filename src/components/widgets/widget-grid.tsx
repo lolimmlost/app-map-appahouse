@@ -45,7 +45,7 @@ import { DockerWidget } from "./docker-widget";
 import { TrueNASWidget } from "./truenas-widget";
 import { WeatherWidget } from "./weather-widget";
 import { TopStatusBar } from "./top-status-bar";
-import { getWidgets, createWidget, deleteWidget, updateWidgetOrder } from "@/lib/server/widgets";
+import { getWidgets, createWidget, deleteWidget, updateWidgetOrder, updateWidget } from "@/lib/server/widgets";
 import { getIntegrations } from "@/lib/server/integrations";
 import type { Widget, WidgetConfig } from "@/database/schema/widgets";
 import type { Integration } from "@/database/schema/integrations";
@@ -62,6 +62,9 @@ interface WidgetGridProps {
   onEditWidget?: (widget: Widget) => void;
   reorderMode?: boolean;
 }
+
+// For CSS columns layout, we use break-inside-avoid to prevent widgets from breaking across columns
+// The size setting now primarily affects internal layout (2-col grids inside widgets when wider)
 
 // Sortable widget wrapper
 function SortableWidget({
@@ -88,7 +91,7 @@ function SortableWidget({
   };
 
   if (!reorderMode) {
-    return <div>{children}</div>;
+    return <div className="break-inside-avoid">{children}</div>;
   }
 
   return (
@@ -96,7 +99,7 @@ function SortableWidget({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative group/sortable-widget",
+        "relative group/sortable-widget break-inside-avoid",
         isDragging && "opacity-50 z-50"
       )}
     >
@@ -299,6 +302,22 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
     },
   });
 
+  const resizeMutation = useMutation({
+    mutationFn: ({ id, size }: { id: string; size: "small" | "medium" | "large" | "full" }) =>
+      updateWidget({
+        data: {
+          id,
+          config: {
+            ...widgets.find((w) => w.id === id)?.config,
+            size,
+          },
+        },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["widgets"] });
+    },
+  });
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -357,11 +376,16 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
     }
   };
 
+  const handleResizeWidget = (widget: Widget, size: "small" | "medium" | "large" | "full") => {
+    resizeMutation.mutate({ id: widget.id, size });
+  };
+
   const renderWidget = (widget: WidgetWithIntegration) => {
     const commonProps = {
       widget,
       onEdit: onEditWidget,
       onDelete: handleDeleteWidget,
+      onResize: handleResizeWidget,
     };
 
     switch (widget.type) {
@@ -549,7 +573,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={gridWidgets.map((w) => w.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-max">
+              <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
                 {gridWidgets.map((widget) => (
                   <SortableWidget key={widget.id} widget={widget} reorderMode={reorderMode}>
                     {renderWidget(widget)}
@@ -566,7 +590,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
             </DragOverlay>
           </DndContext>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-max">
+          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
             {gridWidgets.map((widget) => (
               <SortableWidget key={widget.id} widget={widget} reorderMode={reorderMode}>
                 {renderWidget(widget)}

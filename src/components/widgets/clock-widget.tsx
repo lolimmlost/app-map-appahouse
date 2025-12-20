@@ -28,6 +28,7 @@ interface ClockWidgetProps {
   widget: Widget & { config: WidgetConfig };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 const TIMEZONES = [
@@ -56,7 +57,7 @@ const DATE_FORMATS = [
   { value: "none", label: "Hide Date" },
 ];
 
-export function ClockWidget({ widget, onEdit, onDelete }: ClockWidgetProps) {
+export function ClockWidget({ widget, onEdit, onDelete, onResize }: ClockWidgetProps) {
   const [time, setTime] = useState(new Date());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -157,6 +158,7 @@ export function ClockWidget({ widget, onEdit, onDelete }: ClockWidgetProps) {
         icon={<Clock className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <Button
             variant="ghost"

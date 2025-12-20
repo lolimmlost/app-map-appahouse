@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, CheckCircle, XCircle, AlertCircle, Settings, ExternalLink, Clock, AlertTriangle, TrendingUp } from "lucide-react";
+import { Activity, CheckCircle, XCircle, AlertCircle, Settings, ExternalLink, Clock, AlertTriangle, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getUptimeKumaStatus } from "@/lib/server/widget-proxy";
 import { updateWidget } from "@/lib/server/widgets";
@@ -25,6 +37,7 @@ interface UptimeKumaWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type Heartbeat = {
@@ -56,8 +69,10 @@ type StatusPageData = {
   }>;
 };
 
-export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetProps) {
+export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeKumaWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [monitorsExpanded, setMonitorsExpanded] = useState(true);
+  const [incidentsExpanded, setIncidentsExpanded] = useState(true);
   const queryClient = useQueryClient();
 
   const config = widget.config || {};
@@ -68,6 +83,14 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
   const showResponseTime = config.showResponseTime ?? true;
   const maxItems = config.maxItems ?? 10;
   const statusPageSlug = config.statusPageSlug || "default";
+  const widgetSize = config.size || "small";
+
+  // Display mode: "detailed" (full info), "compact" (just icons/names), "auto" (based on size)
+  const displayMode = config.displayMode || "auto";
+
+  // Determine actual display based on mode and size
+  const isCompact = displayMode === "compact" || (displayMode === "auto" && widgetSize === "small");
+  const isWide = widgetSize === "medium" || widgetSize === "large" || widgetSize === "full";
 
   // Settings form state
   const [formTitle, setFormTitle] = useState(config.title || "Uptime Kuma");
@@ -77,6 +100,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
   const [formShowIncidents, setFormShowIncidents] = useState(showIncidents);
   const [formShowResponseTime, setFormShowResponseTime] = useState(showResponseTime);
   const [formMaxItems, setFormMaxItems] = useState(maxItems);
+  const [formDisplayMode, setFormDisplayMode] = useState<"auto" | "detailed" | "compact">(displayMode);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["uptime-kuma", widget.id, integration?.id, statusPageSlug],
@@ -121,6 +145,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
       showIncidents: formShowIncidents,
       showResponseTime: formShowResponseTime,
       maxItems: formMaxItems,
+      displayMode: formDisplayMode,
     });
   };
 
@@ -217,6 +242,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
         icon={<Activity className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
       >
         <div className="text-sm text-muted-foreground text-center py-4">
           No integration configured
@@ -235,6 +261,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
         onRefresh={() => refetch()}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <div className="flex gap-1">
             <Button
@@ -295,116 +322,161 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
             </div>
 
             {/* Monitor List */}
-            {displayMonitors.length > 0 ? (
-              <div className="space-y-1.5">
-                {displayMonitors.map((monitor) => (
-                  <div
-                    key={monitor.id}
-                    className={cn(
-                      "p-2 rounded-md",
-                      monitor.status === 0 && "bg-red-500/10",
-                      monitor.status === 1 && "bg-muted/50",
-                      monitor.status === 2 && "bg-yellow-500/10",
-                      monitor.status === 3 && "bg-blue-500/10"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {getStatusIcon(monitor.status)}
-                        <span className="text-sm truncate font-medium">{monitor.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
-                            <Clock className="h-3 w-3" />
-                            {monitor.ping}ms
-                          </span>
+            <Collapsible open={monitorsExpanded} onOpenChange={setMonitorsExpanded}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Monitors</span>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    {monitorsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent>
+                {displayMonitors.length > 0 ? (
+                  <div className={cn(
+                    "mt-2",
+                    // Use grid layout when wide, single column when narrow
+                    isWide ? "grid grid-cols-2 gap-2" : "space-y-1.5",
+                    // Compact mode uses tighter grid
+                    isCompact && isWide && "grid-cols-3 gap-1.5"
+                  )}>
+                    {displayMonitors.map((monitor) => (
+                      <div
+                        key={monitor.id}
+                        className={cn(
+                          "rounded-md",
+                          isCompact ? "p-1.5" : "p-2",
+                          monitor.status === 0 && "bg-red-500/10",
+                          monitor.status === 1 && "bg-muted/50",
+                          monitor.status === 2 && "bg-yellow-500/10",
+                          monitor.status === 3 && "bg-blue-500/10"
                         )}
-                        {getStatusBadge(monitor.status)}
-                      </div>
-                    </div>
-                    {/* Heartbeat Graph with Uptime */}
-                    {showHeartbeatGraph && monitor.recentHeartbeats && monitor.recentHeartbeats.length > 0 && (
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <HeartbeatGraph heartbeats={monitor.recentHeartbeats} />
-                        {monitor.uptime !== undefined && monitor.uptime > 0 && (
-                          <span
-                            className={cn(
-                              "text-xs font-medium min-w-[45px] text-right",
-                              monitor.uptime >= 99 && "text-green-500",
-                              monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
-                              monitor.uptime < 95 && "text-red-500"
+                      >
+                        {isCompact ? (
+                          // Compact mode: just icon and name
+                          <div className="flex items-center gap-1.5">
+                            {getStatusIcon(monitor.status)}
+                            <span className="text-xs truncate font-medium">{monitor.name}</span>
+                          </div>
+                        ) : (
+                          // Detailed mode
+                          <>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {getStatusIcon(monitor.status)}
+                                <span className="text-sm truncate font-medium">{monitor.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
+                                    <Clock className="h-3 w-3" />
+                                    {monitor.ping}ms
+                                  </span>
+                                )}
+                                {getStatusBadge(monitor.status)}
+                              </div>
+                            </div>
+                            {/* Heartbeat Graph with Uptime */}
+                            {showHeartbeatGraph && monitor.recentHeartbeats && monitor.recentHeartbeats.length > 0 && (
+                              <div className="mt-1.5 flex items-center gap-2">
+                                <HeartbeatGraph heartbeats={monitor.recentHeartbeats} />
+                                {monitor.uptime !== undefined && monitor.uptime > 0 && (
+                                  <span
+                                    className={cn(
+                                      "text-xs font-medium min-w-[45px] text-right",
+                                      monitor.uptime >= 99 && "text-green-500",
+                                      monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
+                                      monitor.uptime < 95 && "text-red-500"
+                                    )}
+                                  >
+                                    {monitor.uptime.toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
                             )}
-                          >
-                            {monitor.uptime.toFixed(1)}%
-                          </span>
+                            {/* Show uptime percentage without heartbeats if graph disabled but uptime exists */}
+                            {!showHeartbeatGraph && monitor.uptime !== undefined && monitor.uptime > 0 && (
+                              <div className="mt-1.5 flex items-center justify-end">
+                                <span
+                                  className={cn(
+                                    "text-xs font-medium",
+                                    monitor.uptime >= 99 && "text-green-500",
+                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
+                                    monitor.uptime < 95 && "text-red-500"
+                                  )}
+                                >
+                                  {monitor.uptime.toFixed(1)}% uptime
+                                </span>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
-                    )}
-                    {/* Show uptime percentage without heartbeats if graph disabled but uptime exists */}
-                    {!showHeartbeatGraph && monitor.uptime !== undefined && monitor.uptime > 0 && (
-                      <div className="mt-1.5 flex items-center justify-end">
-                        <span
-                          className={cn(
-                            "text-xs font-medium",
-                            monitor.uptime >= 99 && "text-green-500",
-                            monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
-                            monitor.uptime < 95 && "text-red-500"
-                          )}
-                        >
-                          {monitor.uptime.toFixed(1)}% uptime
-                        </span>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : showOnlyDown ? (
-              <div className="text-sm text-muted-foreground text-center py-2">
-                All services operational
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-2">
-                No monitors found
-              </div>
-            )}
+                ) : showOnlyDown ? (
+                  <div className="text-sm text-muted-foreground text-center py-2">
+                    All services operational
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-2">
+                    No monitors found
+                  </div>
+                )}
 
-            {filteredMonitors.length > maxItems && (
-              <div className="text-xs text-muted-foreground text-center">
-                +{filteredMonitors.length - maxItems} more
-              </div>
-            )}
+                {filteredMonitors.length > maxItems && (
+                  <div className="text-xs text-muted-foreground text-center mt-2">
+                    +{filteredMonitors.length - maxItems} more
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Recent Incidents */}
             {showIncidents && allIncidents.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                  <span className="text-xs font-medium">Recent Incidents</span>
-                </div>
-                <div className="space-y-1">
-                  {allIncidents.map((incident, i) => (
-                    <div
-                      key={`${incident.monitorName}-${incident.time}-${i}`}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {incident.type === "down" ? (
-                          <XCircle className="h-3 w-3 text-red-500 shrink-0" />
-                        ) : (
-                          <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
-                        )}
-                        <span className="truncate text-muted-foreground">
-                          {incident.monitorName}
-                        </span>
-                      </div>
-                      <span className="text-muted-foreground/70 shrink-0">
-                        {formatIncidentTime(incident.time)}
-                      </span>
+              <Collapsible open={incidentsExpanded} onOpenChange={setIncidentsExpanded}>
+                <div className="mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                      <span className="text-xs font-medium">Recent Incidents</span>
+                      <Badge variant="outline" className="text-xs h-4 px-1">{allIncidents.length}</Badge>
                     </div>
-                  ))}
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        {incidentsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent>
+                    <div className={cn(
+                      "space-y-1 mt-2",
+                      isWide && "grid grid-cols-2 gap-x-4 gap-y-1 space-y-0"
+                    )}>
+                      {allIncidents.map((incident, i) => (
+                        <div
+                          key={`${incident.monitorName}-${incident.time}-${i}`}
+                          className="flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {incident.type === "down" ? (
+                              <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                            ) : (
+                              <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
+                            )}
+                            <span className="truncate text-muted-foreground">
+                              {incident.monitorName}
+                            </span>
+                          </div>
+                          <span className="text-muted-foreground/70 shrink-0">
+                            {formatIncidentTime(incident.time)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
                 </div>
-              </div>
+              </Collapsible>
             )}
           </div>
         )}
@@ -453,6 +525,23 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete }: UptimeKumaWidgetP
                 value={formMaxItems}
                 onChange={(e) => setFormMaxItems(parseInt(e.target.value) || 10)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Display Mode</Label>
+              <Select value={formDisplayMode} onValueChange={(v) => setFormDisplayMode(v as "auto" | "detailed" | "compact")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto (adapts to size)</SelectItem>
+                  <SelectItem value="detailed">Detailed (full info)</SelectItem>
+                  <SelectItem value="compact">Compact (icons only)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Auto: compact when small, detailed when larger
+              </p>
             </div>
 
             <div className="flex items-center justify-between">

@@ -11,9 +11,10 @@ interface NotesWidgetProps {
   widget: Widget & { config: WidgetConfig };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
-export function NotesWidget({ widget, onEdit, onDelete }: NotesWidgetProps) {
+export function NotesWidget({ widget, onEdit, onDelete, onResize }: NotesWidgetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(widget.config?.content || "");
   const queryClient = useQueryClient();
@@ -50,6 +51,7 @@ export function NotesWidget({ widget, onEdit, onDelete }: NotesWidgetProps) {
       icon={<StickyNote className="h-4 w-4" />}
       onEdit={onEdit}
       onDelete={onDelete}
+      onResize={onResize}
       headerActions={
         !isEditing ? (
           <Button

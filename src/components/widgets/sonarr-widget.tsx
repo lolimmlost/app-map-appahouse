@@ -30,6 +30,7 @@ interface SonarrWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type SonarrQueueItem = {
@@ -68,7 +69,7 @@ type HealthIssue = {
   wikiUrl?: string;
 };
 
-export function SonarrWidget({ widget, onEdit, onDelete }: SonarrWidgetProps) {
+export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
@@ -81,6 +82,8 @@ export function SonarrWidget({ widget, onEdit, onDelete }: SonarrWidgetProps) {
   const showHealth = config.showHealth ?? true;
   const maxItems = config.maxItems ?? 5;
   const defaultExpanded = config.defaultExpanded ?? false;
+  const widgetSize = config.size || "small";
+  const isWide = widgetSize === "medium" || widgetSize === "large" || widgetSize === "full";
 
   // Settings form state
   const [formTitle, setFormTitle] = useState(config.title || "Sonarr");
@@ -260,6 +263,7 @@ export function SonarrWidget({ widget, onEdit, onDelete }: SonarrWidgetProps) {
         icon={<Tv className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
       >
         <div className="text-sm text-muted-foreground text-center py-4">
           No Sonarr integration configured
@@ -278,6 +282,7 @@ export function SonarrWidget({ widget, onEdit, onDelete }: SonarrWidgetProps) {
         onRefresh={handleRefresh}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <div className="flex gap-1">
             <Button
@@ -350,99 +355,107 @@ export function SonarrWidget({ widget, onEdit, onDelete }: SonarrWidgetProps) {
             </div>
 
             {/* Expanded Details */}
-            <CollapsibleContent className="space-y-3 pt-3">
-              {/* Queue */}
-              {showQueue && queue.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Download className="h-3 w-3" /> Queue
-                  </div>
-                  {queue.map((item) => {
-                    const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
-                    const timeLeft = formatTimeLeft(item.timeleft);
-                    return (
-                      <div
-                        key={item.id}
-                        className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => handleOpenSeries(item.series.id)}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm truncate block font-medium">{item.series?.title}</span>
-                            {item.episode && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatEpisode(item.episode.seasonNumber, item.episode.episodeNumber)}
-                              </span>
-                            )}
+            <CollapsibleContent className={cn(
+              "pt-3",
+              isWide ? "grid grid-cols-2 gap-4" : "space-y-3"
+            )}>
+              {/* Left column when wide: Queue + Missing */}
+              <div className={cn(isWide ? "space-y-3" : "contents")}>
+                {/* Queue */}
+                {showQueue && queue.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Download className="h-3 w-3" /> Queue
+                    </div>
+                    {queue.map((item) => {
+                      const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
+                      const timeLeft = formatTimeLeft(item.timeleft);
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => handleOpenSeries(item.series.id)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm truncate block font-medium">{item.series?.title}</span>
+                              {item.episode && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatEpisode(item.episode.seasonNumber, item.episode.episodeNumber)}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
-                          </span>
+                          <Progress value={progress} className="h-1" />
                         </div>
-                        <Progress value={progress} className="h-1" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Upcoming Episodes */}
-              {showCalendar && calendar.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> Upcoming
+                      );
+                    })}
                   </div>
-                  {calendar.slice(0, 3).map((ep) => {
-                    const airDate = new Date(ep.airDateUtc);
-                    return (
+                )}
+
+                {/* Missing Episodes */}
+                {wanted.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Missing
+                    </div>
+                    {wanted.slice(0, isWide ? 5 : 3).map((ep: SonarrCalendarItem) => (
                       <div
                         key={ep.id}
-                        className={cn(
-                          "flex items-center justify-between p-1.5 rounded-md cursor-pointer hover:bg-muted/80 transition-colors text-sm",
-                          ep.hasFile ? "bg-green-500/10" : "bg-muted/50"
-                        )}
+                        className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
                         onClick={() => handleOpenSeries(ep.series.id)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <span className="truncate block">{ep.series?.title}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatEpisode(ep.seasonNumber, ep.episodeNumber)}
-                          </span>
-                        </div>
+                        <span className="truncate flex-1">{ep.series?.title}</span>
                         <span className="text-xs text-muted-foreground ml-2">
-                          {airDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                          {formatEpisode(ep.seasonNumber, ep.episodeNumber)}
                         </span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Missing Episodes */}
-              {wanted.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> Missing
+                    ))}
+                    {wantedCount > (isWide ? 5 : 3) && (
+                      <div className="text-xs text-muted-foreground text-center">
+                        +{wantedCount - (isWide ? 5 : 3)} more
+                      </div>
+                    )}
                   </div>
-                  {wanted.slice(0, 3).map((ep: SonarrCalendarItem) => (
-                    <div
-                      key={ep.id}
-                      className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
-                      onClick={() => handleOpenSeries(ep.series.id)}
-                    >
-                      <span className="truncate flex-1">{ep.series?.title}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {formatEpisode(ep.seasonNumber, ep.episodeNumber)}
-                      </span>
+                )}
+              </div>
+
+              {/* Right column when wide: Upcoming + Disk Space + Health */}
+              <div className={cn(isWide ? "space-y-3" : "contents")}>
+                {/* Upcoming Episodes */}
+                {showCalendar && calendar.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3 w-3" /> Upcoming
                     </div>
-                  ))}
-                  {wantedCount > 3 && (
-                    <div className="text-xs text-muted-foreground text-center">
-                      +{wantedCount - 3} more
-                    </div>
-                  )}
-                </div>
-              )}
+                    {calendar.slice(0, isWide ? 5 : 3).map((ep) => {
+                      const airDate = new Date(ep.airDateUtc);
+                      return (
+                        <div
+                          key={ep.id}
+                          className={cn(
+                            "flex items-center justify-between p-1.5 rounded-md cursor-pointer hover:bg-muted/80 transition-colors text-sm",
+                            ep.hasFile ? "bg-green-500/10" : "bg-muted/50"
+                          )}
+                          onClick={() => handleOpenSeries(ep.series.id)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="truncate block">{ep.series?.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatEpisode(ep.seasonNumber, ep.episodeNumber)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {airDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
               {/* Disk Space */}
               {showDiskSpace && diskSpace.length > 0 && (
@@ -509,10 +522,11 @@ export function SonarrWidget({ widget, onEdit, onDelete }: SonarrWidgetProps) {
                   )}
                 </div>
               )}
+              </div>
 
               {/* Empty state */}
               {queue.length === 0 && calendar.length === 0 && wanted.length === 0 && health.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-2">
+                <div className={cn("text-sm text-muted-foreground text-center py-2", isWide && "col-span-2")}>
                   All clear!
                 </div>
               )}

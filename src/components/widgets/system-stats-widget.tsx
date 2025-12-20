@@ -33,6 +33,7 @@ interface SystemStatsWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -55,7 +56,7 @@ function getUsageTextColor(usage: number): string {
   return "text-green-500";
 }
 
-export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidgetProps) {
+export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: SystemStatsWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -140,6 +141,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete }: SystemStatsWidge
         onRefresh={handleRefresh}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <Button
             variant="ghost"

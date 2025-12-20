@@ -30,6 +30,7 @@ interface LidarrWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type LidarrAlbum = {
@@ -82,7 +83,7 @@ type HealthIssue = {
   wikiUrl?: string;
 };
 
-export function LidarrWidget({ widget, onEdit, onDelete }: LidarrWidgetProps) {
+export function LidarrWidget({ widget, onEdit, onDelete, onResize }: LidarrWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
@@ -95,6 +96,8 @@ export function LidarrWidget({ widget, onEdit, onDelete }: LidarrWidgetProps) {
   const showHealth = config.showHealth ?? true;
   const maxItems = config.maxItems ?? 5;
   const defaultExpanded = config.defaultExpanded ?? false;
+  const widgetSize = config.size || "small";
+  const isWide = widgetSize === "medium" || widgetSize === "large" || widgetSize === "full";
 
   // Settings form state
   const [formTitle, setFormTitle] = useState(config.title || "Lidarr");
@@ -275,6 +278,7 @@ export function LidarrWidget({ widget, onEdit, onDelete }: LidarrWidgetProps) {
         icon={<Music className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
       >
         <div className="text-sm text-muted-foreground text-center py-4">
           No Lidarr integration configured
@@ -293,6 +297,7 @@ export function LidarrWidget({ widget, onEdit, onDelete }: LidarrWidgetProps) {
         onRefresh={handleRefresh}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <div className="flex gap-1">
             <Button
@@ -365,72 +370,80 @@ export function LidarrWidget({ widget, onEdit, onDelete }: LidarrWidgetProps) {
             </div>
 
             {/* Expanded Details */}
-            <CollapsibleContent className="space-y-3 pt-3">
-              {/* Queue */}
-              {showQueue && queue.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Download className="h-3 w-3" /> Queue
+            <CollapsibleContent className={cn(
+              "pt-3",
+              isWide ? "grid grid-cols-2 gap-4" : "space-y-3"
+            )}>
+              {/* Left column when wide: Queue + Wanted */}
+              <div className={cn(isWide ? "space-y-3" : "contents")}>
+                {/* Queue */}
+                {showQueue && queue.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Download className="h-3 w-3" /> Queue
+                    </div>
+                    {queue.map((item) => {
+                      const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
+                      const timeLeft = formatTimeLeft(item.timeleft);
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => item.album?.id ? handleOpenAlbum(item.album.id) : handleOpenArtist(item.artist.id)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm truncate flex-1 font-medium">
+                              {item.album?.title || item.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
+                            </span>
+                          </div>
+                          <Progress value={progress} className="h-1" />
+                        </div>
+                      );
+                    })}
                   </div>
-                  {queue.map((item) => {
-                    const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
-                    const timeLeft = formatTimeLeft(item.timeleft);
-                    return (
+                )}
+
+                {/* Wanted/Missing */}
+                {wanted.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Wanted
+                    </div>
+                    {wanted.slice(0, isWide ? 5 : 3).map((album: LidarrAlbum) => (
                       <div
-                        key={item.id}
-                        className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => item.album?.id ? handleOpenAlbum(item.album.id) : handleOpenArtist(item.artist.id)}
+                        key={album.id}
+                        className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
+                        onClick={() => handleOpenAlbum(album.id)}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm truncate flex-1 font-medium">
-                            {item.album?.title || item.title}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
+                        <div className="flex-1 min-w-0">
+                          <span className="truncate block">{album.title}</span>
+                          <span className="text-xs text-muted-foreground truncate block">
+                            {album.artist?.artistName}
                           </span>
                         </div>
-                        <Progress value={progress} className="h-1" />
+                        {album.releaseDate && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {new Date(album.releaseDate).getFullYear()}
+                          </span>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Wanted/Missing */}
-              {wanted.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> Wanted
+                    ))}
+                    {wantedCount > (isWide ? 5 : 3) && (
+                      <div className="text-xs text-muted-foreground text-center">
+                        +{wantedCount - (isWide ? 5 : 3)} more
+                      </div>
+                    )}
                   </div>
-                  {wanted.slice(0, 3).map((album: LidarrAlbum) => (
-                    <div
-                      key={album.id}
-                      className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
-                      onClick={() => handleOpenAlbum(album.id)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="truncate block">{album.title}</span>
-                        <span className="text-xs text-muted-foreground truncate block">
-                          {album.artist?.artistName}
-                        </span>
-                      </div>
-                      {album.releaseDate && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {new Date(album.releaseDate).getFullYear()}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                  {wantedCount > 3 && (
-                    <div className="text-xs text-muted-foreground text-center">
-                      +{wantedCount - 3} more
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Calendar */}
-              {showCalendar && calendar.length > 0 && (
+              {/* Right column when wide: Calendar + Disk Space + Health */}
+              <div className={cn(isWide ? "space-y-3" : "contents")}>
+                {/* Calendar */}
+                {showCalendar && calendar.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" /> Upcoming
@@ -527,10 +540,11 @@ export function LidarrWidget({ widget, onEdit, onDelete }: LidarrWidgetProps) {
                   )}
                 </div>
               )}
+              </div>
 
               {/* Empty state */}
               {wanted.length === 0 && queue.length === 0 && calendar.length === 0 && health.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-2">
+                <div className={cn("text-sm text-muted-foreground text-center py-2", isWide && "col-span-2")}>
                   All clear!
                 </div>
               )}

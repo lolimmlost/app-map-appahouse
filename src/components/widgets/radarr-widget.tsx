@@ -30,6 +30,7 @@ interface RadarrWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type RadarrMovie = {
@@ -75,7 +76,7 @@ type HealthIssue = {
   wikiUrl?: string;
 };
 
-export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
+export function RadarrWidget({ widget, onEdit, onDelete, onResize }: RadarrWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
@@ -88,6 +89,8 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
   const showHealth = config.showHealth ?? true;
   const maxItems = config.maxItems ?? 5;
   const defaultExpanded = config.defaultExpanded ?? false;
+  const widgetSize = config.size || "small";
+  const isWide = widgetSize === "medium" || widgetSize === "large" || widgetSize === "full";
 
   // Settings form state
   const [formTitle, setFormTitle] = useState(config.title || "Radarr");
@@ -262,6 +265,7 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
         icon={<Film className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
       >
         <div className="text-sm text-muted-foreground text-center py-4">
           No Radarr integration configured
@@ -280,6 +284,7 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
         onRefresh={handleRefresh}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <div className="flex gap-1">
             <Button
@@ -352,60 +357,69 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
             </div>
 
             {/* Expanded Details */}
-            <CollapsibleContent className="space-y-3 pt-3">
-              {/* Queue */}
-              {showQueue && queue.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Download className="h-3 w-3" /> Queue
-                  </div>
-                  {queue.map((item) => {
-                    const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
-                    const timeLeft = formatTimeLeft(item.timeleft);
-                    return (
-                      <div
-                        key={item.id}
-                        className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => item.movie?.id && handleOpenMovie(item.movie.id)}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm truncate flex-1 font-medium">
-                            {item.movie?.title || item.title}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
-                          </span>
+            <CollapsibleContent className={cn(
+              "pt-3",
+              isWide ? "grid grid-cols-2 gap-4" : "space-y-3"
+            )}>
+              {/* Left column when wide: Queue + Wanted */}
+              <div className={cn(isWide ? "space-y-3" : "contents")}>
+                {/* Queue */}
+                {showQueue && queue.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Download className="h-3 w-3" /> Queue
+                    </div>
+                    {queue.map((item) => {
+                      const progress = item.size > 0 ? ((item.size - item.sizeleft) / item.size) * 100 : 0;
+                      const timeLeft = formatTimeLeft(item.timeleft);
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => item.movie?.id && handleOpenMovie(item.movie.id)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm truncate flex-1 font-medium">
+                              {item.movie?.title || item.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {progress.toFixed(0)}%{timeLeft && ` • ${timeLeft}`}
+                            </span>
+                          </div>
+                          <Progress value={progress} className="h-1" />
                         </div>
-                        <Progress value={progress} className="h-1" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Wanted/Missing */}
-              {missing.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> Wanted
+                      );
+                    })}
                   </div>
-                  {missing.slice(0, 3).map((movie) => (
-                    <div
-                      key={movie.id}
-                      className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
-                      onClick={() => handleOpenMovie(movie.id)}
-                    >
-                      <span className="truncate flex-1">{movie.title}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{movie.year}</span>
+                )}
+
+                {/* Wanted/Missing */}
+                {missing.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Wanted
                     </div>
-                  ))}
-                  {missing.length > 3 && (
-                    <div className="text-xs text-muted-foreground text-center">
-                      +{missing.length - 3} more
-                    </div>
-                  )}
-                </div>
-              )}
+                    {missing.slice(0, isWide ? 5 : 3).map((movie) => (
+                      <div
+                        key={movie.id}
+                        className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors text-sm"
+                        onClick={() => handleOpenMovie(movie.id)}
+                      >
+                        <span className="truncate flex-1">{movie.title}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{movie.year}</span>
+                      </div>
+                    ))}
+                    {missing.length > (isWide ? 5 : 3) && (
+                      <div className="text-xs text-muted-foreground text-center">
+                        +{missing.length - (isWide ? 5 : 3)} more
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Right column when wide: Calendar + Disk + Health */}
+              <div className={cn(isWide ? "space-y-3" : "contents")}>
 
               {/* Calendar */}
               {showCalendar && calendar.length > 0 && (
@@ -502,10 +516,11 @@ export function RadarrWidget({ widget, onEdit, onDelete }: RadarrWidgetProps) {
                   )}
                 </div>
               )}
+              </div>
 
               {/* Empty state */}
               {missing.length === 0 && queue.length === 0 && calendar.length === 0 && health.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-2">
+                <div className={cn("text-sm text-muted-foreground text-center py-2", isWide && "col-span-2")}>
                   All clear!
                 </div>
               )}

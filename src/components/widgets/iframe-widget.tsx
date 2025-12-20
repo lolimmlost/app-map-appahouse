@@ -6,9 +6,10 @@ interface IframeWidgetProps {
   widget: Widget & { config: WidgetConfig };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
-export function IframeWidget({ widget, onEdit, onDelete }: IframeWidgetProps) {
+export function IframeWidget({ widget, onEdit, onDelete, onResize }: IframeWidgetProps) {
   const config = widget.config || {};
   const url = config.url || "";
 
@@ -23,6 +24,7 @@ export function IframeWidget({ widget, onEdit, onDelete }: IframeWidgetProps) {
       icon={<ExternalLink className="h-4 w-4" />}
       onEdit={onEdit}
       onDelete={onDelete}
+      onResize={onResize}
       className="overflow-hidden"
     >
       {!url ? (

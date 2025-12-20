@@ -7,9 +7,10 @@ interface BookmarksWidgetProps {
   widget: Widget & { config: WidgetConfig };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
-export function BookmarksWidget({ widget, onEdit, onDelete }: BookmarksWidgetProps) {
+export function BookmarksWidget({ widget, onEdit, onDelete, onResize }: BookmarksWidgetProps) {
   const config = widget.config || {};
   const bookmarks = config.bookmarks || [];
 
@@ -27,6 +28,7 @@ export function BookmarksWidget({ widget, onEdit, onDelete }: BookmarksWidgetPro
       icon={<Bookmark className="h-4 w-4" />}
       onEdit={onEdit}
       onDelete={onDelete}
+      onResize={onResize}
     >
       {bookmarks.length === 0 ? (
         <div className="text-sm text-muted-foreground text-center py-4">

@@ -21,6 +21,7 @@ interface WeatherWidgetProps {
   widget: Widget & { config: WidgetConfig };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type WeatherData = {
@@ -110,7 +111,7 @@ async function fetchWeather(location: string, units: "metric" | "imperial"): Pro
   return null;
 }
 
-export function WeatherWidget({ widget, onEdit, onDelete }: WeatherWidgetProps) {
+export function WeatherWidget({ widget, onEdit, onDelete, onResize }: WeatherWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -180,6 +181,7 @@ export function WeatherWidget({ widget, onEdit, onDelete }: WeatherWidgetProps) 
         onRefresh={() => refetch()}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <Button
             variant="ghost"

@@ -25,6 +25,7 @@ interface DockerWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type DockerContainer = {
@@ -70,7 +71,7 @@ const stateColors: Record<string, string> = {
 };
 
 
-export function DockerWidget({ widget, onEdit, onDelete }: DockerWidgetProps) {
+export function DockerWidget({ widget, onEdit, onDelete, onResize }: DockerWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -208,6 +209,7 @@ export function DockerWidget({ widget, onEdit, onDelete }: DockerWidgetProps) {
         icon={<Container className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
       >
         <div className="text-sm text-muted-foreground text-center py-4">
           No Docker integration configured
@@ -226,6 +228,7 @@ export function DockerWidget({ widget, onEdit, onDelete }: DockerWidgetProps) {
         onRefresh={handleRefresh}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <div className="flex gap-1">
             <Button

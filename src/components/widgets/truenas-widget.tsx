@@ -52,6 +52,7 @@ interface TrueNASWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };
   onEdit?: (widget: Widget) => void;
   onDelete?: (widget: Widget) => void;
+  onResize?: (widget: Widget, size: "small" | "medium" | "large" | "full") => void;
 }
 
 type TrueNASSystemInfo = {
@@ -88,7 +89,7 @@ type TrueNASInterface = {
   };
 };
 
-export function TrueNASWidget({ widget, onEdit, onDelete }: TrueNASWidgetProps) {
+export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWidgetProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [poolsExpanded, setPoolsExpanded] = useState(true);
   const [disksExpanded, setDisksExpanded] = useState(false);
@@ -265,6 +266,7 @@ export function TrueNASWidget({ widget, onEdit, onDelete }: TrueNASWidgetProps) 
         icon={<Server className="h-4 w-4" />}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
       >
         <div className="text-sm text-muted-foreground text-center py-4">
           No integration configured
@@ -289,6 +291,7 @@ export function TrueNASWidget({ widget, onEdit, onDelete }: TrueNASWidgetProps) 
         }}
         onEdit={onEdit}
         onDelete={onDelete}
+        onResize={onResize}
         headerActions={
           <div className="flex gap-1">
             <Button
