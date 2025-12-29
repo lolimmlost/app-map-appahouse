@@ -244,7 +244,7 @@ async function matchWithExistingApps(
 }
 
 // Main discovery function
-export const discoverServices = createServerFn({ method: "POST" }).handler(
+export const discoverServices = createServerFn({ method: "GET" }).handler(
   async () => {
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
