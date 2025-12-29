@@ -3,7 +3,7 @@
   "description": "Implement caching strategy for health check results with smart invalidation. Store health check results in a persistent cache (Redis or in-memory) with configurable TTLs per app, and invalidate only when an app's health check settings change or manually refreshed, rather than relying solely on polling intervals.",
   "id": "feature-1766954790180-vs23vu3p4",
   "steps": [],
-  "status": "verified",
+  "status": "completed",
   "skipTests": false,
   "priority": 1,
   "title": "",
