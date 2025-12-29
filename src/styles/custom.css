@@ -16,16 +16,46 @@
 :root {
     --warning: hsl(38 92% 50%);
     --warning-foreground: hsl(48 96% 89%);
+    --success: hsl(142 76% 36%);
+    --success-foreground: hsl(143 76% 95%);
+    --error: hsl(0 84% 60%);
+    --error-foreground: hsl(0 0% 100%);
+    --info: hsl(217 91% 60%);
+    --info-foreground: hsl(0 0% 100%);
+    --status-online: hsl(142 71% 45%);
+    --status-offline: hsl(0 84% 60%);
+    --status-unknown: hsl(220 9% 46%);
+    --status-pending: hsl(45 93% 47%);
 }
 
 .dark {
     --warning: hsl(48 96% 89%);
     --warning-foreground: hsl(38 92% 50%);
+    --success: hsl(142 71% 45%);
+    --success-foreground: hsl(143 76% 95%);
+    --error: hsl(0 72% 51%);
+    --error-foreground: hsl(0 0% 100%);
+    --info: hsl(217 91% 60%);
+    --info-foreground: hsl(0 0% 100%);
+    --status-online: hsl(142 71% 45%);
+    --status-offline: hsl(0 72% 51%);
+    --status-unknown: hsl(220 13% 50%);
+    --status-pending: hsl(45 93% 47%);
 }
 
 @theme inline {
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-error: var(--error);
+    --color-error-foreground: var(--error-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-status-online: var(--status-online);
+    --color-status-offline: var(--status-offline);
+    --color-status-unknown: var(--status-unknown);
+    --color-status-pending: var(--status-pending);
 }
 
 /** iOS Dynamic System Font Scaling */

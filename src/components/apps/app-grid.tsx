@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { AppCard, type HealthStatus } from "./app-card";
 import { SwipeableCard } from "./swipeable-card";
-import type { App, Tag } from "@/database/schema/apps";
-import type { Category } from "@/database/schema/categories";
+import type { App, Tag } from "@/types/database";
+import type { Category } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 export type AppWithRelations = App & {
@@ -17,10 +17,14 @@ interface AppGridProps {
   columns?: number;
   viewMode?: "grid" | "list";
   groupByCategory?: boolean;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelectApp?: (app: App) => void;
   onEditApp?: (app: App) => void;
   onDeleteApp?: (app: App) => void;
   onViewNotes?: (app: App) => void;
   onPinApp?: (app: App, pinned: boolean) => void;
+  onShareApp?: (app: App) => void;
 }
 
 export function AppGrid({
@@ -30,10 +34,14 @@ export function AppGrid({
   columns = 4,
   viewMode = "grid",
   groupByCategory = true,
+  selectionMode = false,
+  selectedIds = new Set(),
+  onSelectApp,
   onEditApp,
   onDeleteApp,
   onViewNotes,
   onPinApp,
+  onShareApp,
 }: AppGridProps) {
   const groupedApps = useMemo(() => {
     if (!groupByCategory) {
@@ -120,16 +128,21 @@ export function AppGrid({
                 onDelete={onDeleteApp ? () => onDeleteApp(app) : undefined}
                 onPin={onPinApp ? () => onPinApp(app, !app.pinned) : undefined}
                 isPinned={app.pinned ?? false}
+                disabled={selectionMode}
               >
                 <AppCard
                   app={app}
                   healthStatus={healthStatuses[app.id] ?? "unknown"}
                   healthBarStyle={healthBarStyle}
                   viewMode={viewMode}
+                  selectionMode={selectionMode}
+                  isSelected={selectedIds.has(app.id)}
+                  onSelect={onSelectApp}
                   onEdit={onEditApp}
                   onDelete={onDeleteApp}
                   onViewNotes={onViewNotes}
                   onPin={onPinApp}
+                  onShare={onShareApp}
                 />
               </SwipeableCard>
             ))}

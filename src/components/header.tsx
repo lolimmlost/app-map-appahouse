@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserButton } from "@daveyplate/better-auth-ui";
 import { Link } from "@tanstack/react-router";
-import { Map, Settings, Tags, Layers, Menu, Plug, LayoutGrid } from "lucide-react";
+import { Map, Settings, Tags, Layers, Menu, Plug, LayoutGrid, BarChart3 } from "lucide-react";
 import { ModeToggle } from "./mode-toggle";
 import { Button } from "./ui/button";
 import { CommandPalette } from "./command-palette";
@@ -20,6 +20,7 @@ export function Header() {
     { to: "/", icon: Layers, label: "Dashboard" },
     { to: "/apps", icon: LayoutGrid, label: "Apps" },
     { to: "/categories", icon: Tags, label: "Categories" },
+    { to: "/analytics", icon: BarChart3, label: "Analytics" },
     { to: "/integrations", icon: Plug, label: "Integrations" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];

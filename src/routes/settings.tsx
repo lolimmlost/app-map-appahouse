@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeEditor } from "@/components/theme/theme-editor";
-import { getUserSettings, updateUserSettings } from "@/lib/server/user-settings";
-import type { UserSettings } from "@/database/schema/user-settings";
+import { getUserSettings, updateUserSettings } from "@/lib/server/user-settings.server";
+import type { UserSettings } from "@/types/database";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 

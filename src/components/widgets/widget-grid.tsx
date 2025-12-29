@@ -45,10 +45,10 @@ import { DockerWidget } from "./docker-widget";
 import { TrueNASWidget } from "./truenas-widget";
 import { WeatherWidget } from "./weather-widget";
 import { TopStatusBar } from "./top-status-bar";
-import { getWidgets, createWidget, deleteWidget, updateWidgetOrder, updateWidget } from "@/lib/server/widgets";
-import { getIntegrations } from "@/lib/server/integrations";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
-import type { Integration } from "@/database/schema/integrations";
+import { getWidgets, createWidget, deleteWidget, updateWidgetOrder, updateWidget } from "@/lib/server/widgets.server";
+import { getIntegrations } from "@/lib/server/integrations.server";
+import type { Widget, WidgetConfig } from "@/types/database";
+import type { Integration } from "@/types/database";
 
 // Widget types that should appear in the top status bar instead of the grid
 const STATUS_BAR_WIDGET_TYPES = ["clock", "weather"] as const;

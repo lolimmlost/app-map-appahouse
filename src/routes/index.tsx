@@ -1,32 +1,56 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical } from "lucide-react";
+import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
-import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, type AppFormData } from "@/components/apps";
+import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, type AppFormData } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
 import { ServiceDiscoveryDialog } from "@/components/discovery";
-import { getApps, createApp, updateApp, deleteApp, pinApp, updateAppOrder } from "@/lib/server/apps";
-import { getCategories } from "@/lib/server/categories";
-import { getTags } from "@/lib/server/tags";
-import { getUserSettings } from "@/lib/server/user-settings";
+import { getApps } from "@/lib/server/apps.server";
+import { getCategories } from "@/lib/server/categories.server";
+import { getTags } from "@/lib/server/tags.server";
+import { getUserSettings } from "@/lib/server/user-settings.server";
 import { useHealthStatus } from "@/hooks/use-health-status";
-import type { App } from "@/database/schema/apps";
+import { useAppMutations } from "@/hooks/use-app-mutations";
+import type { App } from "@/types/database";
 
 export const Route = createFileRoute("/")({ component: DashboardPage });
 
 function DashboardPage() {
   const { data: session, isPending: isSessionPending } = useAuthenticate();
-  const queryClient = useQueryClient();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<App | null>(null);
   const [notesApp, setNotesApp] = useState<App | null>(null);
+  const [sharingApp, setSharingApp] = useState<App | null>(null);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [reorderMode, setReorderMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // App mutations hook
+  const {
+    createMutation,
+    updateMutation,
+    deleteMutation,
+    pinMutation,
+    reorderMutation,
+    bulkDeleteMutation,
+    bulkCategoryMutation,
+    bulkHealthCheckMutation,
+    bulkExportMutation,
+    bulkTagsMutation,
+    isFormLoading,
+    isBulkLoading,
+  } = useAppMutations({
+    onFormClose: () => setFormOpen(false),
+    onClearEditing: () => setEditingApp(null),
+    onClearSelection: () => setSelectedIds(new Set()),
+    onExitSelectionMode: () => setSelectionMode(false),
+  });
 
   // Health status polling
   const { healthStatuses, isLoading: isHealthLoading, refreshHealth } = useHealthStatus(
@@ -66,84 +90,6 @@ function DashboardPage() {
     staleTime: 60000,
   });
 
-  // Create app mutation
-  const createMutation = useMutation({
-    mutationFn: (data: AppFormData) =>
-      createApp({
-        data: {
-          name: data.name,
-          description: data.description || null,
-          icon: data.icon || null,
-          localUrl: data.localUrl || null,
-          remoteUrl: data.remoteUrl || null,
-          categoryId: data.categoryId,
-          tagIds: data.tagIds,
-          healthCheckEnabled: data.healthCheckEnabled,
-          healthCheckType: data.healthCheckType,
-          healthCheckUrl: data.healthCheckUrl || null,
-          uptimeKumaMonitorId: data.uptimeKumaMonitorId || null,
-          notes: data.notes || null,
-        },
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["apps"] });
-      setFormOpen(false);
-    },
-  });
-
-  // Update app mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: AppFormData }) =>
-      updateApp({
-        data: {
-          id,
-          name: data.name,
-          description: data.description || null,
-          icon: data.icon || null,
-          localUrl: data.localUrl || null,
-          remoteUrl: data.remoteUrl || null,
-          categoryId: data.categoryId,
-          tagIds: data.tagIds,
-          healthCheckEnabled: data.healthCheckEnabled,
-          healthCheckType: data.healthCheckType,
-          healthCheckUrl: data.healthCheckUrl || null,
-          uptimeKumaMonitorId: data.uptimeKumaMonitorId || null,
-          notes: data.notes || null,
-        },
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["apps"] });
-      setFormOpen(false);
-      setEditingApp(null);
-    },
-  });
-
-  // Delete app mutation
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteApp({ data: { id } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["apps"] });
-    },
-  });
-
-  // Pin app mutation
-  const pinMutation = useMutation({
-    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
-      pinApp({ data: { id, pinned } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["apps"] });
-    },
-  });
-
-  // Reorder apps mutation
-  const reorderMutation = useMutation({
-    mutationFn: (orderedIds: string[]) =>
-      updateAppOrder({ data: { orderedIds } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["apps"] });
-    },
-  });
-
   const handleSubmit = (data: AppFormData) => {
     if (editingApp) {
       updateMutation.mutate({ id: editingApp.id, data });
@@ -171,6 +117,10 @@ function DashboardPage() {
     pinMutation.mutate({ id: app.id, pinned });
   };
 
+  const handleShare = (app: App) => {
+    setSharingApp(app);
+  };
+
   const handleReorder = (orderedIds: string[]) => {
     reorderMutation.mutate(orderedIds);
   };
@@ -188,6 +138,72 @@ function DashboardPage() {
     if (!open) {
       setEditingApp(null);
     }
+  };
+
+  // Selection mode handlers
+  const toggleSelectionMode = () => {
+    if (selectionMode) {
+      // Exiting selection mode - clear selections
+      setSelectedIds(new Set());
+    }
+    setSelectionMode(!selectionMode);
+  };
+
+  const handleSelectApp = (app: App) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(app.id)) {
+        next.delete(app.id);
+      } else {
+        next.add(app.id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(apps.map((a) => a.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`Delete ${selectedIds.size} selected app(s)?`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedIds));
+    }
+  };
+
+  const handleBulkUpdateCategory = (categoryId: string | null) => {
+    if (selectedIds.size === 0) return;
+    bulkCategoryMutation.mutate({
+      ids: Array.from(selectedIds),
+      categoryId,
+    });
+  };
+
+  const handleBulkToggleHealthCheck = (enabled: boolean) => {
+    if (selectedIds.size === 0) return;
+    bulkHealthCheckMutation.mutate({
+      ids: Array.from(selectedIds),
+      enabled,
+    });
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.size === 0) return;
+    bulkExportMutation.mutate(Array.from(selectedIds));
+  };
+
+  const handleBulkUpdateTags = (tagIds: string[], mode: "replace" | "append") => {
+    if (selectedIds.size === 0) return;
+    bulkTagsMutation.mutate({
+      ids: Array.from(selectedIds),
+      tagIds,
+      mode,
+    });
   };
 
   // Show login prompt if not authenticated
@@ -274,6 +290,7 @@ function DashboardPage() {
             size="icon"
             className="sm:hidden h-11 w-11"
             onClick={toggleReorderMode}
+            disabled={selectionMode}
             title={reorderMode ? "Exit Reorder Mode" : "Reorder Apps"}
           >
             <GripVertical className="h-5 w-5" />
@@ -283,9 +300,34 @@ function DashboardPage() {
             size="sm"
             className="hidden sm:flex"
             onClick={toggleReorderMode}
+            disabled={selectionMode}
           >
             <GripVertical className="h-4 w-4 mr-2" />
             {reorderMode ? "Done" : "Reorder"}
+          </Button>
+
+          {/* Selection mode toggle */}
+          <Button
+            variant={selectionMode ? "secondary" : "outline"}
+            size="icon"
+            className="sm:hidden h-11 w-11"
+            onClick={toggleSelectionMode}
+            disabled={reorderMode}
+            title={selectionMode ? "Exit Selection Mode" : "Select Apps"}
+            data-testid="selection-mode-toggle"
+          >
+            <CheckSquare className="h-5 w-5" />
+          </Button>
+          <Button
+            variant={selectionMode ? "secondary" : "outline"}
+            size="sm"
+            className="hidden sm:flex"
+            onClick={toggleSelectionMode}
+            disabled={reorderMode}
+            data-testid="selection-mode-toggle-desktop"
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            {selectionMode ? "Done" : "Select"}
           </Button>
 
           {/* Group toggle */}
@@ -352,6 +394,25 @@ function DashboardPage() {
       {/* Widgets Section */}
       <WidgetGrid reorderMode={reorderMode} />
 
+      {/* Bulk Actions Bar - shown when in selection mode */}
+      {selectionMode && (
+        <BulkActionsBar
+          selectedCount={selectedIds.size}
+          totalCount={apps.length}
+          isAllSelected={selectedIds.size === apps.length && apps.length > 0}
+          categories={categories}
+          tags={tags}
+          onSelectAll={handleSelectAll}
+          onClearSelection={handleClearSelection}
+          onBulkUpdateCategory={handleBulkUpdateCategory}
+          onBulkUpdateTags={handleBulkUpdateTags}
+          onBulkToggleHealthCheck={handleBulkToggleHealthCheck}
+          onBulkDelete={handleBulkDelete}
+          onBulkExport={handleBulkExport}
+          isLoading={isBulkLoading}
+        />
+      )}
+
       {/* App Grid */}
       {isAppsLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -384,10 +445,14 @@ function DashboardPage() {
           columns={4}
           viewMode={viewMode}
           groupByCategory={groupByCategory}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onSelectApp={handleSelectApp}
           onEditApp={handleEdit}
           onDeleteApp={handleDelete}
           onViewNotes={handleViewNotes}
           onPinApp={handlePin}
+          onShareApp={handleShare}
         />
       )}
 
@@ -399,7 +464,7 @@ function DashboardPage() {
         app={editingApp}
         categories={categories}
         tags={tags}
-        isLoading={createMutation.isPending || updateMutation.isPending}
+        isLoading={isFormLoading}
       />
 
       {/* Notes Dialog */}
@@ -413,6 +478,13 @@ function DashboardPage() {
       <ServiceDiscoveryDialog
         open={discoveryOpen}
         onOpenChange={setDiscoveryOpen}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={!!sharingApp}
+        onOpenChange={(open) => !open && setSharingApp(null)}
+        app={sharingApp ?? undefined}
       />
     </main>
   );

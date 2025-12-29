@@ -28,11 +28,11 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getApps } from "@/lib/server/apps";
-import { getTags } from "@/lib/server/tags";
-import { getCategories } from "@/lib/server/categories";
-import type { App } from "@/database/schema/apps";
-import type { Category } from "@/database/schema/categories";
+import { getApps } from "@/lib/server/apps.server";
+import { getTags } from "@/lib/server/tags.server";
+import { getCategories } from "@/lib/server/categories.server";
+import type { App } from "@/types/database";
+import type { Category } from "@/types/database";
 
 interface CommandPaletteProps {
   onAddApp?: () => void;
@@ -215,7 +215,7 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
                       title="Copy URL"
                     >
                       {copiedId === app.id ? (
-                        <Check className="h-3 w-3 text-green-500" />
+                        <Check className="h-3 w-3 text-success" />
                       ) : (
                         <Copy className="h-3 w-3 text-muted-foreground" />
                       )}

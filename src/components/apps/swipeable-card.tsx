@@ -88,16 +88,16 @@ export function SwipeableCard({
         <div
           className={cn(
             "absolute left-0 top-0 bottom-0 flex items-center justify-center transition-opacity",
-            isPinned ? "bg-orange-500" : "bg-blue-500",
+            isPinned ? "bg-warning" : "bg-info",
             offsetX > 0 ? "opacity-100" : "opacity-0"
           )}
           style={{ width: ACTION_WIDTH }}
           onClick={() => handleAction("pin")}
         >
           {isPinned ? (
-            <PinOff className="h-5 w-5 text-white" />
+            <PinOff className="h-5 w-5 text-warning-foreground" />
           ) : (
-            <Pin className="h-5 w-5 text-white" />
+            <Pin className="h-5 w-5 text-info-foreground" />
           )}
         </div>
       )}
@@ -106,13 +106,13 @@ export function SwipeableCard({
       {onDelete && (
         <div
           className={cn(
-            "absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500 transition-opacity",
+            "absolute right-0 top-0 bottom-0 flex items-center justify-center bg-destructive transition-opacity",
             offsetX < 0 ? "opacity-100" : "opacity-0"
           )}
           style={{ width: ACTION_WIDTH }}
           onClick={() => handleAction("delete")}
         >
-          <Trash2 className="h-5 w-5 text-white" />
+          <Trash2 className="h-5 w-5 text-destructive-foreground" />
         </div>
       )}
 

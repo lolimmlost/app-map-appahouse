@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import type { App, Tag } from "@/database/schema/apps";
-import type { Category } from "@/database/schema/categories";
+import type { App, Tag } from "@/types/database";
+import type { Category } from "@/types/database";
 
 export type AppFormData = {
   name: string;
@@ -35,9 +35,23 @@ export type AppFormData = {
   healthCheckEnabled: boolean;
   healthCheckType: "http" | "tcp" | "uptime_kuma";
   healthCheckUrl: string;
+  healthCheckTTL: number; // Cache TTL in seconds
   uptimeKumaMonitorId: string;
   notes: string;
 };
+
+// Predefined TTL options for the dropdown
+const TTL_OPTIONS = [
+  { value: 15, label: "15 seconds" },
+  { value: 30, label: "30 seconds" },
+  { value: 60, label: "1 minute" },
+  { value: 120, label: "2 minutes" },
+  { value: 300, label: "5 minutes" },
+  { value: 600, label: "10 minutes" },
+  { value: 900, label: "15 minutes" },
+  { value: 1800, label: "30 minutes" },
+  { value: 3600, label: "1 hour" },
+];
 
 type AppWithTags = App & { tags?: Tag[] };
 
@@ -62,6 +76,7 @@ const initialFormData: AppFormData = {
   healthCheckEnabled: false,
   healthCheckType: "http",
   healthCheckUrl: "",
+  healthCheckTTL: 60, // Default 1 minute
   uptimeKumaMonitorId: "",
   notes: "",
 };
@@ -91,6 +106,7 @@ export function AppForm({
         healthCheckEnabled: app.healthCheckEnabled ?? false,
         healthCheckType: app.healthCheckType ?? "http",
         healthCheckUrl: app.healthCheckUrl ?? "",
+        healthCheckTTL: app.healthCheckTTL ?? 60,
         uptimeKumaMonitorId: app.uptimeKumaMonitorId ?? "",
         notes: app.notes ?? "",
       });
@@ -271,23 +287,49 @@ export function AppForm({
 
             {formData.healthCheckEnabled && (
               <div className="space-y-4 pl-4 border-l-2 border-muted">
-                <div className="space-y-2">
-                  <Label htmlFor="healthCheckType">Check Type</Label>
-                  <Select
-                    value={formData.healthCheckType}
-                    onValueChange={(value: "http" | "tcp" | "uptime_kuma") =>
-                      setFormData({ ...formData, healthCheckType: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="http">HTTP Ping</SelectItem>
-                      <SelectItem value="tcp">TCP Ping</SelectItem>
-                      <SelectItem value="uptime_kuma">Uptime Kuma</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="healthCheckType">Check Type</Label>
+                    <Select
+                      value={formData.healthCheckType}
+                      onValueChange={(value: "http" | "tcp" | "uptime_kuma") =>
+                        setFormData({ ...formData, healthCheckType: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="http">HTTP Ping</SelectItem>
+                        <SelectItem value="tcp">TCP Ping</SelectItem>
+                        <SelectItem value="uptime_kuma">Uptime Kuma</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="healthCheckTTL">Cache Duration</Label>
+                    <Select
+                      value={String(formData.healthCheckTTL)}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, healthCheckTTL: Number(value) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TTL_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={String(option.value)}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      How long to cache health check results
+                    </p>
+                  </div>
                 </div>
 
                 {formData.healthCheckType !== "uptime_kuma" && (

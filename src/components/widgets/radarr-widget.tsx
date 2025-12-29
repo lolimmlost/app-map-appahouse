@@ -21,10 +21,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { getRadarrMovies, getRadarrQueue, getRadarrCalendar, getRadarrDiskSpace, getRadarrHealth } from "@/lib/server/widget-proxy";
-import { updateWidget } from "@/lib/server/widgets";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
-import type { Integration } from "@/database/schema/integrations";
+import { getRadarrMovies, getRadarrQueue, getRadarrCalendar, getRadarrDiskSpace, getRadarrHealth } from "@/lib/server/widget-proxy.server";
+import { updateWidget } from "@/lib/server/widgets.server";
+import type { Widget, WidgetConfig } from "@/types/database";
+import type { Integration } from "@/types/database";
 
 interface RadarrWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };

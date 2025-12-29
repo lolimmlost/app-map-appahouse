@@ -21,8 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { importDiscoveredService, type DiscoveredService } from "@/lib/server/discovery";
-import { getCategories } from "@/lib/server/categories";
+import { importDiscoveredService, type DiscoveredService } from "@/lib/server/discovery.server";
+import { getCategories } from "@/lib/server/categories.server";
 
 interface ImportServiceFormProps {
   service: DiscoveredService;

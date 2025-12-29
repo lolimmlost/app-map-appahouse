@@ -1,0 +1,19 @@
+{
+  "category": "User Experience",
+  "description": "Add search and filtering capabilities to the app list. Implement a powerful search feature that allows users to filter apps by name, category, tags, and health status. Include the ability to save search filters as 'views' for quick access to commonly filtered subsets of apps.",
+  "id": "feature-1766954790180-k383y5qao",
+  "steps": [],
+  "status": "completed",
+  "skipTests": false,
+  "priority": 1,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "startedAt": "2025-12-28T20:47:49.011Z",
+  "updatedAt": "2025-12-28T21:20:36.345Z"
+}

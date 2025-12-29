@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { updateWidget } from "@/lib/server/widgets";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
+import { updateWidget } from "@/lib/server/widgets.server";
+import type { Widget, WidgetConfig } from "@/types/database";
 
 interface WeatherWidgetProps {
   widget: Widget & { config: WidgetConfig };

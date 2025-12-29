@@ -6,9 +6,11 @@ import viteReact from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import devtoolsJson from "vite-plugin-devtools-json"
 import viteTsConfigPaths from "vite-tsconfig-paths"
+import { envOnlyMacros } from "vite-env-only"
 
 const config = defineConfig({
     plugins: [
+        envOnlyMacros(),
         viteTsConfigPaths({
             projects: ["./tsconfig.json"]
         }),

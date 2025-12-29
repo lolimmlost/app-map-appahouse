@@ -60,8 +60,8 @@ import {
   updateIntegration,
   deleteIntegration,
   testIntegration,
-} from "@/lib/server/integrations";
-import type { Integration } from "@/database/schema/integrations";
+} from "@/lib/server/integrations.server";
+import type { Integration } from "@/types/database";
 
 export const Route = createFileRoute("/integrations")({
   component: IntegrationsPage,
@@ -524,8 +524,8 @@ function IntegrationsPage() {
                         testResult.loading
                           ? "text-muted-foreground"
                           : testResult.success
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-red-600 dark:text-red-400"
+                          ? "text-success"
+                          : "text-error"
                       }`}
                     >
                       {testResult.loading ? (
@@ -809,7 +809,7 @@ function IntegrationsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="allowInsecure" className="flex items-center gap-2">
-                    <ShieldOff className="h-4 w-4 text-yellow-500" />
+                    <ShieldOff className="h-4 w-4 text-warning" />
                     Allow Insecure
                   </Label>
                   <p className="text-sm text-muted-foreground">

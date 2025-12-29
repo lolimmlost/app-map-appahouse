@@ -21,8 +21,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { AppCard, type HealthStatus } from "./app-card";
 import { cn } from "@/lib/utils";
-import type { App, Tag } from "@/database/schema/apps";
-import type { Category } from "@/database/schema/categories";
+import type { App, Tag } from "@/types/database";
+import type { Category } from "@/types/database";
 
 export type AppWithRelations = App & {
   category?: Category | null;

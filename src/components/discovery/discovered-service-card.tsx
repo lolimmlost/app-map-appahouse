@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import type { DiscoveredService } from "@/lib/server/discovery";
+import type { DiscoveredService } from "@/lib/server/discovery.server";
 
 interface DiscoveredServiceCardProps {
   service: DiscoveredService;
@@ -34,7 +34,7 @@ export function DiscoveredServiceCard({
         isImported
           ? "bg-muted/30 border-muted"
           : isRunning
-          ? "bg-green-500/5 border-green-500/20 hover:border-green-500/40"
+          ? "bg-success/5 border-success/20 hover:border-success/40"
           : "hover:bg-muted/50"
       )}
     >
@@ -79,7 +79,7 @@ export function DiscoveredServiceCard({
           <span
             className={cn(
               "h-2 w-2 rounded-full shrink-0",
-              isRunning ? "bg-green-500" : "bg-gray-400"
+              isRunning ? "bg-status-online" : "bg-status-unknown"
             )}
             title={service.status}
           />

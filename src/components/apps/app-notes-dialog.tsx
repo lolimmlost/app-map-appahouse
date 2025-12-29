@@ -4,7 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { App } from "@/database/schema/apps";
+import type { App } from "@/types/database";
 
 interface AppNotesDialogProps {
   open: boolean;

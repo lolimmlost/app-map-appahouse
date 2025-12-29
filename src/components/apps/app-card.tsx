@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, MoreVertical, Pencil, Trash2, StickyNote, Home, Globe, Pin, PinOff } from "lucide-react";
+import { Copy, MoreVertical, Pencil, Trash2, StickyNote, Home, Globe, Pin, PinOff, Check, Share2, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,10 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import type { App, Tag } from "@/database/schema/apps";
-import type { Category } from "@/database/schema/categories";
+import { useTrackAppAccess } from "@/hooks/use-analytics";
+import type { App, Tag } from "@/types/database";
+import type { Category } from "@/types/database";
+import type { GranularPermissions } from "@/types/database";
 
 export type HealthStatus = "online" | "offline" | "unknown" | "checking";
 
@@ -27,28 +29,35 @@ interface AppCardProps {
   app: App & {
     category?: Category | null;
     tags?: Tag[];
+    isOwner?: boolean;
+    sharedBy?: { id: string; name: string; email: string; image?: string | null };
+    permissions?: GranularPermissions;
   };
   healthStatus?: HealthStatus;
   healthBarStyle?: "dot" | "border" | "none";
   viewMode?: "grid" | "list";
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (app: App) => void;
   onEdit?: (app: App) => void;
   onDelete?: (app: App) => void;
   onViewNotes?: (app: App) => void;
   onPin?: (app: App, pinned: boolean) => void;
+  onShare?: (app: App) => void;
 }
 
 const healthColors: Record<HealthStatus, string> = {
-  online: "bg-green-500",
-  offline: "bg-red-500",
-  unknown: "bg-gray-400",
-  checking: "bg-yellow-500 animate-pulse",
+  online: "bg-status-online",
+  offline: "bg-status-offline",
+  unknown: "bg-status-unknown",
+  checking: "bg-status-pending animate-pulse",
 };
 
 const healthBorderColors: Record<HealthStatus, string> = {
-  online: "border-green-500",
-  offline: "border-red-500",
-  unknown: "border-gray-400",
-  checking: "border-yellow-500",
+  online: "border-status-online",
+  offline: "border-status-offline",
+  unknown: "border-status-unknown",
+  checking: "border-status-pending",
 };
 
 export function AppCard({
@@ -56,11 +65,26 @@ export function AppCard({
   healthStatus = "unknown",
   healthBarStyle = "dot",
   viewMode = "grid",
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
   onEdit,
   onDelete,
   onViewNotes,
   onPin,
+  onShare,
 }: AppCardProps) {
+  // Analytics tracking
+  const { trackAccess } = useTrackAppAccess();
+
+  // Check permissions
+  const isOwner = app.isOwner !== false; // Default to true for backward compatibility
+  const permissions = app.permissions;
+  const canEdit = isOwner || permissions?.canEdit;
+  const canDelete = isOwner || permissions?.canDelete;
+  const canAccessLocalUrl = isOwner || permissions?.canAccessLocalUrl;
+  const canAccessRemoteUrl = isOwner || permissions?.canAccessRemoteUrl;
+  const canSeeHealth = isOwner || permissions?.canSeeHealth;
   const [copiedType, setCopiedType] = useState<"local" | "remote" | null>(null);
 
   const primaryUrl = app.localUrl || app.remoteUrl;
@@ -106,6 +130,8 @@ export function AppCard({
     if (url) {
       const normalized = normalizeUrl(url);
       if (normalized) {
+        // Track the access
+        trackAccess({ appId: app.id, accessType: urlType === "local" ? "open_local" : "open_remote" });
         window.open(normalized, "_blank", "noopener,noreferrer");
       }
     }
@@ -114,15 +140,31 @@ export function AppCard({
   const handleOpenApp = (e: React.MouseEvent) => {
     // Don't open if clicking on interactive elements
     const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('[role="menu"]')) {
+    if (target.closest('button') || target.closest('[role="menu"]') || target.closest('[data-selection-checkbox]')) {
+      return;
+    }
+
+    // In selection mode, toggle selection on click
+    if (selectionMode && onSelect) {
+      onSelect(app);
       return;
     }
 
     if (primaryUrl) {
       const url = normalizeUrl(primaryUrl);
       if (url) {
+        // Track the access
+        trackAccess({ appId: app.id, accessType: "click" });
         window.open(url, "_blank", "noopener,noreferrer");
       }
+    }
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onSelect) {
+      onSelect(app);
     }
   };
 
@@ -176,7 +218,7 @@ export function AppCard({
       )}
 
       {/* Pin/Unpin */}
-      {onPin && (
+      {onPin && isOwner && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={() => onPin(app, !app.pinned)}>
@@ -195,15 +237,26 @@ export function AppCard({
         </>
       )}
 
+      {/* Share (only for owners) */}
+      {onShare && isOwner && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => onShare(app)}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Share
+          </ContextMenuItem>
+        </>
+      )}
+
       {/* Edit & Delete */}
       <ContextMenuSeparator />
-      {onEdit && (
+      {onEdit && canEdit && (
         <ContextMenuItem onClick={() => onEdit(app)}>
           <Pencil className="mr-2 h-4 w-4" />
           Edit
         </ContextMenuItem>
       )}
-      {onDelete && (
+      {onDelete && canDelete && (
         <ContextMenuItem
           onClick={() => onDelete(app)}
           className="text-destructive focus:text-destructive"
@@ -221,13 +274,35 @@ export function AppCard({
         <Card
           className={cn(
             "group relative transition-all",
-            hasValidUrl && "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
-            !hasValidUrl && "opacity-75",
+            hasValidUrl && !selectionMode && "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
+            selectionMode && "cursor-pointer hover:shadow-md",
+            !hasValidUrl && !selectionMode && "opacity-75",
             healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
-            borderClass
+            borderClass,
+            isSelected && "ring-2 ring-primary border-primary bg-primary/5"
           )}
           onClick={handleOpenApp}
+          data-testid={`app-card-${app.id}`}
         >
+          {/* Selection Checkbox Overlay */}
+          {selectionMode && (
+            <div
+              data-selection-checkbox
+              className="absolute top-2 left-2 z-10"
+              onClick={handleCheckboxClick}
+            >
+              <div
+                className={cn(
+                  "h-5 w-5 rounded-sm border-2 flex items-center justify-center transition-colors",
+                  isSelected
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : "bg-background border-muted-foreground/50 hover:border-primary"
+                )}
+              >
+                {isSelected && <Check className="h-3 w-3" />}
+              </div>
+            </div>
+          )}
       <CardContent className={cn("p-4 sm:p-4 p-5", viewMode === "list" && "p-3 sm:p-3 p-4")}>
         <div className={cn(
           "flex items-start gap-3 sm:gap-3 gap-4",
@@ -284,6 +359,12 @@ export function AppCard({
               )}>{app.name}</h3>
               {app.notes && (
                 <StickyNote className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              )}
+              {!isOwner && (
+                <Badge variant="outline" className="text-xs flex-shrink-0" title={`Shared by ${app.sharedBy?.name || 'another user'}`}>
+                  <Users className="h-3 w-3 mr-1" />
+                  Shared
+                </Badge>
               )}
             </div>
             {app.description && viewMode === "grid" && (
@@ -403,7 +484,7 @@ export function AppCard({
                   </DropdownMenuItem>
                 </>
               )}
-              {onPin && (
+              {onPin && isOwner && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onPin(app, !app.pinned)}>
@@ -421,14 +502,23 @@ export function AppCard({
                   </DropdownMenuItem>
                 </>
               )}
+              {onShare && isOwner && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onShare(app)}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
-              {onEdit && (
+              {onEdit && canEdit && (
                 <DropdownMenuItem onClick={() => onEdit(app)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               )}
-              {onDelete && (
+              {onDelete && canDelete && (
                 <DropdownMenuItem
                   onClick={() => onDelete(app)}
                   className="text-destructive focus:text-destructive"

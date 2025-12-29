@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
+import type { Widget, WidgetConfig } from "@/types/database";
 
 type WidgetSize = "small" | "medium" | "large" | "full";
 

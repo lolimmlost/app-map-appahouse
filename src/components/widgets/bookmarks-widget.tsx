@@ -1,7 +1,7 @@
 import { ExternalLink, Bookmark } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
 import { Button } from "@/components/ui/button";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
+import type { Widget, WidgetConfig } from "@/types/database";
 
 interface BookmarksWidgetProps {
   widget: Widget & { config: WidgetConfig };

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
-import { getUserSettings, updateUserSettings } from "@/lib/server/user-settings";
+import { getUserSettings, updateUserSettings } from "@/lib/server/user-settings.server";
 import {
   type ThemeColors,
   CSS_VAR_MAP,

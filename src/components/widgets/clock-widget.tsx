@@ -21,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateWidget } from "@/lib/server/widgets";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
+import { updateWidget } from "@/lib/server/widgets.server";
+import type { Widget, WidgetConfig } from "@/types/database";
 
 interface ClockWidgetProps {
   widget: Widget & { config: WidgetConfig };

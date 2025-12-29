@@ -22,10 +22,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { getJellyfinSessions, getJellyfinLatest, getJellyfinLibraryStats, getJellyfinSystemInfo } from "@/lib/server/widget-proxy";
-import { updateWidget } from "@/lib/server/widgets";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
-import type { Integration } from "@/database/schema/integrations";
+import { getJellyfinSessions, getJellyfinLatest, getJellyfinLibraryStats, getJellyfinSystemInfo } from "@/lib/server/widget-proxy.server";
+import { updateWidget } from "@/lib/server/widgets.server";
+import type { Widget, WidgetConfig } from "@/types/database";
+import type { Integration } from "@/types/database";
 
 interface JellyfinWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };

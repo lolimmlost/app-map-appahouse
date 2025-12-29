@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
+import type { Widget, WidgetConfig } from "@/types/database";
 
 interface IframeWidgetProps {
   widget: Widget & { config: WidgetConfig };

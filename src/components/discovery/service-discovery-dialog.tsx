@@ -33,7 +33,7 @@ import {
   discoverServices,
   bulkImportServices,
   type DiscoveredService,
-} from "@/lib/server/discovery";
+} from "@/lib/server/discovery.server";
 
 interface ServiceDiscoveryDialogProps {
   open: boolean;
@@ -344,7 +344,7 @@ export function ServiceDiscoveryDialog({
 
           {/* Import success message */}
           {bulkImportMutation.isSuccess && (
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <div className="flex items-center gap-2 text-sm text-success">
               <CheckCircle className="h-4 w-4" />
               Successfully imported {bulkImportMutation.data.imported.length} services
               {bulkImportMutation.data.failed.length > 0 && (

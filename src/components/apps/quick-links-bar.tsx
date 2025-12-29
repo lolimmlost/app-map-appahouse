@@ -1,8 +1,8 @@
 import { Home, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { App } from "@/database/schema/apps";
-import type { Category } from "@/database/schema/categories";
+import type { App } from "@/types/database";
+import type { Category } from "@/types/database";
 import type { HealthStatus } from "./app-card";
 
 export type AppWithCategory = App & {
@@ -17,17 +17,17 @@ interface QuickLinksBarProps {
 }
 
 const healthColors: Record<HealthStatus, string> = {
-  online: "bg-green-500",
-  offline: "bg-red-500",
-  unknown: "bg-gray-400",
-  checking: "bg-yellow-500 animate-pulse",
+  online: "bg-status-online",
+  offline: "bg-status-offline",
+  unknown: "bg-status-unknown",
+  checking: "bg-status-pending animate-pulse",
 };
 
 const healthBorderColors: Record<HealthStatus, string> = {
-  online: "border-green-500",
-  offline: "border-red-500",
-  unknown: "border-gray-400",
-  checking: "border-yellow-500",
+  online: "border-status-online",
+  offline: "border-status-offline",
+  unknown: "border-status-unknown",
+  checking: "border-status-pending",
 };
 
 export function QuickLinksBar({

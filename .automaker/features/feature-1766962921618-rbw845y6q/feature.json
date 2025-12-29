@@ -1,0 +1,17 @@
+{
+  "category": "Security & Automation",
+  "description": "Implement a REST API with API key management for external integrations. Create an /api/v1 endpoint suite with auth tokens, rate limiting, and scope-based permissions (read-only, write apps, manage integrations, etc.). Allow automation tools (Home Assistant, Node-RED, etc.) to query app status, trigger health checks, or update app metadata programmatically.",
+  "id": "feature-1766962921618-rbw845y6q",
+  "steps": [],
+  "status": "backlog",
+  "skipTests": false,
+  "priority": 2,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false
+}

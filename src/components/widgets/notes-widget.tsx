@@ -4,8 +4,8 @@ import { StickyNote, Pencil, Check, X } from "lucide-react";
 import { WidgetContainer } from "./widget-container";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { updateWidget } from "@/lib/server/widgets";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
+import { updateWidget } from "@/lib/server/widgets.server";
+import type { Widget, WidgetConfig } from "@/types/database";
 
 interface NotesWidgetProps {
   widget: Widget & { config: WidgetConfig };

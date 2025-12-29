@@ -1,0 +1,19 @@
+{
+  "category": "Security & Organization",
+  "description": "Implement app sharing and permissions system. Allow users to share specific apps or entire categories with other users with read-only or read-write permissions. Include granular controls: can view, can edit, can see health status, can access remote URL, etc.",
+  "id": "feature-1766954790180-lqxjdutf1",
+  "steps": [],
+  "status": "completed",
+  "skipTests": false,
+  "priority": 2,
+  "branchName": "main",
+  "startedAt": "2025-12-28T22:59:56.453Z",
+  "updatedAt": "2025-12-28T23:22:55.590Z",
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "planningMode": "skip",
+  "requirePlanApproval": false
+}

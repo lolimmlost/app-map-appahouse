@@ -1,0 +1,19 @@
+{
+  "category": "Code Quality",
+  "description": "Extract repeated session retrieval logic into a reusable authentication utility. Currently, `getSession()` is duplicated across all server functions in widgets.ts, apps.ts, health.ts, and other modules. Create a shared `getAuthenticatedSession()` utility function to reduce duplication and centralize auth error handling.",
+  "id": "feature-1766954689799-yaoddspbx",
+  "steps": [],
+  "status": "completed",
+  "skipTests": false,
+  "priority": 1,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "startedAt": "2025-12-28T20:47:48.092Z",
+  "updatedAt": "2025-12-28T20:59:39.623Z"
+}

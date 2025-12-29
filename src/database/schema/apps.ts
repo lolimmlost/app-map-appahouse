@@ -19,6 +19,7 @@ export const apps = pgTable("apps", {
   healthCheckEnabled: boolean("health_check_enabled").default(false),
   healthCheckType: healthCheckTypeEnum("health_check_type").default("http"),
   healthCheckUrl: text("health_check_url"),
+  healthCheckTTL: integer("health_check_ttl").default(60), // Cache TTL in seconds, default 60s
   uptimeKumaMonitorId: text("uptime_kuma_monitor_id"),
   dockerContainerId: text("docker_container_id"),
   truenasAppId: text("truenas_app_id"),

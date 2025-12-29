@@ -23,11 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { getLocalSystemStats, getGlancesStats } from "@/lib/server/system-stats";
-import { updateWidget } from "@/lib/server/widgets";
-import type { Widget, WidgetConfig } from "@/database/schema/widgets";
-import type { Integration } from "@/database/schema/integrations";
-import type { SystemStats } from "@/lib/server/system-stats";
+import { getLocalSystemStats, getGlancesStats } from "@/lib/server/system-stats.server";
+import { updateWidget } from "@/lib/server/widgets.server";
+import type { Widget, WidgetConfig } from "@/types/database";
+import type { Integration } from "@/types/database";
+import type { SystemStats } from "@/lib/server/system-stats.server";
 
 interface SystemStatsWidgetProps {
   widget: Widget & { config: WidgetConfig; integration?: Integration | null };

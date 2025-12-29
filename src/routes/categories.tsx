@@ -15,10 +15,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCategories, createCategory, updateCategory, deleteCategory } from "@/lib/server/categories";
-import { getTags, createTag, updateTag, deleteTag } from "@/lib/server/tags";
-import type { Category } from "@/database/schema/categories";
-import type { Tag } from "@/database/schema/apps";
+import { getCategories, createCategory, updateCategory, deleteCategory } from "@/lib/server/categories.server";
+import { getTags, createTag, updateTag, deleteTag } from "@/lib/server/tags.server";
+import type { Category } from "@/types/database";
+import type { Tag } from "@/types/database";
 
 export const Route = createFileRoute("/categories")({ component: CategoriesPage });
 

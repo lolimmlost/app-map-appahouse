@@ -4,3 +4,8 @@ export * from "./categories";
 export * from "./integrations";
 export * from "./user-settings";
 export * from "./widgets";
+export * from "./search-views";
+export * from "./health-cache";
+export * from "./app-sharing";
+export * from "./app-analytics";
+export * from "./alerts";

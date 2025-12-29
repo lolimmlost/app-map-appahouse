@@ -1,0 +1,21 @@
+{
+  "category": "Uncategorized",
+  "description": "Resolve Buffer Is Not Defined Error in Client-Side Code\n\nFix the \"Buffer is not defined\" ReferenceError that occurs when client-side code attempts to use Node.js Buffer API, which is not available in browser environments.\n\nRoot Cause:\n- A dependency or code module is attempting to use Node.js's `Buffer` global in client-side JavaScript\n- The error originates from a lazy-loaded component and propagates through the module chain: index.js → textParsers.js → defaults.js → utils.js → client.js\n- This is causing React hydration to fail and triggering error boundaries\n\nRequirements:\n- Identify which dependency or module is importing/using Buffer (trace from index.js:3 through the import chain)\n- Implement one of the following solutions:\n  1. Add a Buffer polyfill for browser environments (e.g., buffer package with Vite configuration)\n  2. Replace the problematic dependency with a browser-compatible alternative\n  3. Conditionally import the module only on the server-side if it's not needed in the browser\n  4. Configure Vite to properly polyfill Node.js globals for browser builds\n- Verify the lazy-loaded component renders without errors after the fix\n- Ensure React hydration completes successfully without mismatches\n- Test that the application loads and functions correctly in the browser\n\nAdditional Context:\n- The hydration mismatch warnings in the loader styles are separate but should also be addressed by ensuring server and client render identical initial HTML\n- The error prevents React from rendering the component tree, falling back to error boundaries",
+  "title": "Fix Buffer is not defined ReferenceError",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "branchName": "main",
+  "priority": 2,
+  "planningMode": "lite",
+  "requirePlanApproval": false,
+  "dependencies": [],
+  "titleGenerating": false,
+  "status": "backlog",
+  "id": "feature-1766966675018-gsu1g2r67",
+  "startedAt": "2025-12-29T00:20:53.752Z",
+  "updatedAt": "2025-12-29T00:20:53.761Z"
+}
