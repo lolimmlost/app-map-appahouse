@@ -248,14 +248,22 @@ export const discoverServices = createServerFn({ method: "GET" }).handler(
   async () => {
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
+    const { getOptionalSession } = await import("./auth-utils.server");
     const { apps } = await import("@/database/schema/apps");
     const { integrations } = await import("@/database/schema/integrations");
     const { fetchDockerContainers, fetchTrueNASApps } = await import("./widget-proxy.server");
     const { getIconUrl } = await import("./icons.server");
 
     const db = await getDb();
-    const session = await getAuthenticatedSession();
+    const session = await getOptionalSession();
+
+    if (!session) {
+      return {
+        services: [],
+        errors: [{ integration: "Auth", error: "Please log in to discover services" }],
+        integrationCount: { docker: 0, truenas: 0 },
+      };
+    }
 
     // Get all enabled Docker and TrueNAS integrations
     const userIntegrations = await db.query.integrations.findMany({
