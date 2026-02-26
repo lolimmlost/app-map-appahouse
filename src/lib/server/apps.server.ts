@@ -1,5 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { NewApp, GranularPermissions } from "@/types/database";
+import type { GranularPermissions } from "@/types/database";
+import { validateInput } from "@/lib/validation";
+import {
+  createAppSchema,
+  updateAppSchema,
+  getAppSchema,
+  deleteAppSchema,
+  pinAppSchema,
+  updateAppOrderSchema,
+  bulkDeleteAppsSchema,
+  bulkUpdateCategorySchema,
+  bulkToggleHealthCheckSchema,
+  bulkExportAppsSchema,
+  bulkUpdateTagsSchema,
+  refreshAppIconsSchema,
+  reorderAppsItemSchema,
+} from "@/lib/validation/schemas/app";
 
 // Fields that affect health check behavior and should trigger cache invalidation
 const HEALTH_CHECK_FIELDS = [
@@ -158,7 +174,10 @@ export const getApps = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const getApp = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { id: string } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { id } = validateInput(getAppSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -169,7 +188,7 @@ export const getApp = createServerFn({ method: "POST" }).handler(
     const session = await getAuthenticatedSession();
 
     const app = await db.query.apps.findFirst({
-      where: and(eq(apps.id, ctx.data.id), eq(apps.userId, session.user.id)),
+      where: and(eq(apps.id, id), eq(apps.userId, session.user.id)),
       with: {
         category: true,
         tags: {
@@ -189,12 +208,11 @@ export const getApp = createServerFn({ method: "POST" }).handler(
   }
 );
 
-type CreateAppData = {
-  data: Omit<NewApp, "id" | "userId" | "createdAt" | "updatedAt"> & { tagIds?: string[] };
-};
-
 export const createApp = createServerFn({ method: "POST" }).handler(
-  async (ctx: CreateAppData) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input using schema
+    const validData = validateInput(createAppSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
     const { apps, appTags } = await import("@/database/schema");
@@ -203,7 +221,7 @@ export const createApp = createServerFn({ method: "POST" }).handler(
 
     const session = await getAuthenticatedSession();
 
-    const { tagIds, ...appData } = ctx.data;
+    const { tagIds, ...appData } = validData;
 
     const [newApp] = await db
       .insert(apps)
@@ -226,12 +244,11 @@ export const createApp = createServerFn({ method: "POST" }).handler(
   }
 );
 
-type UpdateAppData = {
-  data: { id: string } & Partial<Omit<NewApp, "id" | "userId">> & { tagIds?: string[] };
-};
-
 export const updateApp = createServerFn({ method: "POST" }).handler(
-  async (ctx: UpdateAppData) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input using schema
+    const validData = validateInput(updateAppSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -242,7 +259,7 @@ export const updateApp = createServerFn({ method: "POST" }).handler(
 
     const session = await getAuthenticatedSession();
 
-    const { id, tagIds, ...updateData } = ctx.data;
+    const { id, tagIds, ...updateData } = validData;
 
     // Check if any health check related fields are being updated
     const shouldInvalidateCache = HEALTH_CHECK_FIELDS.some(
@@ -279,7 +296,10 @@ export const updateApp = createServerFn({ method: "POST" }).handler(
 );
 
 export const deleteApp = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { id: string } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { id } = validateInput(deleteAppSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -289,14 +309,16 @@ export const deleteApp = createServerFn({ method: "POST" }).handler(
 
     const session = await getAuthenticatedSession();
 
-    await db.delete(apps).where(and(eq(apps.id, ctx.data.id), eq(apps.userId, session.user.id)));
+    await db.delete(apps).where(and(eq(apps.id, id), eq(apps.userId, session.user.id)));
 
     return { success: true };
   }
 );
 
 export const reorderApps = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { id: string; sortOrder: number }[] }) => {
+  async (ctx: { data: unknown }) => {
+    const validData = validateInput(reorderAppsItemSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -306,12 +328,12 @@ export const reorderApps = createServerFn({ method: "POST" }).handler(
 
     const session = await getAuthenticatedSession();
 
-    if (!ctx.data.length) return { success: true };
+    if (!validData.length) return { success: true };
 
     // Batch update using a transaction for better performance
     await db.transaction(async (tx) => {
       await Promise.all(
-        ctx.data.map(({ id, sortOrder }) =>
+        validData.map(({ id, sortOrder }) =>
           tx
             .update(apps)
             .set({ sortOrder })
@@ -325,7 +347,10 @@ export const reorderApps = createServerFn({ method: "POST" }).handler(
 );
 
 export const pinApp = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { id: string; pinned: boolean } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { id, pinned } = validateInput(pinAppSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -337,8 +362,8 @@ export const pinApp = createServerFn({ method: "POST" }).handler(
 
     const [updatedApp] = await db
       .update(apps)
-      .set({ pinned: ctx.data.pinned, updatedAt: new Date() })
-      .where(and(eq(apps.id, ctx.data.id), eq(apps.userId, session.user.id)))
+      .set({ pinned, updatedAt: new Date() })
+      .where(and(eq(apps.id, id), eq(apps.userId, session.user.id)))
       .returning();
 
     if (!updatedApp) throw new Error("App not found");
@@ -371,7 +396,10 @@ export const getPinnedApps = createServerFn({ method: "GET" }).handler(async () 
 
 // Bulk delete apps
 export const bulkDeleteApps = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { ids: string[] } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { ids } = validateInput(bulkDeleteAppsSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and, inArray } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -380,9 +408,6 @@ export const bulkDeleteApps = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     const session = await getAuthenticatedSession();
-
-    const { ids } = ctx.data;
-    if (!ids.length) return { deleted: 0 };
 
     // First delete app tags
     await db.delete(appTags).where(inArray(appTags.appId, ids));
@@ -398,7 +423,10 @@ export const bulkDeleteApps = createServerFn({ method: "POST" }).handler(
 
 // Bulk update category
 export const bulkUpdateCategory = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { ids: string[]; categoryId: string | null } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { ids, categoryId } = validateInput(bulkUpdateCategorySchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and, inArray } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -407,9 +435,6 @@ export const bulkUpdateCategory = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     const session = await getAuthenticatedSession();
-
-    const { ids, categoryId } = ctx.data;
-    if (!ids.length) return { updated: 0 };
 
     await db
       .update(apps)
@@ -422,7 +447,10 @@ export const bulkUpdateCategory = createServerFn({ method: "POST" }).handler(
 
 // Bulk toggle health check
 export const bulkToggleHealthCheck = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { ids: string[]; enabled: boolean } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { ids, enabled } = validateInput(bulkToggleHealthCheckSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and, inArray } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -432,9 +460,6 @@ export const bulkToggleHealthCheck = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     const session = await getAuthenticatedSession();
-
-    const { ids, enabled } = ctx.data;
-    if (!ids.length) return { updated: 0 };
 
     await db
       .update(apps)
@@ -450,7 +475,10 @@ export const bulkToggleHealthCheck = createServerFn({ method: "POST" }).handler(
 
 // Refresh icons for apps (detect icons based on name)
 export const refreshAppIcons = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { ids: string[] } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { ids } = validateInput(refreshAppIconsSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and, inArray } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -460,9 +488,6 @@ export const refreshAppIcons = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     const session = await getAuthenticatedSession();
-
-    const { ids } = ctx.data;
-    if (!ids.length) return { updated: 0, icons: [] };
 
     // Get the apps to refresh
     const appsToRefresh = await db.query.apps.findMany({
@@ -488,7 +513,10 @@ export const refreshAppIcons = createServerFn({ method: "POST" }).handler(
 
 // Update app sort order (for drag and drop reordering)
 export const updateAppOrder = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { orderedIds: string[] } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { orderedIds } = validateInput(updateAppOrderSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -498,7 +526,6 @@ export const updateAppOrder = createServerFn({ method: "POST" }).handler(
 
     const session = await getAuthenticatedSession();
 
-    const { orderedIds } = ctx.data;
     if (!orderedIds.length) return { updated: 0 };
 
     const now = new Date();
@@ -521,7 +548,10 @@ export const updateAppOrder = createServerFn({ method: "POST" }).handler(
 
 // Bulk export apps as JSON
 export const bulkExportApps = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { ids: string[] } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { ids } = validateInput(bulkExportAppsSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and, inArray } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -530,9 +560,6 @@ export const bulkExportApps = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     const session = await getAuthenticatedSession();
-
-    const { ids } = ctx.data;
-    if (!ids.length) return { data: [] };
 
     // Get the apps to export
     const appsToExport = await db.query.apps.findMany({
@@ -572,7 +599,10 @@ export const bulkExportApps = createServerFn({ method: "POST" }).handler(
 
 // Bulk update tags for apps
 export const bulkUpdateTags = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { ids: string[]; tagIds: string[]; mode: "replace" | "append" } }) => {
+  async (ctx: { data: unknown }) => {
+    // Validate input
+    const { ids, tagIds, mode } = validateInput(bulkUpdateTagsSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and, inArray } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -581,9 +611,6 @@ export const bulkUpdateTags = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     const session = await getAuthenticatedSession();
-
-    const { ids, tagIds, mode } = ctx.data;
-    if (!ids.length) return { updated: 0 };
 
     // Verify apps belong to user
     const userApps = await db.query.apps.findMany({

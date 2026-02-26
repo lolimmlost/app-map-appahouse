@@ -1,36 +1,56 @@
 import { createServerFn } from "@tanstack/react-start";
-import { Agent } from "undici";
-import type { Integration, NewIntegration } from "@/types/database";
+import { validateInput } from "@/lib/validation";
+import {
+  createIntegrationSchema,
+  updateIntegrationSchema,
+  deleteIntegrationSchema,
+  testIntegrationSchema,
+} from "@/lib/validation/schemas/integration";
+import { idSchema } from "@/lib/validation/schemas/common";
+import { withErrorHandling } from "./server-fn";
 
-// Create an undici agent that ignores SSL certificate errors
-const insecureAgent = new Agent({
-  connect: {
-    rejectUnauthorized: false,
-  },
-});
+// Types defined locally to avoid importing from schema
+type Integration = {
+  id: string;
+  userId: string;
+  name: string;
+  type: string;
+  url: string;
+  apiKey: string | null;
+  username: string | null;
+  password: string | null;
+  allowInsecure: boolean | null;
+  enabled: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // Get all integrations for the current user
-export const getIntegrations = createServerFn({ method: "GET" }).handler(async () => {
-  const { getDb } = await import("./get-db");
-  const { eq, asc } = await import("drizzle-orm");
-  const { getOptionalSession } = await import("./auth-utils.server");
-  const { integrations } = await import("@/database/schema/integrations");
+export const getIntegrations = createServerFn({ method: "GET" }).handler(
+  withErrorHandling(async () => {
+    const { getDb } = await import("./get-db");
+    const { eq, asc } = await import("drizzle-orm");
+    const { getOptionalSession } = await import("./auth-utils.server");
+    const { integrations } = await import("@/database/schema/integrations");
 
-  const session = await getOptionalSession();
-  if (!session) return { integrations: [] };
+    const session = await getOptionalSession();
+    if (!session) return { integrations: [] };
 
-  const db = await getDb();
-  const result = await db.query.integrations.findMany({
-    where: eq(integrations.userId, session.user.id),
-    orderBy: [asc(integrations.name)],
-  });
+    const db = await getDb();
+    const result = await db.query.integrations.findMany({
+      where: eq(integrations.userId, session.user.id),
+      orderBy: [asc(integrations.name)],
+    });
 
-  return { integrations: result };
-});
+    return { integrations: result };
+  }, { operation: "getIntegrations" })
+);
 
 // Get a single integration by ID
 export const getIntegration = createServerFn({ method: "GET" }).handler(
-  async (ctx: { data: { id: string } }) => {
+  withErrorHandling(async (ctx: { data: unknown }) => {
+    const { id } = validateInput(idSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -42,22 +62,20 @@ export const getIntegration = createServerFn({ method: "GET" }).handler(
     const [integration] = await db
       .select()
       .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.id), eq(integrations.userId, session.user.id)))
+      .where(and(eq(integrations.id, id), eq(integrations.userId, session.user.id)))
       .limit(1);
 
     if (!integration) throw new Error("Integration not found");
 
     return { integration };
-  }
+  }, { operation: "getIntegration" })
 );
-
-type CreateIntegrationData = {
-  data: Omit<NewIntegration, "id" | "userId" | "createdAt" | "updatedAt">;
-};
 
 // Create a new integration
 export const createIntegration = createServerFn({ method: "POST" }).handler(
-  async (ctx: CreateIntegrationData) => {
+  withErrorHandling(async (ctx: { data: unknown }) => {
+    const validData = validateInput(createIntegrationSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
     const { integrations } = await import("@/database/schema/integrations");
@@ -68,25 +86,20 @@ export const createIntegration = createServerFn({ method: "POST" }).handler(
     const [newIntegration] = await db
       .insert(integrations)
       .values({
-        ...ctx.data,
+        ...validData,
         userId: session.user.id,
       })
       .returning();
 
     return newIntegration;
-  }
+  }, { operation: "createIntegration" })
 );
-
-type UpdateIntegrationData = {
-  data: {
-    id: string;
-    data: Partial<Omit<NewIntegration, "id" | "userId" | "createdAt">>;
-  };
-};
 
 // Update an existing integration
 export const updateIntegration = createServerFn({ method: "POST" }).handler(
-  async (ctx: UpdateIntegrationData) => {
+  withErrorHandling(async (ctx: { data: unknown }) => {
+    const { id, data } = validateInput(updateIntegrationSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -94,8 +107,6 @@ export const updateIntegration = createServerFn({ method: "POST" }).handler(
 
     const session = await getAuthenticatedSession();
     const db = await getDb();
-
-    const { id, data } = ctx.data;
 
     const [updatedIntegration] = await db
       .update(integrations)
@@ -109,12 +120,14 @@ export const updateIntegration = createServerFn({ method: "POST" }).handler(
     if (!updatedIntegration) throw new Error("Integration not found");
 
     return updatedIntegration;
-  }
+  }, { operation: "updateIntegration" })
 );
 
 // Delete an integration
 export const deleteIntegration = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { id: string } }) => {
+  withErrorHandling(async (ctx: { data: unknown }) => {
+    const { id } = validateInput(deleteIntegrationSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -124,16 +137,18 @@ export const deleteIntegration = createServerFn({ method: "POST" }).handler(
     const db = await getDb();
 
     await db.delete(integrations).where(
-      and(eq(integrations.id, ctx.data.id), eq(integrations.userId, session.user.id))
+      and(eq(integrations.id, id), eq(integrations.userId, session.user.id))
     );
 
     return { success: true };
-  }
+  }, { operation: "deleteIntegration" })
 );
 
 // Test an integration connection
 export const testIntegration = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { id: string } }) => {
+  withErrorHandling(async (ctx: { data: unknown }) => {
+    const { id } = validateInput(testIntegrationSchema, ctx.data);
+
     const { getDb } = await import("./get-db");
     const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
@@ -145,7 +160,7 @@ export const testIntegration = createServerFn({ method: "POST" }).handler(
     const [integration] = await db
       .select()
       .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.id), eq(integrations.userId, session.user.id)))
+      .where(and(eq(integrations.id, id), eq(integrations.userId, session.user.id)))
       .limit(1);
 
     if (!integration) throw new Error("Integration not found");
@@ -159,16 +174,13 @@ export const testIntegration = createServerFn({ method: "POST" }).handler(
         message: error instanceof Error ? error.message : "Connection test failed",
       };
     }
-  }
+  }, { operation: "testIntegration" })
 );
 
 // Helper function to test different integration types
 async function testIntegrationConnection(
   integration: Integration
 ): Promise<{ success: boolean; message: string }> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
   try {
     let testUrl = integration.url;
     let headers: Record<string, string> = {
@@ -250,22 +262,16 @@ async function testIntegrationConnection(
         break;
     }
 
-    // Build fetch options
-    const fetchOptions: RequestInit & { dispatcher?: Agent } = {
+    // Dynamically import fetchWithTimeout to avoid bundling undici on client
+    const { fetchWithTimeout } = await import("./integration-client.server");
+
+    // Use fetchWithTimeout utility for consistent timeout handling
+    const response = await fetchWithTimeout(testUrl, {
       method: "GET",
       headers,
-      signal: controller.signal,
-    };
-
-    // Use insecure dispatcher for self-signed certificates if allowInsecure is enabled
-    if (integration.allowInsecure && testUrl.startsWith("https://")) {
-      // @ts-expect-error - dispatcher is undici-specific but works with Node.js fetch
-      fetchOptions.dispatcher = insecureAgent;
-    }
-
-    const response = await fetch(testUrl, fetchOptions);
-
-    clearTimeout(timeoutId);
+      timeout: 10000,
+      allowInsecure: integration.allowInsecure || false,
+    });
 
     if (response.ok) {
       return { success: true, message: "Connection successful" };
@@ -276,10 +282,6 @@ async function testIntegrationConnection(
       };
     }
   } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      return { success: false, message: "Connection timed out" };
-    }
     return {
       success: false,
       message: error instanceof Error ? error.message : "Connection failed",

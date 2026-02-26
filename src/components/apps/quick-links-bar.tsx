@@ -1,6 +1,8 @@
 import { Home, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTrackAppAccess } from "@/hooks/use-analytics";
+import { useScrollGuard } from "@/hooks/use-scroll-guard";
 import type { App } from "@/types/database";
 import type { Category } from "@/types/database";
 import type { HealthStatus } from "./app-card";
@@ -36,6 +38,9 @@ export function QuickLinksBar({
   healthBarStyle = "dot",
   className,
 }: QuickLinksBarProps) {
+  const { trackAccess } = useTrackAppAccess();
+  const { isScrolling } = useScrollGuard();
+
   if (apps.length === 0) {
     return null;
   }
@@ -58,17 +63,20 @@ export function QuickLinksBar({
     }
   };
 
-  const handleOpenUrl = (url: string | null) => {
+  const handleOpenUrl = (appId: string, url: string | null, urlType: "primary" | "local" | "remote" = "primary") => {
+    if (isScrolling()) return;
     if (url) {
       const normalized = normalizeUrl(url);
       if (normalized) {
+        const accessType = urlType === "local" ? "open_local" : urlType === "remote" ? "open_remote" : "click";
+        trackAccess({ appId, accessType });
         window.open(normalized, "_blank", "noopener,noreferrer");
       }
     }
   };
 
   return (
-    <div className={cn("flex flex-wrap gap-2 sm:gap-2 gap-3", className)}>
+    <div className={cn("grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2", className)}>
       {apps.map((app) => {
         const hasLocalUrl = !!app.localUrl?.trim();
         const hasRemoteUrl = !!app.remoteUrl?.trim();
@@ -82,7 +90,7 @@ export function QuickLinksBar({
           <div
             key={app.id}
             className={cn(
-              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-lg border bg-card p-1 sm:p-1 p-1.5 shadow-sm",
+              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-lg border bg-card p-1 sm:p-1 p-1.5 shadow-sm overflow-hidden",
               healthBarStyle === "border" && healthStatus && [
                 "border-2",
                 healthBorderColors[healthStatus]
@@ -103,8 +111,8 @@ export function QuickLinksBar({
             <Button
               variant="ghost"
               size="sm"
-              className="h-10 sm:h-8 px-2.5 sm:px-2 gap-2 sm:gap-1.5"
-              onClick={() => handleOpenUrl(primaryUrl)}
+              className="h-10 sm:h-8 px-2.5 sm:px-2 gap-2 sm:gap-1.5 min-w-0 flex-1 sm:flex-initial"
+              onClick={() => handleOpenUrl(app.id, primaryUrl, "primary")}
               title={app.name}
             >
               {app.icon ? (
@@ -122,7 +130,7 @@ export function QuickLinksBar({
                   {app.name.charAt(0).toUpperCase()}
                 </span>
               )}
-              <span className="text-sm sm:text-xs font-medium max-w-[100px] sm:max-w-[80px] truncate">
+              <span className="text-sm sm:text-xs font-medium truncate sm:max-w-[80px]">
                 {app.name}
               </span>
             </Button>
@@ -130,12 +138,12 @@ export function QuickLinksBar({
             {/* Show separate buttons when both URLs available - larger on mobile */}
             {hasBothUrls && (
               <>
-                <div className="h-5 sm:h-4 w-px bg-border" />
+                <div className="h-5 sm:h-4 w-px bg-border shrink-0" />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-7 sm:w-7"
-                  onClick={() => handleOpenUrl(app.localUrl)}
+                  className="h-9 w-9 sm:h-7 sm:w-7 shrink-0"
+                  onClick={() => handleOpenUrl(app.id, app.localUrl, "local")}
                   title="Local"
                 >
                   <Home className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
@@ -143,8 +151,8 @@ export function QuickLinksBar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-7 sm:w-7"
-                  onClick={() => handleOpenUrl(app.remoteUrl)}
+                  className="h-9 w-9 sm:h-7 sm:w-7 shrink-0"
+                  onClick={() => handleOpenUrl(app.id, app.remoteUrl, "remote")}
                   title="Remote"
                 >
                   <Globe className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
