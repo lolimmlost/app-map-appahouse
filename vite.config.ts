@@ -16,10 +16,17 @@ const config = defineConfig({
         }),
         tailwindcss(),
         tanstackStart(),
-        nitroV2Plugin({ preset: "vercel" }),
+        nitroV2Plugin({ preset: "node-server" }),
         viteReact(),
         devtoolsJson()
     ],
+    build: {
+        rollupOptions: {
+            // Prevent Rollup from failing on Node.js built-in SSR imports
+            // that leak into the client bundle via @tanstack/router-core
+            external: (id) => id.startsWith("node:")
+        }
+    },
     server: {
         host: true,
         port: 4175,
