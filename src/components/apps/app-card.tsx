@@ -321,8 +321,8 @@ export function AppCard({
               </div>
             </div>
           )}
-      <CardContent className="p-1.5 sm:p-1">
-        <div className="flex items-center gap-1.5 sm:gap-1">
+      <CardContent className="px-2.5 py-1 sm:px-2 sm:py-0.5">
+        <div className="flex items-center gap-2 sm:gap-1.5">
           {/* App Icon */}
           <div className="relative flex-shrink-0">
             <div className="flex items-center justify-center rounded-md bg-muted h-8 w-8 sm:h-7 sm:w-7">
