@@ -1,7 +1,54 @@
+/**
+ * Health Check Server Module
+ *
+ * This module provides app-level health monitoring for authenticated users.
+ * It performs HTTP/TCP health checks against configured app URLs and caches
+ * results in the database for performance optimization.
+ *
+ * ARCHITECTURE OVERVIEW:
+ * ----------------------
+ * 1. App-Level Monitoring (this file):
+ *    - Used by authenticated users to monitor their apps from the dashboard
+ *    - Uses the `healthCache` table to store results per user/app
+ *    - Leverages the centralized HttpClient for connection pooling and timeout handling
+ *    - Triggered by `useHealthStatus` hook in the main app
+ *
+ * 2. Status Page Monitoring (status-pages.server.ts):
+ *    - Public status pages have their OWN health checking mechanism
+ *    - `getPublicStatusPageHealth` reads from the SAME `healthCache` table
+ *    - `refreshPublicStatusPageHealth` performs LIVE checks for status pages
+ *    - Both systems share the same cache, keyed by (appId, userId)
+ *
+ * CACHE STRATEGY:
+ * - Results are cached with a TTL (configurable per-app, default 60s)
+ * - Cache is shared between app dashboard and status pages
+ * - When cache expires or is empty, a live check is performed
+ * - Status pages can trigger their own refresh via `refreshPublicStatusPageHealth`
+ *
+ * NO DUPLICATE CHECKS:
+ * - The cache is shared, so if the main app checks health, status pages
+ *   will use the same cached result (and vice versa)
+ * - TTL ensures fresh data while preventing excessive API calls
+ *
+ * @see http-client.server.ts for the centralized HttpClient used here
+ */
+
 import { createServerFn } from "@tanstack/react-start";
-import type { apps } from "@/database/schema/apps";
+import { serverLogger } from "./logger";
+import { performHealthCheck as httpClientHealthCheck } from "./http-client.server";
+
+// Create a child logger for health module
+const log = serverLogger.child({ module: "health" });
 
 export type HealthStatus = "online" | "offline" | "unknown" | "checking";
+
+// Local type to avoid importing from schema which pulls in drizzle-orm/pg-core
+type AppForHealthCheck = {
+  healthCheckUrl: string | null;
+  localUrl: string | null;
+  remoteUrl: string | null;
+  healthCheckType: "http" | "tcp" | "uptime_kuma" | null;
+};
 
 export type HealthCheckResult = {
   appId: string;
@@ -12,140 +59,12 @@ export type HealthCheckResult = {
   cached?: boolean; // Indicates if result came from cache
 };
 
-// Connection pool configuration
-const CONNECTION_POOL_CONFIG = {
-  maxConnectionsPerHost: 6, // Maximum concurrent connections per host
-  keepAliveTimeout: 60000, // Keep connections alive for 60 seconds
-  requestTimeout: 5000, // Default request timeout
-};
+// Default request timeout for health checks
+const DEFAULT_HEALTH_CHECK_TIMEOUT = 5000;
 
-// Connection pool to reuse HTTP connections
-// Uses a Map to track active connections per host
-const connectionPool = new Map<string, {
-  activeConnections: number;
-  lastUsed: number;
-}>();
-
-// Cleanup stale connections periodically
-function cleanupConnectionPool() {
-  const now = Date.now();
-  for (const [host, state] of connectionPool.entries()) {
-    if (now - state.lastUsed > CONNECTION_POOL_CONFIG.keepAliveTimeout) {
-      connectionPool.delete(host);
-    }
-  }
-}
-
-// Run cleanup every minute
-if (typeof setInterval !== "undefined") {
-  setInterval(cleanupConnectionPool, 60000);
-}
-
-// Extract host from URL for connection pooling
-function getHostFromUrl(url: string): string {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.host;
-  } catch {
-    return url;
-  }
-}
-
-// Acquire a connection slot from the pool
-async function acquireConnection(host: string): Promise<boolean> {
-  const state = connectionPool.get(host) || { activeConnections: 0, lastUsed: Date.now() };
-
-  if (state.activeConnections >= CONNECTION_POOL_CONFIG.maxConnectionsPerHost) {
-    // Wait for a connection to become available (simple polling)
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const currentState = connectionPool.get(host);
-      if (!currentState || currentState.activeConnections < CONNECTION_POOL_CONFIG.maxConnectionsPerHost) {
-        break;
-      }
-      attempts++;
-    }
-
-    if (attempts >= maxAttempts) {
-      // Timeout waiting for connection, proceed anyway
-      return false;
-    }
-  }
-
-  // Increment active connections
-  connectionPool.set(host, {
-    activeConnections: (connectionPool.get(host)?.activeConnections || 0) + 1,
-    lastUsed: Date.now(),
-  });
-
-  return true;
-}
-
-// Release a connection slot back to the pool
-function releaseConnection(host: string): void {
-  const state = connectionPool.get(host);
-  if (state) {
-    connectionPool.set(host, {
-      activeConnections: Math.max(0, state.activeConnections - 1),
-      lastUsed: Date.now(),
-    });
-  }
-}
-
-// Perform HTTP health check with connection pooling
-async function httpHealthCheck(url: string, timeoutMs = CONNECTION_POOL_CONFIG.requestTimeout): Promise<{ online: boolean; responseTime?: number; error?: string }> {
-  const host = getHostFromUrl(url);
-  const startTime = Date.now();
-
-  // Acquire connection from pool
-  await acquireConnection(host);
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const response = await fetch(url, {
-      method: "HEAD",
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "AppMap-HealthCheck/1.0",
-        "Connection": "keep-alive", // Request connection reuse
-      },
-      // Enable keep-alive for connection reuse
-      keepalive: true,
-    });
-
-    clearTimeout(timeoutId);
-    const responseTime = Date.now() - startTime;
-
-    // Consider 2xx and 3xx as online
-    return {
-      online: response.status >= 200 && response.status < 400,
-      responseTime,
-    };
-  } catch (error) {
-    return {
-      online: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  } finally {
-    // Release connection back to pool
-    releaseConnection(host);
-  }
-}
-
-// Perform TCP health check (simplified - just try HTTP)
-async function tcpHealthCheck(url: string, timeoutMs = CONNECTION_POOL_CONFIG.requestTimeout): Promise<{ online: boolean; responseTime?: number; error?: string }> {
-  // For now, TCP check is the same as HTTP but we try to just connect
-  return httpHealthCheck(url, timeoutMs);
-}
-
-// Perform actual health check for an app (internal function)
+// Perform actual health check for an app using centralized HttpClient
 async function performHealthCheck(
-  app: typeof apps.$inferSelect
+  app: AppForHealthCheck
 ): Promise<{ online: boolean; responseTime?: number; error?: string }> {
   const checkUrl = app.healthCheckUrl || app.localUrl || app.remoteUrl;
 
@@ -155,13 +74,20 @@ async function performHealthCheck(
 
   switch (app.healthCheckType) {
     case "http":
-      return httpHealthCheck(checkUrl);
     case "tcp":
-      return tcpHealthCheck(checkUrl);
+      // Use centralized HttpClient for health checks
+      // TCP checks use the same HTTP logic (attempt connection via HTTP HEAD)
+      return httpClientHealthCheck(checkUrl, {
+        timeout: DEFAULT_HEALTH_CHECK_TIMEOUT,
+        method: "HEAD",
+      });
     case "uptime_kuma":
       return { online: false, error: "Uptime Kuma integration not configured" };
     default:
-      return httpHealthCheck(checkUrl);
+      return httpClientHealthCheck(checkUrl, {
+        timeout: DEFAULT_HEALTH_CHECK_TIMEOUT,
+        method: "HEAD",
+      });
   }
 }
 
@@ -251,7 +177,7 @@ export const checkAppHealth = createServerFn({ method: "POST" }).handler(
       healthResult.status as "online" | "offline" | "unknown",
       healthResult.responseTime,
       healthResult.error
-    ).catch(console.error);
+    ).catch((error) => log.logError(error, "Failed to record health check for analytics"));
 
     return healthResult;
   }
@@ -325,7 +251,7 @@ export const forceRefreshAppHealth = createServerFn({ method: "POST" }).handler(
       healthResult.status as "online" | "offline" | "unknown",
       healthResult.responseTime,
       healthResult.error
-    ).catch(console.error);
+    ).catch((error) => log.logError(error, "Failed to record health check for analytics"));
 
     return healthResult;
   }
@@ -414,7 +340,7 @@ export const checkAllAppsHealth = createServerFn({ method: "GET" }).handler(
             healthResult.status as "online" | "offline" | "unknown",
             healthResult.responseTime,
             healthResult.error
-          ).catch(console.error);
+          ).catch((err) => log.logError(err, "Failed to record health check for analytics"));
 
           return healthResult;
         } catch (error) {

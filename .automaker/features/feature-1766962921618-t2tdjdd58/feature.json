@@ -3,7 +3,7 @@
   "description": "Create a public-facing status page similar to Uptime Kuma's status page. Allow users to mark specific apps as 'public' and generate a shareable, read-only status page (with optional password protection) showing real-time health status. Customizable branding, color scheme, and public description text. Share via unique token URLs.",
   "id": "feature-1766962921618-t2tdjdd58",
   "steps": [],
-  "status": "backlog",
+  "status": "completed",
   "skipTests": false,
   "priority": 2,
   "title": "",
@@ -13,5 +13,7 @@
   "textFilePaths": [],
   "branchName": "main",
   "planningMode": "skip",
-  "requirePlanApproval": false
+  "requirePlanApproval": false,
+  "startedAt": "2025-12-29T19:38:41.585Z",
+  "updatedAt": "2025-12-29T19:59:41.061Z"
 }

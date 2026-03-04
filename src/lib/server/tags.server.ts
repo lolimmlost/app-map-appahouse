@@ -1,20 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { NewTag } from "@/types/database";
 
+/**
+ * Get all tags for the current user
+ */
 export const getTags = createServerFn({ method: "GET" }).handler(async () => {
-  const { getDb } = await import("./get-db");
-  const { eq, asc } = await import("drizzle-orm");
   const { getOptionalSession } = await import("./auth-utils.server");
-  const { tags } = await import("@/database/schema");
+  const { getTagRepository } = await import("./repositories");
 
   const session = await getOptionalSession();
   if (!session) return { tags: [] };
 
-  const db = await getDb();
-  const result = await db.query.tags.findMany({
-    where: eq(tags.userId, session.user.id),
-    orderBy: [asc(tags.name)],
-  });
+  const tagRepo = getTagRepository();
+  const result = await tagRepo.findAll(session.user.id);
 
   return { tags: result };
 });
@@ -23,22 +21,21 @@ type CreateTagData = {
   data: Omit<NewTag, "id" | "userId" | "createdAt">;
 };
 
+/**
+ * Create a new tag
+ */
 export const createTag = createServerFn({ method: "POST" }).handler(
   async (ctx: CreateTagData) => {
-    const { getDb } = await import("./get-db");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { tags } = await import("@/database/schema");
+    const { getTagRepository } = await import("./repositories");
 
     const session = await getAuthenticatedSession();
-    const db = await getDb();
+    const tagRepo = getTagRepository();
 
-    const [newTag] = await db
-      .insert(tags)
-      .values({
-        ...ctx.data,
-        userId: session.user.id,
-      })
-      .returning();
+    const newTag = await tagRepo.create({
+      ...ctx.data,
+      userId: session.user.id,
+    });
 
     return newTag;
   }
@@ -48,23 +45,20 @@ type UpdateTagData = {
   data: { id: string } & Partial<Omit<NewTag, "id" | "userId">>;
 };
 
+/**
+ * Update an existing tag
+ */
 export const updateTag = createServerFn({ method: "POST" }).handler(
   async (ctx: UpdateTagData) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { tags } = await import("@/database/schema");
+    const { getTagRepository } = await import("./repositories");
 
     const session = await getAuthenticatedSession();
-    const db = await getDb();
+    const tagRepo = getTagRepository();
 
     const { id, ...updateData } = ctx.data;
 
-    const [updatedTag] = await db
-      .update(tags)
-      .set(updateData)
-      .where(and(eq(tags.id, id), eq(tags.userId, session.user.id)))
-      .returning();
+    const updatedTag = await tagRepo.update(id, session.user.id, updateData);
 
     if (!updatedTag) throw new Error("Tag not found");
 
@@ -72,17 +66,18 @@ export const updateTag = createServerFn({ method: "POST" }).handler(
   }
 );
 
+/**
+ * Delete a tag
+ */
 export const deleteTag = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { id: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
     const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { tags } = await import("@/database/schema");
+    const { getTagRepository } = await import("./repositories");
 
     const session = await getAuthenticatedSession();
-    const db = await getDb();
+    const tagRepo = getTagRepository();
 
-    await db.delete(tags).where(and(eq(tags.id, ctx.data.id), eq(tags.userId, session.user.id)));
+    await tagRepo.delete(ctx.data.id, session.user.id);
 
     return { success: true };
   }

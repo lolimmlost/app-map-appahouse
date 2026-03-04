@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import type {
-  AppAccessLog,
-  AppUsageMetrics,
-} from "@/database/schema/app-analytics";
+import { serverLogger } from "./logger";
+
+// Create a child logger for analytics module
+const log = serverLogger.child({ module: "analytics" });
 
 // ============================================================================
 // Types
@@ -30,7 +30,7 @@ export type DailyMetric = {
   averageResponseTime: number | null;
 };
 
-export type TimeRange = "7d" | "30d" | "90d" | "all";
+export type TimeRange = "7d" | "30d" | "90d" | "1y" | "all";
 
 // ============================================================================
 // Helper Functions
@@ -52,6 +52,9 @@ function getDateRange(range: TimeRange): { start: Date; end: Date } {
       break;
     case "90d":
       start.setDate(start.getDate() - 90);
+      break;
+    case "1y":
+      start.setFullYear(start.getFullYear() - 1);
       break;
     case "all":
       start.setFullYear(2020, 0, 1); // Effectively all time
@@ -79,6 +82,8 @@ export async function logAppAccess(
   userId: string,
   accessType: AccessType = "click"
 ): Promise<void> {
+  log.debug("logAppAccess started", { appId, userId, accessType });
+
   const { getDb } = await import("./get-db");
   const { eq, and } = await import("drizzle-orm");
   const { appAccessLog, appUsageMetrics } = await import("@/database/schema/app-analytics");
@@ -86,9 +91,11 @@ export async function logAppAccess(
   const db = await getDb();
 
   try {
+
     const now = new Date();
     const today = truncateToDay(now);
 
+    log.debug("Inserting access log entry");
     // Insert access log entry
     await db.insert(appAccessLog).values({
       appId,
@@ -96,8 +103,10 @@ export async function logAppAccess(
       accessedAt: now,
       accessType,
     });
+    log.debug("Access log inserted successfully");
 
     // Update or create daily metrics
+    log.debug("Checking for existing metrics");
     const [existingMetrics] = await db
       .select()
       .from(appUsageMetrics)
@@ -111,6 +120,7 @@ export async function logAppAccess(
       .limit(1);
 
     if (existingMetrics) {
+      log.debug("Updating existing metrics", { metricsId: existingMetrics.id });
       // Update existing metrics
       const metadata = existingMetrics.metadata || { hourlyAccess: Array(24).fill(0), accessByType: {} };
       const hourlyAccess = metadata.hourlyAccess || Array(24).fill(0);
@@ -128,7 +138,9 @@ export async function logAppAccess(
           updatedAt: now,
         })
         .where(eq(appUsageMetrics.id, existingMetrics.id));
+      log.debug("Metrics updated successfully");
     } else {
+      log.debug("Creating new metrics entry");
       // Create new metrics entry
       const hourlyAccess = Array(24).fill(0);
       hourlyAccess[now.getHours()] = 1;
@@ -144,9 +156,11 @@ export async function logAppAccess(
           accessByType: { [accessType]: 1 },
         },
       });
+      log.debug("New metrics entry created");
     }
+    log.debug("logAppAccess completed successfully", { appId, userId, accessType });
   } catch (error) {
-    console.error("Error logging app access:", error);
+    log.logError(error, "Error in logAppAccess", { appId, userId, accessType });
     // Don't throw - analytics should not break the main flow
   }
 }
@@ -244,7 +258,7 @@ export async function recordHealthCheck(
       });
     }
   } catch (error) {
-    console.error("Error recording health check:", error);
+    log.logError(error, "Error recording health check", { appId, userId, status });
     // Don't throw - analytics should not break the main flow
   }
 }
@@ -258,30 +272,59 @@ export async function recordHealthCheck(
  */
 export const trackAppAccess = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { appId: string; accessType?: AccessType } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { apps } = await import("@/database/schema/apps");
+    log.debug("trackAppAccess called", { data: ctx.data });
+    try {
+      const { getDb } = await import("./get-db");
+      const { eq, or } = await import("drizzle-orm");
+      const { getAuthenticatedSession } = await import("./auth-utils.server");
+      const { apps, appShares } = await import("@/database/schema");
 
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
+      const db = await getDb();
+      const session = await getAuthenticatedSession();
 
-    const { appId, accessType = "click" } = ctx.data;
+      const { appId, accessType = "click" } = ctx.data;
 
-    // Verify app belongs to user
-    const [app] = await db
-      .select()
-      .from(apps)
-      .where(and(eq(apps.id, appId), eq(apps.userId, session.user.id)))
-      .limit(1);
+      log.debug("Tracking app access", { appId, accessType, userId: session.user.id });
 
-    if (!app) {
-      throw new Error("App not found");
+      // Verify user has access to app (either owns it or it's shared with them)
+      const [app] = await db
+        .select({ id: apps.id, userId: apps.userId })
+        .from(apps)
+        .where(eq(apps.id, appId))
+        .limit(1);
+
+      if (!app) {
+        log.warn("App not found for tracking", { appId });
+        throw new Error("App not found");
+      }
+
+      // Check if user owns the app or has access via sharing
+      const isOwner = app.userId === session.user.id;
+      const hasSharedAccess = !isOwner && await db.query.appShares.findFirst({
+        where: (shares, { eq, and, or, isNotNull }) => and(
+          eq(shares.sharedWithId, session.user.id),
+          or(
+            eq(shares.appId, appId),
+            // Check if shared via category
+            isNotNull(shares.categoryId)
+          )
+        )
+      });
+
+      if (!isOwner && !hasSharedAccess) {
+        log.warn("User denied access to app for tracking", { appId, userId: session.user.id });
+        throw new Error("Access denied");
+      }
+
+      await logAppAccess(appId, session.user.id, accessType);
+
+      log.debug("Successfully tracked app access", { appId });
+      return { success: true };
+    } catch (error) {
+      log.logError(error, "Error in trackAppAccess");
+      // Throw a clean error without circular references
+      throw new Error(error instanceof Error ? error.message : "Failed to track app access");
     }
-
-    await logAppAccess(appId, session.user.id, accessType);
-
-    return { success: true };
   }
 );
 
@@ -725,6 +768,503 @@ export const getAppAnalytics = createServerFn({ method: "GET" }).handler(
   }
 );
 
+// ============================================================================
+// New Dashboard Functions
+// ============================================================================
+
+export type HealthHistoryEntry = {
+  status: "online" | "offline" | "unknown";
+  responseTime: number | null;
+  error: string | null;
+  checkedAt: string;
+  appName: string;
+  appIcon: string | null;
+  appId: string;
+};
+
+export type UptimeStats = {
+  period: string;
+  startDate: string;
+  endDate: string;
+  totalHealthChecks: number;
+  successfulChecks: number;
+  failedChecks: number;
+  uptimePercentage: number | null;
+  averageResponseTime: number | null;
+  minResponseTime: number | null;
+  maxResponseTime: number | null;
+};
+
+export type ServiceReliabilityStats = {
+  appId: string;
+  appName: string;
+  appIcon: string | null;
+  monthlyUptime: number | null;
+  yearlyUptime: number | null;
+  totalDowntime: number; // in minutes
+  mttr: number | null; // Mean Time To Recovery in minutes
+  mtbf: number | null; // Mean Time Between Failures in hours
+  lastIncident: string | null;
+};
+
+/**
+ * Get health status history for all apps
+ */
+export const getHealthHistory = createServerFn({ method: "GET" }).handler(
+  async (ctx: { data?: { range?: TimeRange; limit?: number; appId?: string } } = {}) => {
+    const { getDb } = await import("./get-db");
+    const { eq, and, gte, lte, desc } = await import("drizzle-orm");
+    const { getOptionalSession } = await import("./auth-utils.server");
+    const { apps } = await import("@/database/schema/apps");
+    const { healthHistory } = await import("@/database/schema/app-analytics");
+
+    const db = await getDb();
+    const session = await getOptionalSession();
+    if (!session) {
+      return { history: [] as HealthHistoryEntry[] };
+    }
+
+    const range = ctx?.data?.range || "7d";
+    const limit = ctx?.data?.limit || 100;
+    const appId = ctx?.data?.appId;
+    const { start, end } = getDateRange(range);
+
+    // Build conditions
+    const conditions = [
+      eq(healthHistory.userId, session.user.id),
+      gte(healthHistory.checkedAt, start),
+      lte(healthHistory.checkedAt, end),
+    ];
+
+    if (appId) {
+      conditions.push(eq(healthHistory.appId, appId));
+    }
+
+    // Get health history entries
+    const historyData = await db
+      .select({
+        id: healthHistory.id,
+        status: healthHistory.status,
+        responseTime: healthHistory.responseTime,
+        error: healthHistory.error,
+        checkedAt: healthHistory.checkedAt,
+        appId: healthHistory.appId,
+      })
+      .from(healthHistory)
+      .where(and(...conditions))
+      .orderBy(desc(healthHistory.checkedAt))
+      .limit(limit);
+
+    // Get app details
+    const appIds = [...new Set(historyData.map((h) => h.appId))];
+    const appDetails = await db
+      .select({ id: apps.id, name: apps.name, icon: apps.icon })
+      .from(apps)
+      .where(eq(apps.userId, session.user.id));
+
+    const appMap = new Map(appDetails.map((a) => [a.id, a]));
+
+    const history: HealthHistoryEntry[] = historyData
+      .map((h) => {
+        const app = appMap.get(h.appId);
+        if (!app) return null;
+        return {
+          status: h.status as "online" | "offline" | "unknown",
+          responseTime: h.responseTime,
+          error: h.error,
+          checkedAt: h.checkedAt.toISOString(),
+          appName: app.name,
+          appIcon: app.icon,
+          appId: h.appId,
+        };
+      })
+      .filter((h): h is HealthHistoryEntry => h !== null);
+
+    return { history };
+  }
+);
+
+/**
+ * Get detailed uptime statistics for SLA tracking
+ */
+export const getUptimeStats = createServerFn({ method: "GET" }).handler(
+  async (ctx: { data?: { range?: TimeRange; appId?: string } } = {}) => {
+    const { getDb } = await import("./get-db");
+    const { eq, and, sql, gte, lte } = await import("drizzle-orm");
+    const { getOptionalSession } = await import("./auth-utils.server");
+    const { appUsageMetrics } = await import("@/database/schema/app-analytics");
+
+    const db = await getDb();
+    const session = await getOptionalSession();
+    if (!session) {
+      return { stats: null, monthlyBreakdown: [] as UptimeStats[], yearlyStats: null as UptimeStats | null };
+    }
+
+    const range = ctx?.data?.range || "30d";
+    const appId = ctx?.data?.appId;
+    const { start, end } = getDateRange(range);
+
+    // Build conditions
+    const conditions = [
+      eq(appUsageMetrics.userId, session.user.id),
+      gte(appUsageMetrics.date, start),
+      lte(appUsageMetrics.date, end),
+    ];
+
+    if (appId) {
+      conditions.push(eq(appUsageMetrics.appId, appId));
+    }
+
+    // Get overall stats for the range
+    const overallStats = await db
+      .select({
+        totalHealthChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.totalHealthChecks}), 0)`,
+        successfulChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.successfulHealthChecks}), 0)`,
+        failedChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.failedHealthChecks}), 0)`,
+        totalResponseTime: sql<number>`COALESCE(SUM(${appUsageMetrics.totalResponseTime}), 0)`,
+        minResponseTime: sql<number>`MIN(${appUsageMetrics.minResponseTime})`,
+        maxResponseTime: sql<number>`MAX(${appUsageMetrics.maxResponseTime})`,
+      })
+      .from(appUsageMetrics)
+      .where(and(...conditions));
+
+    const os = overallStats[0];
+    const totalChecks = Number(os?.totalHealthChecks) || 0;
+    const successfulChecks = Number(os?.successfulChecks) || 0;
+    const totalResponseTime = Number(os?.totalResponseTime) || 0;
+
+    const stats: UptimeStats = {
+      period: range,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      totalHealthChecks: totalChecks,
+      successfulChecks,
+      failedChecks: Number(os?.failedChecks) || 0,
+      uptimePercentage: totalChecks > 0 ? (successfulChecks / totalChecks) * 100 : null,
+      averageResponseTime: totalChecks > 0 ? Math.round(totalResponseTime / totalChecks) : null,
+      minResponseTime: os?.minResponseTime || null,
+      maxResponseTime: os?.maxResponseTime || null,
+    };
+
+    // Get monthly breakdown
+    const monthlyData = await db
+      .select({
+        month: sql<string>`TO_CHAR(${appUsageMetrics.date}, 'YYYY-MM')`,
+        totalHealthChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.totalHealthChecks}), 0)`,
+        successfulChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.successfulHealthChecks}), 0)`,
+        failedChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.failedHealthChecks}), 0)`,
+        totalResponseTime: sql<number>`COALESCE(SUM(${appUsageMetrics.totalResponseTime}), 0)`,
+        minResponseTime: sql<number>`MIN(${appUsageMetrics.minResponseTime})`,
+        maxResponseTime: sql<number>`MAX(${appUsageMetrics.maxResponseTime})`,
+        minDate: sql<Date>`MIN(${appUsageMetrics.date})`,
+        maxDate: sql<Date>`MAX(${appUsageMetrics.date})`,
+      })
+      .from(appUsageMetrics)
+      .where(and(...conditions))
+      .groupBy(sql`TO_CHAR(${appUsageMetrics.date}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${appUsageMetrics.date}, 'YYYY-MM')`);
+
+    const monthlyBreakdown: UptimeStats[] = monthlyData.map((m) => {
+      const tc = Number(m.totalHealthChecks) || 0;
+      const sc = Number(m.successfulChecks) || 0;
+      const trt = Number(m.totalResponseTime) || 0;
+
+      return {
+        period: m.month,
+        startDate: m.minDate?.toISOString() || "",
+        endDate: m.maxDate?.toISOString() || "",
+        totalHealthChecks: tc,
+        successfulChecks: sc,
+        failedChecks: Number(m.failedChecks) || 0,
+        uptimePercentage: tc > 0 ? (sc / tc) * 100 : null,
+        averageResponseTime: tc > 0 ? Math.round(trt / tc) : null,
+        minResponseTime: m.minResponseTime || null,
+        maxResponseTime: m.maxResponseTime || null,
+      };
+    });
+
+    // Get yearly stats (last 12 months)
+    const yearStart = new Date();
+    yearStart.setFullYear(yearStart.getFullYear() - 1);
+    yearStart.setHours(0, 0, 0, 0);
+
+    const yearConditions = [
+      eq(appUsageMetrics.userId, session.user.id),
+      gte(appUsageMetrics.date, yearStart),
+      lte(appUsageMetrics.date, end),
+    ];
+
+    if (appId) {
+      yearConditions.push(eq(appUsageMetrics.appId, appId));
+    }
+
+    const yearlyData = await db
+      .select({
+        totalHealthChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.totalHealthChecks}), 0)`,
+        successfulChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.successfulHealthChecks}), 0)`,
+        failedChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.failedHealthChecks}), 0)`,
+        totalResponseTime: sql<number>`COALESCE(SUM(${appUsageMetrics.totalResponseTime}), 0)`,
+        minResponseTime: sql<number>`MIN(${appUsageMetrics.minResponseTime})`,
+        maxResponseTime: sql<number>`MAX(${appUsageMetrics.maxResponseTime})`,
+      })
+      .from(appUsageMetrics)
+      .where(and(...yearConditions));
+
+    const yd = yearlyData[0];
+    const ytc = Number(yd?.totalHealthChecks) || 0;
+    const ysc = Number(yd?.successfulChecks) || 0;
+    const ytrt = Number(yd?.totalResponseTime) || 0;
+
+    const yearlyStats: UptimeStats = {
+      period: "1y",
+      startDate: yearStart.toISOString(),
+      endDate: end.toISOString(),
+      totalHealthChecks: ytc,
+      successfulChecks: ysc,
+      failedChecks: Number(yd?.failedChecks) || 0,
+      uptimePercentage: ytc > 0 ? (ysc / ytc) * 100 : null,
+      averageResponseTime: ytc > 0 ? Math.round(ytrt / ytc) : null,
+      minResponseTime: yd?.minResponseTime || null,
+      maxResponseTime: yd?.maxResponseTime || null,
+    };
+
+    return { stats, monthlyBreakdown, yearlyStats };
+  }
+);
+
+/**
+ * Get service reliability statistics for all apps
+ */
+export const getServiceReliability = createServerFn({ method: "GET" }).handler(
+  async (ctx: { data?: { range?: TimeRange } } = {}) => {
+    const { getDb } = await import("./get-db");
+    const { eq, and, sql, gte, lte, desc } = await import("drizzle-orm");
+    const { getOptionalSession } = await import("./auth-utils.server");
+    const { apps } = await import("@/database/schema/apps");
+    const { appUsageMetrics, healthHistory } = await import("@/database/schema/app-analytics");
+
+    const db = await getDb();
+    const session = await getOptionalSession();
+    if (!session) {
+      return { services: [] as ServiceReliabilityStats[] };
+    }
+
+    // Get all user apps with health checks enabled
+    const userApps = await db.query.apps.findMany({
+      where: and(
+        eq(apps.userId, session.user.id),
+        eq(apps.healthCheckEnabled, true)
+      ),
+    });
+
+    if (userApps.length === 0) {
+      return { services: [] as ServiceReliabilityStats[] };
+    }
+
+    const now = new Date();
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const yearStart = new Date();
+    yearStart.setFullYear(yearStart.getFullYear() - 1);
+    yearStart.setHours(0, 0, 0, 0);
+
+    const services: ServiceReliabilityStats[] = [];
+
+    for (const app of userApps) {
+      // Get monthly stats
+      const monthlyData = await db
+        .select({
+          totalChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.totalHealthChecks}), 0)`,
+          successfulChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.successfulHealthChecks}), 0)`,
+          failedChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.failedHealthChecks}), 0)`,
+        })
+        .from(appUsageMetrics)
+        .where(
+          and(
+            eq(appUsageMetrics.appId, app.id),
+            eq(appUsageMetrics.userId, session.user.id),
+            gte(appUsageMetrics.date, monthStart)
+          )
+        );
+
+      // Get yearly stats
+      const yearlyData = await db
+        .select({
+          totalChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.totalHealthChecks}), 0)`,
+          successfulChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.successfulHealthChecks}), 0)`,
+          failedChecks: sql<number>`COALESCE(SUM(${appUsageMetrics.failedHealthChecks}), 0)`,
+        })
+        .from(appUsageMetrics)
+        .where(
+          and(
+            eq(appUsageMetrics.appId, app.id),
+            eq(appUsageMetrics.userId, session.user.id),
+            gte(appUsageMetrics.date, yearStart)
+          )
+        );
+
+      // Get last incident (offline status)
+      const lastIncident = await db
+        .select({ checkedAt: healthHistory.checkedAt })
+        .from(healthHistory)
+        .where(
+          and(
+            eq(healthHistory.appId, app.id),
+            eq(healthHistory.userId, session.user.id),
+            eq(healthHistory.status, "offline")
+          )
+        )
+        .orderBy(desc(healthHistory.checkedAt))
+        .limit(1);
+
+      const md = monthlyData[0];
+      const mtc = Number(md?.totalChecks) || 0;
+      const msc = Number(md?.successfulChecks) || 0;
+      const mfc = Number(md?.failedChecks) || 0;
+
+      const yd = yearlyData[0];
+      const ytc = Number(yd?.totalChecks) || 0;
+      const ysc = Number(yd?.successfulChecks) || 0;
+      const yfc = Number(yd?.failedChecks) || 0;
+
+      // Estimate downtime (assuming checks every 5 minutes when failed)
+      const totalDowntime = yfc * 5; // Estimate 5 minutes per failed check
+
+      services.push({
+        appId: app.id,
+        appName: app.name,
+        appIcon: app.icon,
+        monthlyUptime: mtc > 0 ? (msc / mtc) * 100 : null,
+        yearlyUptime: ytc > 0 ? (ysc / ytc) * 100 : null,
+        totalDowntime,
+        mttr: yfc > 0 ? Math.round(totalDowntime / yfc) : null,
+        mtbf: ytc > 0 && yfc > 0 ? Math.round((ytc * 5) / 60 / yfc) : null, // In hours
+        lastIncident: lastIncident[0]?.checkedAt?.toISOString() || null,
+      });
+    }
+
+    // Sort by lowest yearly uptime
+    services.sort((a, b) => (a.yearlyUptime || 100) - (b.yearlyUptime || 100));
+
+    return { services };
+  }
+);
+
+/**
+ * Export analytics data for SLA documentation
+ */
+export const exportAnalyticsData = createServerFn({ method: "GET" }).handler(
+  async (ctx: { data: { range: TimeRange; format: "csv" | "json" } }) => {
+    const { getDb } = await import("./get-db");
+    const { eq, and, gte, lte, asc } = await import("drizzle-orm");
+    const { getAuthenticatedSession } = await import("./auth-utils.server");
+    const { apps } = await import("@/database/schema/apps");
+    const { appUsageMetrics, healthHistory } = await import("@/database/schema/app-analytics");
+
+    const db = await getDb();
+    const session = await getAuthenticatedSession();
+
+    const { range, format } = ctx.data;
+    const { start, end } = getDateRange(range);
+
+    // Get all user apps
+    const userApps = await db.query.apps.findMany({
+      where: eq(apps.userId, session.user.id),
+    });
+
+    const appMap = new Map(userApps.map((a) => [a.id, a]));
+
+    // Get daily metrics
+    const dailyMetrics = await db
+      .select()
+      .from(appUsageMetrics)
+      .where(
+        and(
+          eq(appUsageMetrics.userId, session.user.id),
+          gte(appUsageMetrics.date, start),
+          lte(appUsageMetrics.date, end)
+        )
+      )
+      .orderBy(asc(appUsageMetrics.date));
+
+    // Get health history
+    const healthData = await db
+      .select()
+      .from(healthHistory)
+      .where(
+        and(
+          eq(healthHistory.userId, session.user.id),
+          gte(healthHistory.checkedAt, start),
+          lte(healthHistory.checkedAt, end)
+        )
+      )
+      .orderBy(asc(healthHistory.checkedAt));
+
+    // Format the data
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      range,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      metrics: dailyMetrics.map((m) => ({
+        date: m.date.toISOString().split("T")[0],
+        appId: m.appId,
+        appName: appMap.get(m.appId)?.name || "Unknown",
+        accessCount: m.accessCount,
+        totalHealthChecks: m.totalHealthChecks || 0,
+        successfulHealthChecks: m.successfulHealthChecks || 0,
+        failedHealthChecks: m.failedHealthChecks || 0,
+        uptimePercentage: m.uptimePercentage?.toFixed(2) || null,
+        avgResponseTime: m.totalHealthChecks && m.totalHealthChecks > 0
+          ? Math.round((m.totalResponseTime || 0) / m.totalHealthChecks)
+          : null,
+        minResponseTime: m.minResponseTime,
+        maxResponseTime: m.maxResponseTime,
+      })),
+      healthHistory: healthData.map((h) => ({
+        checkedAt: h.checkedAt.toISOString(),
+        appId: h.appId,
+        appName: appMap.get(h.appId)?.name || "Unknown",
+        status: h.status,
+        responseTime: h.responseTime,
+        error: h.error,
+      })),
+    };
+
+    if (format === "csv") {
+      // Generate CSV
+      const metricsCsv = [
+        "Date,App ID,App Name,Access Count,Total Health Checks,Successful Checks,Failed Checks,Uptime %,Avg Response Time,Min Response Time,Max Response Time",
+        ...exportData.metrics.map((m) =>
+          `${m.date},${m.appId},"${m.appName}",${m.accessCount},${m.totalHealthChecks},${m.successfulHealthChecks},${m.failedHealthChecks},${m.uptimePercentage || ""},${m.avgResponseTime || ""},${m.minResponseTime || ""},${m.maxResponseTime || ""}`
+        ),
+      ].join("\n");
+
+      const healthCsv = [
+        "Checked At,App ID,App Name,Status,Response Time,Error",
+        ...exportData.healthHistory.map((h) =>
+          `${h.checkedAt},${h.appId},"${h.appName}",${h.status},${h.responseTime || ""},"${h.error || ""}"`
+        ),
+      ].join("\n");
+
+      return {
+        format: "csv",
+        metrics: metricsCsv,
+        healthHistory: healthCsv,
+        filename: `analytics-${range}-${new Date().toISOString().split("T")[0]}`,
+      };
+    }
+
+    return {
+      format: "json",
+      data: exportData,
+      filename: `analytics-${range}-${new Date().toISOString().split("T")[0]}`,
+    };
+  }
+);
+
 /**
  * Cleanup old analytics data (keep last 90 days by default)
  */
@@ -755,7 +1295,7 @@ export async function cleanupOldAnalyticsData(daysToKeep = 90): Promise<{ access
       healthHistory: healthHistoryResult.length,
     };
   } catch (error) {
-    console.error("Error cleaning up old analytics data:", error);
+    log.logError(error, "Error cleaning up old analytics data", { daysToKeep });
     return { accessLogs: 0, healthHistory: 0 };
   }
 }

@@ -1,0 +1,17 @@
+{
+  "category": "Performance & Scalability",
+  "description": "Implement a caching layer abstraction to support multiple backends (in-memory, Redis, file-based). Currently using only database-backed cache in `health-cache.server.ts`. Create an `ICache` interface with implementations for different backends, allowing users to choose their caching strategy without code changes. Start with in-memory + database as defaults.",
+  "id": "feature-1767312341634-l12hz4nwi",
+  "steps": [],
+  "status": "backlog",
+  "skipTests": false,
+  "priority": 1,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false
+}

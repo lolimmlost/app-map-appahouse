@@ -1,0 +1,22 @@
+{
+  "category": "Uncategorized",
+  "description": "Review and Fix Status Maps UI Issues\n\nInvestigate and resolve multiple UI and functional issues in the status maps interface related to visibility, scrolling, and service status display.\n\nIssues to Address:\n\n1. Password Option Visibility\n   - Password option is currently hidden in the UI\n   - Container is not scrollable, preventing access to hidden content\n   - Ensure all configuration options are visible and accessible\n   - Add proper scrolling behavior if content exceeds viewport\n\n2. Service Status Display Problem\n   - Status page incorrectly shows \"services unavailable\" \n   - Verify if this is a display issue or actual connectivity problem\n   - Check data fetching and rendering logic for service status\n\n3. Ping/Monitoring Architecture Clarification\n   - Determine if status page relies on existing app-level ping monitoring\n   - Investigate if status page has its own independent pinging feature\n   - Document the current monitoring architecture\n   - Ensure no duplicate or conflicting health check implementations\n\nAcceptance Criteria:\n- All status map configuration options are visible and accessible\n- Scrolling works properly when content overflows\n- Service status accurately reflects actual service availability\n- Clear understanding of ping/monitoring responsibilities documented\n- UI displays correct real-time status for all monitored services",
+  "title": "Fix status maps UI scrolling and service visibility issues",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "branchName": "main",
+  "priority": 2,
+  "planningMode": "lite",
+  "requirePlanApproval": false,
+  "dependencies": [],
+  "titleGenerating": false,
+  "status": "completed",
+  "id": "feature-1767048913059-1se1rfd9b",
+  "startedAt": "2025-12-29T22:55:13.147Z",
+  "updatedAt": "2025-12-29T22:59:32.265Z",
+  "justFinishedAt": "2025-12-29T22:59:32.265Z"
+}

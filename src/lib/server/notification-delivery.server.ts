@@ -4,6 +4,10 @@ import type {
   AlertDetails,
   NotificationsSent,
 } from "@/database/schema/alerts";
+import { serverLogger } from "./logger";
+
+// Create a child logger for notification delivery module
+const log = serverLogger.child({ module: "notification-delivery" });
 
 interface DeliverNotificationsParams {
   userId: string;
@@ -131,7 +135,7 @@ async function deliverInAppNotification(params: {
 
     return { sent: true, sentAt: new Date().toISOString() };
   } catch (error) {
-    console.error("Error delivering in-app notification:", error);
+    log.logError(error, "Error delivering in-app notification", { userId: params.userId, alertHistoryId: params.alertHistoryId });
     return {
       sent: false,
       error: error instanceof Error ? error.message : "Failed to deliver in-app notification",
@@ -169,10 +173,10 @@ async function deliverEmailNotification(params: {
 
     // In production, send email via email service
     // For now, log the email that would be sent
-    console.log("📧 Would send email notification:", {
+    log.info("Would send email notification (placeholder)", {
       to: emailAddress,
       subject,
-      body,
+      bodyLength: body.length,
     });
 
     // Placeholder: In a real implementation, you would call your email service here
@@ -183,7 +187,7 @@ async function deliverEmailNotification(params: {
     // In production, remove this and implement actual email sending
     return { sent: true, sentAt: new Date().toISOString() };
   } catch (error) {
-    console.error("Error delivering email notification:", error);
+    log.logError(error, "Error delivering email notification", { emailAddress: params.emailAddress });
     return {
       sent: false,
       error: error instanceof Error ? error.message : "Failed to deliver email notification",
@@ -275,7 +279,7 @@ async function deliverWebhookNotification(params: {
       };
     }
   } catch (error) {
-    console.error("Error delivering webhook notification:", error);
+    log.logError(error, "Error delivering webhook notification", { webhookUrl: params.webhookUrl });
     return {
       sent: false,
       error: error instanceof Error ? error.message : "Failed to deliver webhook notification",

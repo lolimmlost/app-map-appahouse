@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { execSync } from "child_process";
 import os from "os";
+import { serverLogger } from "./logger";
+
+// Create a child logger for system stats module
+const log = serverLogger.child({ module: "system-stats" });
 
 export type NetworkInterface = {
   name: string;
@@ -163,7 +167,7 @@ function getDiskUsage(): SystemStats["disks"] {
 
     return disks;
   } catch (error) {
-    console.error("Failed to get disk usage:", error);
+    log.logError(error, "Failed to get disk usage");
     return [];
   }
 }
@@ -211,7 +215,7 @@ function getNetworkStats(): NetworkInterface[] {
 
     return result;
   } catch (error) {
-    console.error("Failed to get network stats:", error);
+    log.logError(error, "Failed to get network stats");
     return [];
   }
 }
@@ -288,7 +292,7 @@ function getTopProcesses(): TopProcess[] {
 
     return processes;
   } catch (error) {
-    console.error("Failed to get top processes:", error);
+    log.logError(error, "Failed to get top processes");
     return [];
   }
 }
@@ -445,7 +449,7 @@ export const getGlancesStats = createServerFn({ method: "POST" }).handler(
         hostname: data.system?.hostname || "Unknown",
       };
     } catch (error) {
-      console.error("Failed to fetch Glances stats:", error);
+      log.logError(error, "Failed to fetch Glances stats", { url });
       throw new Error(
         `Failed to connect to Glances: ${error instanceof Error ? error.message : "Unknown error"}`
       );

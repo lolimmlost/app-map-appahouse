@@ -7,6 +7,10 @@ import {
   getLeastUsedApps,
   getLeastReliableApps,
   getAppAnalytics,
+  getHealthHistory,
+  getUptimeStats,
+  getServiceReliability,
+  exportAnalyticsData,
   type TimeRange,
   type AccessType,
 } from "@/lib/server/analytics.server";
@@ -17,11 +21,16 @@ import {
  */
 export function useTrackAppAccess() {
   const trackMutation = useMutation({
-    mutationFn: (data: { appId: string; accessType?: AccessType }) =>
-      trackAppAccess({ data }),
+    mutationFn: (data: { appId: string; accessType?: AccessType }) => {
+      console.log("[Analytics] CLIENT: Calling trackAppAccess with:", data);
+      return trackAppAccess({ data });
+    },
+    onSuccess: (result) => {
+      console.log("[Analytics] CLIENT: trackAppAccess succeeded:", result);
+    },
     // Silent - don't show errors for analytics
     onError: (error) => {
-      console.error("Failed to track app access:", error);
+      console.error("[Analytics] CLIENT: Failed to track app access:", error);
     },
   });
 
@@ -107,4 +116,50 @@ export function useInvalidateAnalytics() {
   return () => {
     queryClient.invalidateQueries({ queryKey: ["analytics"] });
   };
+}
+
+/**
+ * Hook for fetching health status history
+ */
+export function useHealthHistory(range: TimeRange = "7d", limit = 100, appId?: string) {
+  return useQuery({
+    queryKey: ["analytics", "healthHistory", range, limit, appId],
+    queryFn: () => getHealthHistory({ data: { range, limit, appId } }),
+    staleTime: 60000, // 1 minute
+  });
+}
+
+/**
+ * Hook for fetching uptime statistics
+ */
+export function useUptimeStats(range: TimeRange = "30d", appId?: string) {
+  return useQuery({
+    queryKey: ["analytics", "uptimeStats", range, appId],
+    queryFn: () => getUptimeStats({ data: { range, appId } }),
+    staleTime: 60000, // 1 minute
+  });
+}
+
+/**
+ * Hook for fetching service reliability statistics
+ */
+export function useServiceReliability(range: TimeRange = "30d") {
+  return useQuery({
+    queryKey: ["analytics", "serviceReliability", range],
+    queryFn: () => getServiceReliability({ data: { range } }),
+    staleTime: 60000, // 1 minute
+  });
+}
+
+/**
+ * Hook for exporting analytics data
+ */
+export function useExportAnalytics() {
+  return useMutation({
+    mutationFn: (data: { range: TimeRange; format: "csv" | "json" }) =>
+      exportAnalyticsData({ data }),
+    onError: (error) => {
+      console.error("Failed to export analytics:", error);
+    },
+  });
 }

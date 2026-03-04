@@ -1,11 +1,33 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { HealthCacheEntry } from "@/database/schema/health-cache";
 import type { HealthCheckResult } from "./health.server";
+import { serverLogger } from "./logger";
+
+// Create a child logger for health cache module
+const log = serverLogger.child({ module: "health-cache" });
 
 // Default TTL values in seconds
 export const DEFAULT_TTL = 60; // 1 minute
 export const MIN_TTL = 10; // 10 seconds
 export const MAX_TTL = 3600; // 1 hour
+
+// Local type to avoid importing from schema which pulls in drizzle-orm/pg-core
+export type HealthCacheEntry = {
+  id: string;
+  appId: string;
+  userId: string;
+  status: "online" | "offline" | "unknown";
+  responseTime: number | null;
+  error: string | null;
+  lastChecked: Date;
+  expiresAt: Date;
+  metadata: {
+    httpStatusCode?: number;
+    checksCount?: number;
+    consecutiveFailures?: number;
+  } | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // In-memory cache for fast access (fallback when DB is not available)
 const memoryCache = new Map<string, {
@@ -74,7 +96,7 @@ export async function getCachedHealthResult(
 
     return null;
   } catch (error) {
-    console.error("Error fetching cached health result:", error);
+    log.logError(error, "Error fetching cached health result", { appId, userId });
     return null;
   }
 }
@@ -102,7 +124,7 @@ export async function getAllCachedHealthResults(
     // Filter to only non-expired entries
     return cachedEntries.filter(entry => entry.expiresAt > now);
   } catch (error) {
-    console.error("Error fetching all cached health results:", error);
+    log.logError(error, "Error fetching all cached health results", { userId });
     return [];
   }
 }
@@ -197,7 +219,7 @@ export async function cacheHealthResult(
 
     return entry;
   } catch (error) {
-    console.error("Error caching health result:", error);
+    log.logError(error, "Error caching health result", { appId, userId });
     return null;
   }
 }
@@ -232,7 +254,7 @@ export async function invalidateAppCache(
 
     return true;
   } catch (error) {
-    console.error("Error invalidating app cache:", error);
+    log.logError(error, "Error invalidating app cache", { appId, userId });
     return false;
   }
 }
@@ -270,7 +292,7 @@ export async function invalidateMultipleAppCaches(
 
     return true;
   } catch (error) {
-    console.error("Error invalidating multiple app caches:", error);
+    log.logError(error, "Error invalidating multiple app caches", { appIds, userId });
     return false;
   }
 }
@@ -300,7 +322,7 @@ export async function invalidateAllUserCache(userId: string): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error("Error invalidating all user cache:", error);
+    log.logError(error, "Error invalidating all user cache", { userId });
     return false;
   }
 }
@@ -325,7 +347,7 @@ export async function cleanupExpiredCache(): Promise<number> {
 
     return result.length;
   } catch (error) {
-    console.error("Error cleaning up expired cache:", error);
+    log.logError(error, "Error cleaning up expired cache");
     return 0;
   }
 }
@@ -369,7 +391,7 @@ export async function getCacheStats(userId: string): Promise<{
       memoryCacheSize,
     };
   } catch (error) {
-    console.error("Error getting cache stats:", error);
+    log.logError(error, "Error getting cache stats", { userId });
     return {
       totalEntries: 0,
       validEntries: 0,

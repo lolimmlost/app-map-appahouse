@@ -10,9 +10,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyMetric, AppAnalyticsSummary } from "@/lib/server/analytics.server";
@@ -36,13 +33,13 @@ export function AccessTrendChart({
   }, [data]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
+      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent pb-2 pt-3 px-4">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
+      <CardContent className="pb-3 px-4">
+        <div className="h-[240px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -102,13 +99,13 @@ export function UptimeTrendChart({
   }, [data]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
+      <CardHeader className="bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/10 pb-2 pt-3 px-4">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
+      <CardContent className="pb-3 px-4">
+        <div className="h-[240px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -170,13 +167,13 @@ export function ResponseTimeChart({
   }, [data]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
+      <CardHeader className="bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/10 pb-2 pt-3 px-4">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
+      <CardContent className="pb-3 px-4">
+        <div className="h-[240px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -222,16 +219,6 @@ interface MostUsedAppsChartProps {
   limit?: number;
 }
 
-const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(221, 83%, 53%)",
-  "hsl(142, 76%, 36%)",
-  "hsl(262, 83%, 58%)",
-  "hsl(25, 95%, 53%)",
-  "hsl(173, 80%, 40%)",
-  "hsl(339, 90%, 51%)",
-  "hsl(47, 96%, 53%)",
-];
 
 export function MostUsedAppsChart({
   data,
@@ -252,13 +239,13 @@ export function MostUsedAppsChart({
 
   if (chartData.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+      <Card className="shadow-lg border-2">
+        <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
+          <CardTitle className="text-base">{title}</CardTitle>
+          <CardDescription className="text-xs">{description}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+        <CardContent className="pb-3 px-4">
+          <div className="h-[240px] flex items-center justify-center text-muted-foreground">
             No usage data available yet
           </div>
         </CardContent>
@@ -267,13 +254,13 @@ export function MostUsedAppsChart({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
+      <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
+      <CardContent className="pb-3 px-4">
+        <div className="h-[240px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -333,13 +320,13 @@ export function AppReliabilityChart({
 
   if (chartData.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+      <Card className="shadow-lg border-2">
+        <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
+          <CardTitle className="text-base">{title}</CardTitle>
+          <CardDescription className="text-xs">{description}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+        <CardContent className="pb-3 px-4">
+          <div className="h-[240px] flex items-center justify-center text-muted-foreground">
             No health check data available yet
           </div>
         </CardContent>
@@ -348,13 +335,13 @@ export function AppReliabilityChart({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
+      <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
+      <CardContent className="pb-3 px-4">
+        <div className="h-[240px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

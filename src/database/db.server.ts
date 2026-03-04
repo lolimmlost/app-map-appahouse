@@ -2,6 +2,10 @@ import { serverOnly$ } from "vite-env-only/macros";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool, type PoolClient } from "pg";
 import * as schema from "./schema";
+import { serverLogger } from "@/lib/server/logger";
+
+// Create a child logger for database module
+const log = serverLogger.child({ module: "database" });
 
 // Ensure this module is never imported on the client
 const _serverOnly = serverOnly$(true);
@@ -132,7 +136,7 @@ function createConnectionPool(): Pool {
 
   // Handle pool-level errors
   pool.on("error", (err: Error) => {
-    console.error("Unexpected database pool error:", err);
+    log.logError(err, "Unexpected database pool error");
   });
 
   return pool;
@@ -143,7 +147,7 @@ let pool: Pool;
 try {
   pool = createConnectionPool();
 } catch (error) {
-  console.error("Failed to initialize database connection pool:", error);
+  log.logError(error, "Failed to initialize database connection pool");
   throw error;
 }
 
@@ -173,7 +177,7 @@ export async function checkDatabaseConnection(): Promise<{
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown database error";
-    console.error("Database connection check failed:", errorMessage);
+    log.warn("Database connection check failed", { error: errorMessage });
 
     return {
       connected: false,
@@ -190,9 +194,9 @@ export async function checkDatabaseConnection(): Promise<{
 export async function closeDatabaseConnection(): Promise<void> {
   try {
     await pool.end();
-    console.log("Database connection pool closed successfully");
+    log.info("Database connection pool closed successfully");
   } catch (error) {
-    console.error("Error closing database connection pool:", error);
+    log.logError(error, "Error closing database connection pool");
     throw new DatabaseError(
       "Failed to close database connection pool",
       "SHUTDOWN_ERROR",

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Container, HardDrive } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Container, HardDrive, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { importDiscoveredService, type DiscoveredService } from "@/lib/server/discovery.server";
 import { getCategories } from "@/lib/server/categories.server";
+import { getApps } from "@/lib/server/apps.server";
+import { createDependency } from "@/lib/server/app-dependencies.server";
 
 interface ImportServiceFormProps {
   service: DiscoveredService;
@@ -35,6 +37,8 @@ export function ImportServiceForm({
   open,
   onClose,
 }: ImportServiceFormProps) {
+  const queryClient = useQueryClient();
+
   // Get the best URL from the service
   const getDefaultUrl = () => {
     if (service.truenasPortal) return service.truenasPortal;
@@ -50,6 +54,8 @@ export function ImportServiceForm({
   const [localUrl, setLocalUrl] = useState(getDefaultUrl());
   const [categoryId, setCategoryId] = useState<string>("");
   const [healthCheckEnabled, setHealthCheckEnabled] = useState(false);
+  const [addToDependencyGraph, setAddToDependencyGraph] = useState(service.source === "truenas");
+  const [dependsOnAppId, setDependsOnAppId] = useState<string>("");
 
   // Fetch categories
   const { data: categoriesData } = useQuery({
@@ -58,12 +64,28 @@ export function ImportServiceForm({
     enabled: open,
   });
 
+  // Fetch apps for dependency selection
+  const { data: appsData } = useQuery({
+    queryKey: ["apps"],
+    queryFn: () => getApps(),
+    enabled: open && addToDependencyGraph,
+  });
+
   const categories = categoriesData?.categories || [];
+  const apps = appsData?.apps || [];
+
+  // Find apps that could be the "parent" integration (e.g., TrueNAS, Docker host)
+  // These are apps with matching integration name
+  const potentialParentApps = apps.filter(
+    (app) => app.name.toLowerCase().includes(service.integrationName.toLowerCase()) ||
+             service.integrationName.toLowerCase().includes(app.name.toLowerCase())
+  );
 
   // Import mutation
   const importMutation = useMutation({
-    mutationFn: () =>
-      importDiscoveredService({
+    mutationFn: async () => {
+      // First, import the service
+      const newApp = await importDiscoveredService({
         data: {
           service,
           name,
@@ -71,8 +93,30 @@ export function ImportServiceForm({
           categoryId: categoryId || undefined,
           healthCheckEnabled,
         },
-      }),
+      });
+
+      // If dependency graph option is enabled and we have a parent app selected
+      if (addToDependencyGraph && dependsOnAppId && newApp?.id) {
+        try {
+          await createDependency({
+            data: {
+              appId: newApp.id,
+              dependsOnAppId: dependsOnAppId,
+              dependencyType: "required",
+              description: `Discovered from ${service.integrationName}`,
+            },
+          });
+        } catch (error) {
+          // Don't fail the whole import if dependency creation fails
+          console.error("Failed to create dependency:", error);
+        }
+      }
+
+      return newApp;
+    },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dependency-graph"] });
+      queryClient.invalidateQueries({ queryKey: ["dependencies"] });
       onClose(true);
     },
   });
@@ -216,6 +260,62 @@ export function ImportServiceForm({
               checked={healthCheckEnabled}
               onCheckedChange={setHealthCheckEnabled}
             />
+          </div>
+
+          {/* Add to Dependency Graph */}
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="import-dependency" className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  Add to Dependency Graph
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Mark this app as depending on another app
+                </p>
+              </div>
+              <Switch
+                id="import-dependency"
+                checked={addToDependencyGraph}
+                onCheckedChange={setAddToDependencyGraph}
+              />
+            </div>
+
+            {addToDependencyGraph && (
+              <div className="space-y-2">
+                <Label htmlFor="depends-on">Depends On</Label>
+                <Select value={dependsOnAppId} onValueChange={setDependsOnAppId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select parent app" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Show potential parent apps first (matching integration name) */}
+                    {potentialParentApps.length > 0 && (
+                      <>
+                        {potentialParentApps.map((app) => (
+                          <SelectItem key={app.id} value={app.id}>
+                            {app.name} (suggested)
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {/* Show all other apps */}
+                    {apps
+                      .filter((app) => !potentialParentApps.some((p) => p.id === app.id))
+                      .map((app) => (
+                        <SelectItem key={app.id} value={app.id}>
+                          {app.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {service.source === "truenas"
+                    ? `This app was discovered from ${service.integrationName}. Select it as the dependency.`
+                    : "Select which app this service depends on."}
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

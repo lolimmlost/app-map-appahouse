@@ -1,6 +1,7 @@
 /**
  * Database types for client-side use
  * These are manually defined to avoid importing drizzle-orm/pg-core on the client
+ * Keep in sync with src/database/schema/*.ts
  */
 
 // App types
@@ -89,7 +90,7 @@ export interface NewCategory {
 }
 
 // Integration types
-export type IntegrationType = "uptime_kuma" | "docker" | "truenas" | "portainer" | "sonarr" | "radarr" | "lidarr" | "jellyfin" | "glances"
+export type IntegrationType = "uptime_kuma" | "docker" | "truenas" | "portainer" | "sonarr" | "radarr" | "lidarr" | "jellyfin" | "glances" | "proxmox"
 
 export interface Integration {
     id: string
@@ -99,7 +100,8 @@ export interface Integration {
     apiKey: string | null
     username: string | null
     password: string | null
-    isDefault: boolean | null
+    enabled: boolean | null
+    allowInsecure: boolean | null
     userId: string
     createdAt: Date
     updatedAt: Date
@@ -113,7 +115,8 @@ export interface NewIntegration {
     apiKey?: string | null
     username?: string | null
     password?: string | null
-    isDefault?: boolean | null
+    enabled?: boolean | null
+    allowInsecure?: boolean | null
     userId: string
 }
 
@@ -121,70 +124,90 @@ export interface NewIntegration {
 export type DefaultUrlType = "local" | "remote"
 
 export interface UserSettings {
-    id: string
     userId: string
-    defaultUrlType: DefaultUrlType | null
-    showHealthStatus: boolean | null
-    enableNotifications: boolean | null
-    healthCheckInterval: number | null
     theme: string | null
-    widgetLayout: unknown | null
-    createdAt: Date
-    updatedAt: Date
+    customTheme: unknown | null
+    defaultView: "grid" | "list" | "compact" | null
+    gridColumns: number | null
+    showHealthDots: boolean | null
+    healthBarStyle: "dot" | "border" | "none" | null
+    sidebarCollapsed: boolean | null
 }
 
 // Alert types
+export type AlertTriggerType = "status_change" | "consecutive_failures" | "response_time" | "integration_status"
 export type AlertSeverity = "info" | "warning" | "critical"
-export type AlertStatus = "pending" | "triggered" | "acknowledged" | "resolved"
+export type AlertStatus = "active" | "resolved" | "acknowledged" | "silenced"
 
 export interface AlertConditions {
-    type: "status_change" | "response_time" | "downtime_duration"
-    operator?: "gt" | "lt" | "eq" | "gte" | "lte"
-    value?: number
-    fromStatus?: string
-    toStatus?: string
+    fromStatus?: "online" | "offline" | "unknown"
+    toStatus?: "online" | "offline" | "unknown"
+    failureThreshold?: number
+    responseTimeThreshold?: number
+    integrationTypes?: string[]
 }
 
 export interface AlertChannels {
-    inApp?: boolean
     email?: boolean
-    webhook?: {
-        url: string
-        headers?: Record<string, string>
-    }
-    integration?: {
-        id: string
-        type: string
-    }
+    webhook?: boolean
+    inApp?: boolean
+}
+
+export interface NotificationsSent {
+    email?: { sent: boolean; sentAt?: string; error?: string }
+    webhook?: { sent: boolean; sentAt?: string; error?: string; statusCode?: number }
+    inApp?: { sent: boolean; sentAt?: string }
+}
+
+export interface AlertDetails {
+    previousStatus?: string
+    currentStatus?: string
+    consecutiveFailures?: number
+    responseTime?: number
+    error?: string
 }
 
 export interface AlertRule {
     id: string
     name: string
-    appId: string | null
-    userId: string
+    description: string | null
     enabled: boolean | null
+    triggerType: AlertTriggerType
+    appId: string | null
+    integrationId: string | null
+    userId: string
+    conditions: AlertConditions | null
     severity: AlertSeverity | null
-    conditions: AlertConditions
-    channels: AlertChannels
+    channels: AlertChannels | null
     cooldownMinutes: number | null
+    lastTriggeredAt: Date | null
     createdAt: Date
     updatedAt: Date
     app?: App | null
+    integration?: Integration | null
 }
 
 export interface AlertHistory {
     id: string
-    alertRuleId: string
+    alertRuleId: string | null
     appId: string | null
     userId: string
+    alertName: string
+    triggerType: AlertTriggerType
+    severity: AlertSeverity
+    appName: string | null
+    integrationId: string | null
+    integrationName: string | null
     status: AlertStatus | null
-    severity: AlertSeverity | null
-    message: string | null
-    metadata: unknown | null
-    triggeredAt: Date
-    acknowledgedAt: Date | null
+    message: string
+    details: AlertDetails | null
     resolvedAt: Date | null
+    resolvedBy: string | null
+    acknowledgedAt: Date | null
+    notificationsSent: NotificationsSent | null
+    triggeredAt: Date
+    createdAt: Date
+    updatedAt: Date
 }
 
 export interface InAppNotification {
@@ -192,8 +215,13 @@ export interface InAppNotification {
     alertHistoryId: string | null
     userId: string
     title: string
-    message: string | null
+    message: string
+    severity: AlertSeverity | null
+    linkType: string | null
+    linkId: string | null
     read: boolean | null
+    readAt: Date | null
+    dismissed: boolean | null
     createdAt: Date
 }
 
@@ -210,15 +238,65 @@ export interface WidgetPosition {
 export interface WidgetConfig {
     title?: string
     refreshInterval?: number
+    size?: "small" | "medium" | "large" | "full"
+    // Clock
+    timezone?: string
+    showSeconds?: boolean
+    format24h?: boolean
+    dateFormat?: "full" | "long" | "medium" | "short" | "none"
+    // Weather
+    location?: string
+    units?: "metric" | "imperial"
+    // Uptime Kuma
+    statusPageSlug?: string
+    showOnlyDown?: boolean
+    showHeartbeatGraph?: boolean
+    showIncidents?: boolean
+    showResponseTime?: boolean
+    displayMode?: "auto" | "detailed" | "compact"
+    // *arr widgets
+    showQueue?: boolean
+    showCalendar?: boolean
+    showDiskSpace?: boolean
+    showHealth?: boolean
+    defaultExpanded?: boolean
+    maxItems?: number
+    // Jellyfin
+    showNowPlaying?: boolean
+    showRecentlyAdded?: boolean
+    showLibraryStats?: boolean
+    showServerInfo?: boolean
+    // Docker
+    showContainers?: string[]
+    showAllContainers?: boolean
+    showHostInfo?: boolean
+    // Iframe
+    url?: string
+    // Bookmarks
+    bookmarks?: Array<{ name: string; url: string; icon?: string }>
+    // Notes
+    content?: string
+    // System Stats
+    showCpu?: boolean
+    showRam?: boolean
+    showDisk?: boolean
+    showNetwork?: boolean
+    showTemperatures?: boolean
+    showProcesses?: boolean
+    diskPaths?: string[]
+    // TrueNAS
+    showPools?: boolean
+    showDisks?: boolean
+    showApps?: boolean
+    showNetworkInterfaces?: boolean
     [key: string]: unknown
 }
 
 export interface Widget {
     id: string
     type: WidgetType
-    title: string | null
     position: WidgetPosition
-    config: WidgetConfig | null
+    config: WidgetConfig
     integrationId: string | null
     userId: string
     sortOrder: number | null
@@ -230,8 +308,7 @@ export interface Widget {
 export interface NewWidget {
     id?: string
     type: WidgetType
-    title?: string | null
-    position: WidgetPosition
+    position?: WidgetPosition
     config?: WidgetConfig | null
     integrationId?: string | null
     userId: string
@@ -240,41 +317,51 @@ export interface NewWidget {
 
 // Saved views types
 export interface SearchViewFilters {
-    search?: string
-    categoryId?: string
-    tags?: string[]
-    healthStatus?: string
-    pinned?: boolean
+    searchQuery?: string
+    categoryIds?: string[]
+    tagIds?: string[]
+    healthStatus?: "all" | "enabled" | "disabled"
+    pinnedOnly?: boolean
+    discoverySource?: string | null
 }
 
 export interface SavedView {
     id: string
     name: string
+    description: string | null
     filters: SearchViewFilters
     isDefault: boolean | null
     userId: string
     createdAt: Date
+    updatedAt: Date
 }
 
 // Sharing types
-export type SharingPermission = "view" | "interact" | "edit" | "admin"
+export type SharingPermission = "view" | "view_health" | "view_urls" | "edit" | "full"
 
 export interface GranularPermissions {
-    canViewHealth?: boolean
-    canViewNotes?: boolean
-    canEditNotes?: boolean
-    canLaunch?: boolean
-    canReorder?: boolean
+    canView: boolean
+    canEdit: boolean
+    canSeeHealth: boolean
+    canAccessRemoteUrl: boolean
+    canAccessLocalUrl: boolean
+    canDelete: boolean
 }
 
 export interface AppShare {
     id: string
+    shareType: "app" | "category"
     appId: string | null
     categoryId: string | null
     ownerId: string
     sharedWithId: string
-    permission: SharingPermission | null
-    granularPermissions: GranularPermissions | null
+    permission: SharingPermission
+    canView: boolean
+    canEdit: boolean
+    canSeeHealth: boolean
+    canAccessRemoteUrl: boolean
+    canAccessLocalUrl: boolean
+    canDelete: boolean
     createdAt: Date
     updatedAt: Date
 }

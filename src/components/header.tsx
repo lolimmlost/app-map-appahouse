@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserButton } from "@daveyplate/better-auth-ui";
 import { Link } from "@tanstack/react-router";
-import { Map, Settings, Tags, Layers, Menu, Plug, LayoutGrid, BarChart3 } from "lucide-react";
+import { Map, Settings, Tags, Layers, Menu, Plug, LayoutGrid, BarChart3, Activity, Key } from "lucide-react";
 import { ModeToggle } from "./mode-toggle";
 import { Button } from "./ui/button";
 import { CommandPalette } from "./command-palette";
@@ -21,7 +21,9 @@ export function Header() {
     { to: "/apps", icon: LayoutGrid, label: "Apps" },
     { to: "/categories", icon: Tags, label: "Categories" },
     { to: "/analytics", icon: BarChart3, label: "Analytics" },
+    { to: "/status-pages", icon: Activity, label: "Status Pages" },
     { to: "/integrations", icon: Plug, label: "Integrations" },
+    { to: "/api-keys", icon: Key, label: "API Keys" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
@@ -68,13 +70,13 @@ export function Header() {
           <span className="hidden sm:inline">App Map</span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        {/* Desktop nav - responsive: hidden on mobile, icons on md-lg, full labels on xl */}
+        <nav className="hidden md:flex items-center gap-0.5 xl:gap-1">
           {navItems.map((item) => (
             <Link key={item.to} to={item.to}>
-              <Button variant="ghost" size="sm">
-                <item.icon className="h-4 w-4 mr-2" />
-                {item.label}
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 xl:h-9 xl:w-auto xl:px-3" title={item.label}>
+                <item.icon className="h-4 w-4 xl:mr-2" />
+                <span className="hidden xl:inline">{item.label}</span>
               </Button>
             </Link>
           ))}

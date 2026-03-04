@@ -3,7 +3,7 @@
   "description": "Implement app dependency tracking where users can define which apps depend on others (e.g., 'Overseerr depends on Radarr'). Display dependency graphs on the dashboard. Optionally, create conditional health status - an app can be marked 'degraded' if its dependencies are offline. Support circular dependency detection.",
   "id": "feature-1766962921618-gnrtipeny",
   "steps": [],
-  "status": "backlog",
+  "status": "completed",
   "skipTests": false,
   "priority": 2,
   "title": "",
@@ -13,5 +13,7 @@
   "textFilePaths": [],
   "branchName": "main",
   "planningMode": "skip",
-  "requirePlanApproval": false
+  "requirePlanApproval": false,
+  "startedAt": "2025-12-29T19:20:44.310Z",
+  "updatedAt": "2025-12-29T19:35:51.451Z"
 }

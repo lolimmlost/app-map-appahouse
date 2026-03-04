@@ -69,7 +69,7 @@ type LayoutMode = "masonry" | "grid";
 function getWidgetSizeClasses(size?: "small" | "medium" | "large" | "full"): string {
   switch (size) {
     case "full":
-      return "md:col-span-2 lg:col-span-3 xl:col-span-4";
+      return "col-span-full";
     case "large":
       return "md:col-span-2 lg:col-span-3";
     case "medium":
@@ -93,7 +93,7 @@ function WidgetWrapper({
   const sizeClasses = layoutMode === "grid" ? getWidgetSizeClasses(widget.config?.size) : "";
   const layoutClasses = layoutMode === "masonry" ? "break-inside-avoid" : "";
 
-  return <div className={cn(layoutClasses, sizeClasses)}>{children}</div>;
+  return <div className={cn("min-w-0", layoutClasses, sizeClasses)}>{children}</div>;
 }
 
 // Sortable widget wrapper for reorder mode
@@ -479,7 +479,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Top Status Bar - Clock & Weather */}
       {(clockWidget || weatherWidget) && (
         <TopStatusBar clockWidget={clockWidget} weatherWidget={weatherWidget} />
@@ -488,7 +488,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
       {/* Widgets Section Header */}
       <div className="flex items-center justify-between">
         {gridWidgets.length > 0 && (
-          <h2 className="text-lg font-semibold">Widgets</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">Widgets</h2>
         )}
         <div className={cn("flex items-center gap-2", gridWidgets.length === 0 ? "ml-auto" : "")}>
           {/* Layout mode toggle */}
@@ -631,7 +631,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
               <div className={cn(
                 layoutMode === "masonry"
                   ? "columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
-                  : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start"
+                  : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr items-stretch"
               )}>
                 {gridWidgets.map((widget) => (
                   <SortableWidget key={widget.id} widget={widget} layoutMode={layoutMode}>
@@ -652,7 +652,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
           <div className={cn(
             layoutMode === "masonry"
               ? "columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
-              : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start"
+              : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr items-stretch"
           )}>
             {gridWidgets.map((widget) => (
               <WidgetWrapper key={widget.id} widget={widget} layoutMode={layoutMode}>

@@ -3,6 +3,10 @@ import type {
   AlertConditions,
   AlertDetails,
 } from "@/database/schema/alerts";
+import { serverLogger } from "./logger";
+
+// Create a child logger for alert evaluation module
+const log = serverLogger.child({ module: "alert-evaluation" });
 
 export type HealthStatus = "online" | "offline" | "unknown";
 
@@ -58,7 +62,7 @@ export async function evaluateAlertsForHealthCheck(
       await autoResolveAlertsForApp(healthResult.appId, userId);
     }
   } catch (error) {
-    console.error("Error evaluating alerts:", error);
+    log.logError(error, "Error evaluating alerts", { userId, appId: healthResult.appId });
   }
 }
 
@@ -271,7 +275,7 @@ async function triggerAlert(
       details,
     });
   } catch (error) {
-    console.error("Error triggering alert:", error);
+    log.logError(error, "Error triggering alert", { ruleId: rule.id, appId: healthResult.appId });
   }
 }
 
@@ -363,7 +367,7 @@ export async function evaluateIntegrationStatusAlerts(
       });
     }
   } catch (error) {
-    console.error("Error evaluating integration status alerts:", error);
+    log.logError(error, "Error evaluating integration status alerts", { userId, integrationId, integrationName });
   }
 }
 

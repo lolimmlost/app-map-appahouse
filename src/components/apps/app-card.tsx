@@ -19,21 +19,24 @@ import {
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { useTrackAppAccess } from "@/hooks/use-analytics";
+import { useScrollGuard } from "@/hooks/use-scroll-guard";
 import type { App, Tag } from "@/types/database";
 import type { Category } from "@/types/database";
 import type { GranularPermissions } from "@/types/database";
 
 export type HealthStatus = "online" | "offline" | "unknown" | "checking";
+export type DependencyStatus = "healthy" | "degraded" | "offline";
 
 interface AppCardProps {
   app: App & {
     category?: Category | null;
-    tags?: Tag[];
+    tags?: { tag: Tag }[] | Tag[];
     isOwner?: boolean;
     sharedBy?: { id: string; name: string; email: string; image?: string | null };
     permissions?: GranularPermissions;
   };
   healthStatus?: HealthStatus;
+  dependencyStatus?: DependencyStatus;
   healthBarStyle?: "dot" | "border" | "none";
   viewMode?: "grid" | "list";
   selectionMode?: boolean;
@@ -60,9 +63,16 @@ const healthBorderColors: Record<HealthStatus, string> = {
   checking: "border-status-pending",
 };
 
+const dependencyStatusColors: Record<DependencyStatus, string> = {
+  healthy: "bg-status-online",
+  degraded: "bg-yellow-500",
+  offline: "bg-status-offline",
+};
+
 export function AppCard({
   app,
   healthStatus = "unknown",
+  dependencyStatus,
   healthBarStyle = "dot",
   viewMode = "grid",
   selectionMode = false,
@@ -76,15 +86,14 @@ export function AppCard({
 }: AppCardProps) {
   // Analytics tracking
   const { trackAccess } = useTrackAppAccess();
+  // Prevent accidental taps while scrolling
+  const { isScrolling, guardedHandler } = useScrollGuard();
 
   // Check permissions
   const isOwner = app.isOwner !== false; // Default to true for backward compatibility
   const permissions = app.permissions;
   const canEdit = isOwner || permissions?.canEdit;
   const canDelete = isOwner || permissions?.canDelete;
-  const canAccessLocalUrl = isOwner || permissions?.canAccessLocalUrl;
-  const canAccessRemoteUrl = isOwner || permissions?.canAccessRemoteUrl;
-  const canSeeHealth = isOwner || permissions?.canSeeHealth;
   const [copiedType, setCopiedType] = useState<"local" | "remote" | null>(null);
 
   const primaryUrl = app.localUrl || app.remoteUrl;
@@ -137,7 +146,18 @@ export function AppCard({
     }
   };
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleMenuOpenChange = (open: boolean) => {
+    // Block opening while scrolling
+    if (open && isScrolling()) return;
+    setMenuOpen(open);
+  };
+
   const handleOpenApp = (e: React.MouseEvent) => {
+    // Block while scrolling
+    if (isScrolling()) return;
+
     // Don't open if clicking on interactive elements
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('[role="menu"]') || target.closest('[data-selection-checkbox]')) {
@@ -153,7 +173,6 @@ export function AppCard({
     if (primaryUrl) {
       const url = normalizeUrl(primaryUrl);
       if (url) {
-        // Track the access
         trackAccess({ appId: app.id, accessType: "click" });
         window.open(url, "_blank", "noopener,noreferrer");
       }
@@ -274,7 +293,7 @@ export function AppCard({
         <Card
           className={cn(
             "group relative transition-all",
-            hasValidUrl && !selectionMode && "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
+            hasValidUrl && !selectionMode && "cursor-pointer hover:shadow-md hover:border-primary/30",
             selectionMode && "cursor-pointer hover:shadow-md",
             !hasValidUrl && !selectionMode && "opacity-75",
             healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
@@ -303,32 +322,29 @@ export function AppCard({
               </div>
             </div>
           )}
-      <CardContent className={cn("p-4 sm:p-4 p-5", viewMode === "list" && "p-3 sm:p-3 p-4")}>
-        <div className={cn(
-          "flex items-start gap-3 sm:gap-3 gap-4",
-          viewMode === "list" && "items-center"
-        )}>
+      <CardContent className={cn(
+        "p-3 sm:p-2.5",
+        viewMode === "list" && "p-2.5 sm:p-2"
+      )}>
+        <div className="flex items-center gap-2.5 sm:gap-2">
           {/* App Icon */}
           <div className="relative flex-shrink-0">
             <div className={cn(
               "flex items-center justify-center rounded-lg bg-muted",
-              viewMode === "list" ? "h-12 w-12 sm:h-10 sm:w-10" : "h-14 w-14 sm:h-12 sm:w-12"
+              viewMode === "list" ? "h-10 w-10 sm:h-9 sm:w-9" : "h-10 w-10 sm:h-9 sm:w-9"
             )}>
               {app.icon ? (
                 app.icon.startsWith("http") ? (
                   <img
                     src={app.icon}
                     alt={app.name}
-                    className={cn(viewMode === "list" ? "h-7 w-7 sm:h-6 sm:w-6" : "h-9 w-9 sm:h-8 sm:w-8", "object-contain")}
+                    className="h-5 w-5 sm:h-4.5 sm:w-4.5 object-contain"
                   />
                 ) : (
-                  <span className={cn(viewMode === "list" ? "text-2xl sm:text-xl" : "text-3xl sm:text-2xl")}>{app.icon}</span>
+                  <span className="text-lg sm:text-base">{app.icon}</span>
                 )
               ) : (
-                <span className={cn(
-                  "font-semibold text-muted-foreground",
-                  viewMode === "list" ? "text-lg sm:text-base" : "text-xl sm:text-lg"
-                )}>
+                <span className="font-semibold text-muted-foreground text-sm">
                   {app.name.charAt(0).toUpperCase()}
                 </span>
               )}
@@ -337,115 +353,78 @@ export function AppCard({
             {healthBarStyle === "dot" && app.healthCheckEnabled && (
               <div
                 className={cn(
-                  "absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-background",
+                  "absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-background",
                   healthColors[healthStatus]
                 )}
+              />
+            )}
+            {/* Dependency Status Indicator */}
+            {dependencyStatus && dependencyStatus !== "healthy" && (
+              <div
+                className={cn(
+                  "absolute -left-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-background",
+                  dependencyStatusColors[dependencyStatus]
+                )}
+                title={dependencyStatus === "degraded"
+                  ? "Optional dependency is offline"
+                  : "Required dependency is offline"}
               />
             )}
           </div>
 
           {/* App Info */}
-          <div className={cn(
-            "flex-1 min-w-0",
-            viewMode === "list" && "flex items-center gap-4"
-          )}>
-            <div className={cn(
-              "flex items-center gap-2",
-              viewMode === "list" && "flex-shrink-0"
-            )}>
-              <h3 className={cn(
-                "font-semibold truncate",
-                viewMode === "list" && "text-sm"
-              )}>{app.name}</h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-medium text-sm truncate">{app.name}</h3>
               {app.notes && (
                 <StickyNote className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               )}
               {!isOwner && (
-                <Badge variant="outline" className="text-xs flex-shrink-0" title={`Shared by ${app.sharedBy?.name || 'another user'}`}>
-                  <Users className="h-3 w-3 mr-1" />
-                  Shared
-                </Badge>
+                <span title={`Shared by ${app.sharedBy?.name || 'another user'}`}>
+                  <Users className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                </span>
               )}
             </div>
-            {app.description && viewMode === "grid" && (
-              <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+            {app.description && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
                 {app.description}
               </p>
-            )}
-            {app.description && viewMode === "list" && (
-              <p className="text-sm text-muted-foreground truncate hidden sm:block flex-1">
-                {app.description}
-              </p>
-            )}
-            {/* URL quick access in list view */}
-            {hasBothUrls && viewMode === "list" && (
-              <div className="flex items-center gap-2 sm:gap-1 ml-auto">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 sm:h-7 sm:w-7"
-                  onClick={(e) => handleOpenUrl(e, "local")}
-                  title="Open Local"
-                >
-                  <Home className="h-5 w-5 sm:h-4 sm:w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 sm:h-7 sm:w-7"
-                  onClick={(e) => handleOpenUrl(e, "remote")}
-                  title="Open Remote"
-                >
-                  <Globe className="h-5 w-5 sm:h-4 sm:w-4" />
-                </Button>
-              </div>
-            )}
-            {app.category && viewMode === "grid" && (
-              <Badge
-                variant="secondary"
-                className="mt-2 text-xs"
-                style={app.category.color ? { backgroundColor: app.category.color } : undefined}
-              >
-                {app.category.name}
-              </Badge>
-            )}
-            {/* URL quick access buttons - show when both URLs available */}
-            {hasBothUrls && viewMode === "grid" && (
-              <div className="mt-3 sm:mt-2 flex items-center gap-2 sm:gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 sm:h-7 px-3 sm:px-2 text-sm sm:text-xs"
-                  onClick={(e) => handleOpenUrl(e, "local")}
-                >
-                  <Home className="h-4 w-4 sm:h-3 sm:w-3 mr-1.5 sm:mr-1" />
-                  Local
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 sm:h-7 px-3 sm:px-2 text-sm sm:text-xs"
-                  onClick={(e) => handleOpenUrl(e, "remote")}
-                >
-                  <Globe className="h-4 w-4 sm:h-3 sm:w-3 mr-1.5 sm:mr-1" />
-                  Remote
-                </Button>
-              </div>
             )}
           </div>
 
+          {/* URL quick access - compact inline buttons */}
+          {hasBothUrls && (
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 sm:h-7 sm:w-7"
+                onClick={guardedHandler((e: React.MouseEvent) => handleOpenUrl(e, "local"))}
+                title="Open Local"
+              >
+                <Home className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 sm:h-7 sm:w-7"
+                onClick={guardedHandler((e: React.MouseEvent) => handleOpenUrl(e, "remote"))}
+                title="Open Remote"
+              >
+                <Globe className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
           {/* Actions Menu */}
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(
-                  "h-10 w-10 sm:h-8 sm:w-8 transition-opacity",
-                  viewMode === "list" ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                )}
+                className="h-8 w-8 sm:h-7 sm:w-7 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
               >
-                <MoreVertical className="h-5 w-5 sm:h-4 sm:w-4" />
+                <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -531,19 +510,31 @@ export function AppCard({
           </DropdownMenu>
         </div>
 
-        {/* Tags - only show in grid view */}
-        {viewMode === "grid" && app.tags && app.tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {app.tags.map((tag) => (
+        {/* Tags & Category - compact inline */}
+        {viewMode === "grid" && (app.category || (app.tags && app.tags.length > 0)) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            {app.category && (
               <Badge
-                key={tag.id}
-                variant="outline"
-                className="text-xs"
-                style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0 h-5"
+                style={app.category.color ? { backgroundColor: app.category.color } : undefined}
               >
-                {tag.name}
+                {app.category.name}
               </Badge>
-            ))}
+            )}
+            {app.tags?.map((tagItem) => {
+              const tag = "tag" in tagItem ? tagItem.tag : tagItem;
+              return (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 h-5"
+                  style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                >
+                  {tag.name}
+                </Badge>
+              );
+            })}
           </div>
         )}
       </CardContent>

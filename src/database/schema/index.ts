@@ -9,3 +9,6 @@ export * from "./health-cache";
 export * from "./app-sharing";
 export * from "./app-analytics";
 export * from "./alerts";
+export * from "./app-dependencies";
+export * from "./status-pages";
+export * from "./api-keys";

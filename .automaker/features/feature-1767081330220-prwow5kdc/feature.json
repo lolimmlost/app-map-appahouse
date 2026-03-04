@@ -1,0 +1,20 @@
+{
+  "category": "Observability",
+  "description": "Replace 53 scattered `console.log/warn/error` statements with a structured logging utility. Create a logger module that supports different log levels (debug, info, warn, error), log formatting, and optional integration with external services. Standardize logging patterns across analytics, health checks, widget proxy, and alert evaluation modules which have the most logging statements.",
+  "id": "feature-1767081330220-prwow5kdc",
+  "steps": [],
+  "status": "completed",
+  "skipTests": true,
+  "priority": 2,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "startedAt": "2025-12-30T23:01:46.346Z",
+  "updatedAt": "2025-12-30T23:15:55.609Z",
+  "justFinishedAt": "2025-12-30T23:15:55.609Z"
+}

@@ -61,8 +61,8 @@ export function useAppMutations(options: UseAppMutationsOptions = {}) {
 
   // Update app mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: AppFormData }) =>
-      updateApp({
+    mutationFn: async ({ id, data }: { id: string; data: AppFormData }) => {
+      const result = await updateApp({
         data: {
           id,
           name: data.name,
@@ -79,11 +79,19 @@ export function useAppMutations(options: UseAppMutationsOptions = {}) {
           uptimeKumaMonitorId: data.uptimeKumaMonitorId || null,
           notes: data.notes || null,
         },
-      }),
+      });
+      return result;
+    },
     onSuccess: () => {
       invalidateApps();
       onFormClose?.();
       onClearEditing?.();
+    },
+    onError: (error: any) => {
+      console.error("Update app error:", error);
+      if (error?.fieldErrors) {
+        console.error("Field errors:", error.fieldErrors);
+      }
     },
   });
 

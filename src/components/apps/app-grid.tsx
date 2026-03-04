@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { AppCard, type HealthStatus } from "./app-card";
+import { AppCard, type HealthStatus, type DependencyStatus } from "./app-card";
 import { SwipeableCard } from "./swipeable-card";
 import type { App, Tag } from "@/types/database";
 import type { Category } from "@/types/database";
@@ -13,6 +13,7 @@ export type AppWithRelations = App & {
 interface AppGridProps {
   apps: AppWithRelations[];
   healthStatuses?: Record<string, HealthStatus>;
+  dependencyStatuses?: Record<string, DependencyStatus>;
   healthBarStyle?: "dot" | "border" | "none";
   columns?: number;
   viewMode?: "grid" | "list";
@@ -30,6 +31,7 @@ interface AppGridProps {
 export function AppGrid({
   apps,
   healthStatuses = {},
+  dependencyStatuses = {},
   healthBarStyle = "dot",
   columns = 4,
   viewMode = "grid",
@@ -82,12 +84,12 @@ export function AppGrid({
   }, [apps, groupByCategory]);
 
   const gridClasses = cn(
-    viewMode === "list" ? "flex flex-col gap-2" : "grid gap-4",
+    viewMode === "list" ? "flex flex-col gap-1.5" : "grid gap-2 sm:gap-2.5",
     viewMode === "grid" && columns === 2 && "grid-cols-1 sm:grid-cols-2",
     viewMode === "grid" && columns === 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-    viewMode === "grid" && columns === 4 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-    viewMode === "grid" && columns === 5 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
-    viewMode === "grid" && columns === 6 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+    viewMode === "grid" && columns === 4 && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
+    viewMode === "grid" && columns === 5 && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+    viewMode === "grid" && columns === 6 && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
   );
 
   if (apps.length === 0) {
@@ -102,21 +104,21 @@ export function AppGrid({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {groupedApps.map((group) => (
         <div key={group.category?.id ?? "uncategorized"}>
           {groupByCategory && (
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2.5">
               {group.category?.icon && (
-                <span className="text-xl">{group.category.icon}</span>
+                <span className="text-base">{group.category.icon}</span>
               )}
               <h2
-                className="text-lg font-semibold"
+                className="text-sm font-semibold"
                 style={group.category?.color ? { color: group.category.color } : undefined}
               >
                 {group.category?.name ?? "Uncategorized"}
               </h2>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 ({group.apps.length})
               </span>
             </div>
@@ -133,6 +135,7 @@ export function AppGrid({
                 <AppCard
                   app={app}
                   healthStatus={healthStatuses[app.id] ?? "unknown"}
+                  dependencyStatus={dependencyStatuses[app.id]}
                   healthBarStyle={healthBarStyle}
                   viewMode={viewMode}
                   selectionMode={selectionMode}

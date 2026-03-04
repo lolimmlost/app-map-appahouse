@@ -1,0 +1,23 @@
+{
+  "category": "Uncategorized",
+  "description": "## Parent Task Context (Already Completed)\n\n> **Note:** The following parent task has already been completed. This context is provided to help you understand the background and requirements for this sub-task. Do not re-implement the parent task - focus only on the new sub-task described below.\n\n### Task (feature-)\n\n**Description:** Create a public-facing status page similar to Uptime Kuma's status page. Allow users to mark specific apps as 'public' and generate a shareable, read-only status page (with optional password protection) showing real-time health status. Customizable branding, color scheme, and public description text. Share via unique token URLs.\n\n---\n\n## Task Description\n\nwhen selecting apps to host it says object cannot be found here",
+  "title": "Fix public status page app selection error",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "branchName": "main",
+  "priority": 2,
+  "planningMode": "lite",
+  "requirePlanApproval": false,
+  "dependencies": [
+    "feature-1766962921618-t2tdjdd58"
+  ],
+  "titleGenerating": false,
+  "status": "completed",
+  "id": "feature-1767043833990-n8179bmbe",
+  "startedAt": "2025-12-29T21:30:34.079Z",
+  "updatedAt": "2025-12-29T21:30:34.248Z"
+}

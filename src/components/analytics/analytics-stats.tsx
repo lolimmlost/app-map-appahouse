@@ -22,21 +22,21 @@ export function StatCard({
   trendValue,
 }: StatCardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
+    <Card className="overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/30">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3 px-4 bg-gradient-to-br from-muted/30 to-transparent">
+        <CardTitle className="text-xs font-medium">{title}</CardTitle>
+        {icon && <div className="text-muted-foreground/70">{icon}</div>}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="pt-2 pb-3 px-4">
+        <div className="text-xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">{value}</div>
         {(description || trendValue) && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
             {trend && trendValue && (
               <span
                 className={cn(
-                  "flex items-center gap-0.5",
-                  trend === "up" && "text-green-500",
-                  trend === "down" && "text-red-500"
+                  "flex items-center gap-0.5 font-medium",
+                  trend === "up" && "text-green-600 dark:text-green-500",
+                  trend === "down" && "text-red-600 dark:text-red-500"
                 )}
               >
                 {trend === "up" ? (
@@ -154,49 +154,84 @@ export function TopAppsList({
     }
   };
 
+  const getGradientClass = () => {
+    switch (type) {
+      case "most-used":
+        return "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20";
+      case "least-used":
+        return "bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20";
+      case "least-reliable":
+        return "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20";
+    }
+  };
+
+  const getEmptyStateIcon = () => {
+    switch (type) {
+      case "most-used":
+        return <TrendingUp className="h-12 w-12 opacity-30" />;
+      case "least-used":
+        return <TrendingDown className="h-12 w-12 opacity-30" />;
+      case "least-reliable":
+        return <AlertTriangle className="h-12 w-12 opacity-30" />;
+    }
+  };
+
+  const getEmptyStateMessage = () => {
+    switch (type) {
+      case "most-used":
+        return "No usage data yet";
+      case "least-used":
+        return "No apps tracked yet";
+      case "least-reliable":
+        return "No health data available";
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-2">
+      <CardHeader className={cn("pb-2 pt-3 px-4", getGradientClass())}>
         <div className="flex items-center gap-2">
           {getIcon()}
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-base">{title}</CardTitle>
         </div>
-        {description && <CardDescription>{description}</CardDescription>}
+        {description && <CardDescription className="mt-0.5 text-xs">{description}</CardDescription>}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-3 pb-4 px-4">
         {displayApps.length === 0 ? (
-          <div className="text-sm text-muted-foreground text-center py-4">
-            No data available yet
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            {getEmptyStateIcon()}
+            <p className="text-sm text-muted-foreground mt-3">{getEmptyStateMessage()}</p>
+            <p className="text-xs text-muted-foreground mt-1">Data will appear as apps are used</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             {displayApps.map((app, index) => (
               <div
                 key={app.appId}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                className="group flex items-center gap-2 p-2 rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200 hover:shadow-md"
               >
-                <span className="text-sm font-medium text-muted-foreground w-6">
+                <span className="text-xs font-bold text-muted-foreground/60 w-5 group-hover:text-primary transition-colors">
                   #{index + 1}
                 </span>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="flex-shrink-0 h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+                  <div className="flex-shrink-0 h-7 w-7 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200">
                     {app.appIcon ? (
                       app.appIcon.startsWith("http") ? (
                         <img
                           src={app.appIcon}
                           alt={app.appName}
-                          className="h-5 w-5 object-contain"
+                          className="h-4 w-4 object-contain"
                         />
                       ) : (
                         <span className="text-sm">{app.appIcon}</span>
                       )
                     ) : (
-                      <span className="text-sm font-medium text-muted-foreground">
+                      <span className="text-xs font-semibold text-muted-foreground">
                         {app.appName.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
-                  <span className="font-medium truncate">{app.appName}</span>
+                  <span className="font-medium truncate text-xs">{app.appName}</span>
                 </div>
                 {getValueDisplay(app)}
               </div>

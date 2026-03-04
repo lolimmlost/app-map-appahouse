@@ -18,7 +18,6 @@ import {
   Bookmark,
   Star,
   ChevronDown,
-  Filter,
   SlidersHorizontal,
 } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
@@ -44,9 +43,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -59,7 +55,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
   getApps,

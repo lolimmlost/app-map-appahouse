@@ -7,3 +7,4 @@ export { QuickLinksBar } from "./quick-links-bar";
 export { SwipeableCard } from "./swipeable-card";
 export { BulkActionsBar } from "./bulk-actions-bar";
 export { ShareDialog } from "./share-dialog";
+export { DependencyGraphView } from "./dependency-graph";

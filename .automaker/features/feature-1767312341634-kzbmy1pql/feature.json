@@ -1,0 +1,17 @@
+{
+  "category": "Component Architecture",
+  "description": "Split large route components into smaller, reusable sub-components. `apps.tsx` (and analytics-dashboard.tsx at 868 lines) are monolithic. Extract: (1) filter/search logic into `AppFilter` component, (2) bulk actions into `BulkActionsController`, (3) list/grid view into separate view components. Use React composition patterns to improve testability and reusability.",
+  "id": "feature-1767312341634-kzbmy1pql",
+  "steps": [],
+  "status": "backlog",
+  "skipTests": false,
+  "priority": 2,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false
+}

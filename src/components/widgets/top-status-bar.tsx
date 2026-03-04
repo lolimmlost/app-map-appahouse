@@ -9,7 +9,6 @@ import {
   CloudLightning,
   MapPin,
   Droplets,
-  Wind,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Widget, WidgetConfig } from "@/types/database";
@@ -199,7 +198,7 @@ export function TopStatusBar({ clockWidget, weatherWidget, className }: TopStatu
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-4 px-4 py-3 rounded-lg bg-card border",
+        "flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-card border",
         className
       )}
     >

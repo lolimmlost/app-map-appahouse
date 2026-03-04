@@ -1,0 +1,20 @@
+{
+  "category": "Code Quality",
+  "description": "Standardize input validation for form mutations. Currently, server functions receive raw `data` objects with minimal validation (e.g., `useAppMutations` transforms client data before sending). Create a validation middleware/helper that uses a schema validation library (already have @hookform/resolvers installed) to define and reuse schemas across create/update operations, ensuring consistent validation rules on both client and server.",
+  "id": "feature-1767081330220-9cscde8et",
+  "steps": [],
+  "status": "completed",
+  "skipTests": true,
+  "priority": 2,
+  "title": "",
+  "model": "opus",
+  "thinkingLevel": "ultrathink",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "branchName": "main",
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "startedAt": "2025-12-30T22:04:24.031Z",
+  "updatedAt": "2025-12-30T22:16:57.940Z",
+  "justFinishedAt": "2025-12-30T22:16:57.940Z"
+}

@@ -1,4 +1,5 @@
 import { getRequest } from "@tanstack/react-start/server";
+import { Errors } from "./errors";
 
 /**
  * Session type from better-auth
@@ -40,16 +41,16 @@ export async function getSession(): Promise<AuthSession> {
 }
 
 /**
- * Get the authenticated session or throw an Unauthorized error.
+ * Get the authenticated session or throw an AuthenticationError.
  * Use this for endpoints that require authentication.
  *
- * @throws Error with message "Unauthorized" if not authenticated
+ * @throws AuthenticationError if not authenticated
  * @returns The authenticated session with a guaranteed user
  */
 export async function getAuthenticatedSession(): Promise<AuthenticatedSession> {
   const session = await getSession();
   if (!session?.user) {
-    throw new Error("Unauthorized");
+    throw Errors.unauthorized();
   }
   return session as AuthenticatedSession;
 }

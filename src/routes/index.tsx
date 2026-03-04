@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare } from "lucide-react";
+import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
-import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, type AppFormData } from "@/components/apps";
+import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, type AppFormData } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
 import { ServiceDiscoveryDialog } from "@/components/discovery";
 import { getApps } from "@/lib/server/apps.server";
@@ -13,6 +13,7 @@ import { getTags } from "@/lib/server/tags.server";
 import { getUserSettings } from "@/lib/server/user-settings.server";
 import { useHealthStatus } from "@/hooks/use-health-status";
 import { useAppMutations } from "@/hooks/use-app-mutations";
+import { useDependencyStatuses } from "@/hooks/use-dependency-status";
 import type { App } from "@/types/database";
 
 export const Route = createFileRoute("/")({ component: DashboardPage });
@@ -57,6 +58,10 @@ function DashboardPage() {
     !!session?.user,
     30000 // Poll every 30 seconds
   );
+
+  // Dependency status tracking
+  const { dependencyStatuses } = useDependencyStatuses(!!session?.user);
+  const [showDependencyGraph, setShowDependencyGraph] = useState(false);
 
   // Fetch apps
   const { data: appsData, isLoading: isAppsLoading, refetch: refetchApps } = useQuery({
@@ -229,17 +234,19 @@ function DashboardPage() {
   const healthBarStyle = settingsData?.settings?.healthBarStyle ?? "dot";
 
   return (
-    <main className="container mx-auto flex flex-col gap-6 p-6">
+    <main className="container mx-auto flex flex-col gap-4 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            {apps.length} app{apps.length !== 1 ? "s" : ""} configured
-          </p>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">Dashboard</h1>
+            <p className="text-xs text-muted-foreground">
+              {apps.length} app{apps.length !== 1 ? "s" : ""} configured
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 sm:gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
           {/* Refresh health button */}
           <Button
             variant="outline"
@@ -352,6 +359,28 @@ function DashboardPage() {
             Group by Category
           </Button>
 
+          {/* Dependency Graph toggle */}
+          <Button
+            variant={showDependencyGraph ? "secondary" : "outline"}
+            size="icon"
+            className="sm:hidden h-11 w-11"
+            onClick={() => setShowDependencyGraph(!showDependencyGraph)}
+            title={showDependencyGraph ? "Hide Dependencies" : "Show Dependencies"}
+            data-testid="dependency-graph-toggle"
+          >
+            <GitBranch className="h-5 w-5" />
+          </Button>
+          <Button
+            variant={showDependencyGraph ? "secondary" : "outline"}
+            size="sm"
+            className="hidden sm:flex"
+            onClick={() => setShowDependencyGraph(!showDependencyGraph)}
+            data-testid="dependency-graph-toggle-desktop"
+          >
+            <GitBranch className="h-4 w-4 mr-2" />
+            Dependencies
+          </Button>
+
           {/* Discover button */}
           <Button
             variant="outline"
@@ -389,6 +418,11 @@ function DashboardPage() {
           healthStatuses={healthStatuses}
           healthBarStyle={healthBarStyle}
         />
+      )}
+
+      {/* Dependency Graph */}
+      {showDependencyGraph && (
+        <DependencyGraphView className="mb-2" />
       )}
 
       {/* Widgets Section */}
@@ -441,6 +475,7 @@ function DashboardPage() {
         <AppGrid
           apps={apps}
           healthStatuses={healthStatuses}
+          dependencyStatuses={dependencyStatuses}
           healthBarStyle={healthBarStyle}
           columns={4}
           viewMode={viewMode}

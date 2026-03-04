@@ -1,4 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { serverLogger } from "./logger";
+
+// Create a child logger for user settings module
+const log = serverLogger.child({ module: "user-settings" });
 
 // Get user settings
 export const getUserSettings = createServerFn({ method: "GET" }).handler(
@@ -24,7 +28,7 @@ export const getUserSettings = createServerFn({ method: "GET" }).handler(
 
       return { settings: settings ?? null };
     } catch (error) {
-      console.error("Error fetching user settings:", error);
+      log.logError(error, "Error fetching user settings");
       return { settings: null };
     }
   }

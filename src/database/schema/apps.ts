@@ -39,7 +39,14 @@ export const appsRelations = relations(apps, ({ one, many }) => ({
     references: [users.id],
   }),
   tags: many(appTags),
+  // Apps this app depends on (outgoing dependencies)
+  dependencies: many(appDependencies, { relationName: "appDependencies" }),
+  // Apps that depend on this app (incoming dependencies)
+  dependents: many(appDependencies, { relationName: "appDependents" }),
 }));
+
+// Import appDependencies for the relations
+import { appDependencies } from "./app-dependencies";
 
 export const appTags = pgTable("app_tags", {
   appId: text("app_id").notNull().references(() => apps.id, { onDelete: "cascade" }),

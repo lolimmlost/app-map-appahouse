@@ -1,4 +1,16 @@
+/**
+ * Widget Proxy Server
+ *
+ * Provides server-side proxy functionality for widget integrations.
+ * Uses the IntegrationClient for consistent HTTP request handling with
+ * timeout management, connection pooling, and error handling.
+ */
+
 import { createServerFn } from "@tanstack/react-start";
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 type ProxyRequest = {
   data: {
@@ -8,597 +20,243 @@ type ProxyRequest = {
   };
 };
 
-// Internal helper function to fetch TrueNAS apps (can be called from other server code)
+// ============================================================================
+// INTERNAL HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Internal helper function to fetch TrueNAS apps (can be called from other server code)
+ */
 export async function fetchTrueNASApps(integrationId: string, userId: string): Promise<any[]> {
-  const { getDb } = await import("./get-db");
-  const { eq, and } = await import("drizzle-orm");
-  const { integrations } = await import("@/database/schema/integrations");
-
-  const db = await getDb();
-
-  const [integration] = await db
-    .select()
-    .from(integrations)
-    .where(and(eq(integrations.id, integrationId), eq(integrations.userId, userId)))
-    .limit(1);
-
-  if (!integration) throw new Error("Integration not found");
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const url = `${integration.url}/api/v2.0/app`;
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (integration.apiKey) {
-      headers["Authorization"] = `Bearer ${integration.apiKey}`;
-    }
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Request timed out");
-    }
-    throw error;
-  }
+  const { createIntegrationClient } = await import("./integration-client.server");
+  const client = await createIntegrationClient(integrationId, userId, { timeout: 15000 });
+  return client.getArray("/api/v2.0/app");
 }
 
-// Internal helper function to fetch Docker containers (can be called from other server code)
+/**
+ * Internal helper function to fetch Docker containers (can be called from other server code)
+ */
 export async function fetchDockerContainers(integrationId: string, userId: string, all = false): Promise<any[]> {
-  const { getDb } = await import("./get-db");
-  const { eq, and } = await import("drizzle-orm");
-  const { integrations } = await import("@/database/schema/integrations");
-
-  const db = await getDb();
-
-  const [integration] = await db
-    .select()
-    .from(integrations)
-    .where(and(eq(integrations.id, integrationId), eq(integrations.userId, userId)))
-    .limit(1);
-
-  if (!integration) throw new Error("Integration not found");
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const url = new URL("/containers/json", integration.url);
-    if (all) {
-      url.searchParams.set("all", "true");
-    }
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Request timed out");
-    }
-    throw error;
-  }
+  const { createIntegrationClient } = await import("./integration-client.server");
+  const client = await createIntegrationClient(integrationId, userId, { timeout: 10000 });
+  const params = all ? { all: "true" } : undefined;
+  return client.getArray("/containers/json", { params });
 }
 
-// Proxy requests to integrations to avoid CORS issues
+// ============================================================================
+// GENERIC PROXY
+// ============================================================================
+
+/**
+ * Proxy requests to integrations to avoid CORS issues
+ */
 export const proxyIntegrationRequest = createServerFn({ method: "POST" }).handler(
   async (ctx: ProxyRequest) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
     const { integrationId, endpoint, params } = ctx.data;
+    const client = await createAuthenticatedIntegrationClient(integrationId, { timeout: 15000 });
 
-    // Get the integration
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    // Build the URL
-    const url = new URL(endpoint, integration.url);
-
-    // Add API key to params
-    if (integration.apiKey) {
-      url.searchParams.set("apikey", integration.apiKey);
+    const result = await client.get(endpoint, { params });
+    if (!result.success) {
+      throw new Error("error" in result ? result.error : "Request failed");
     }
-
-    // Add additional params
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.set(key, value);
-      });
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const headers: Record<string, string> = {
-        "User-Agent": "AppMap-Widget/1.0",
-      };
-
-      // Some integrations use headers instead of query params
-      if (integration.type === "jellyfin" && integration.apiKey) {
-        headers["X-Emby-Token"] = integration.apiKey;
-        url.searchParams.delete("apikey");
-      }
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
+    return { success: true, data: result.data };
   }
 );
 
-// Sonarr-specific endpoints
+// ============================================================================
+// SONARR ENDPOINTS
+// ============================================================================
+
 export const getSonarrQueue = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/queue?apikey=${integration.apiKey}&includeSeries=true&includeEpisode=true`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/queue", {
+      params: { includeSeries: "true", includeEpisode: "true" },
+    });
   }
 );
 
 export const getSonarrCalendar = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; start: string; end: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/calendar?apikey=${integration.apiKey}&start=${ctx.data.start}&end=${ctx.data.end}&includeSeries=true`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/calendar", {
+      params: {
+        start: ctx.data.start,
+        end: ctx.data.end,
+        includeSeries: "true",
+      },
+    });
   }
 );
 
 export const getSonarrWanted = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; pageSize: number } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/wanted/missing?apikey=${integration.apiKey}&pageSize=${ctx.data.pageSize}&sortKey=airDateUtc&sortDirection=descending&includeSeries=true`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/wanted/missing", {
+      params: {
+        pageSize: String(ctx.data.pageSize),
+        sortKey: "airDateUtc",
+        sortDirection: "descending",
+        includeSeries: "true",
+      },
+    });
   }
 );
 
 export const getSonarrDiskSpace = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/diskspace?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/diskspace");
   }
 );
 
 export const getSonarrHealth = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/health?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/health");
   }
 );
 
-// Radarr-specific endpoints
+// ============================================================================
+// RADARR ENDPOINTS
+// ============================================================================
+
 export const getRadarrMovies = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/movie?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/movie");
   }
 );
 
 export const getRadarrQueue = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/queue?apikey=${integration.apiKey}&includeMovie=true`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/queue", {
+      params: { includeMovie: "true" },
+    });
   }
 );
 
 export const getRadarrCalendar = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; start: string; end: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/calendar?apikey=${integration.apiKey}&start=${ctx.data.start}&end=${ctx.data.end}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/calendar", {
+      params: {
+        start: ctx.data.start,
+        end: ctx.data.end,
+      },
+    });
   }
 );
 
 export const getRadarrDiskSpace = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/diskspace?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/diskspace");
   }
 );
 
 export const getRadarrHealth = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v3/health?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v3/health");
   }
 );
 
-// Lidarr-specific endpoints
+// ============================================================================
+// LIDARR ENDPOINTS
+// ============================================================================
+
 export const getLidarrWanted = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; pageSize: number } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v1/wanted/missing?apikey=${integration.apiKey}&pageSize=${ctx.data.pageSize}&sortKey=releaseDate&sortDirection=descending`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v1/wanted/missing", {
+      params: {
+        pageSize: String(ctx.data.pageSize),
+        sortKey: "releaseDate",
+        sortDirection: "descending",
+      },
+    });
   }
 );
 
 export const getLidarrQueue = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v1/queue?apikey=${integration.apiKey}&includeArtist=true&includeAlbum=true`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v1/queue", {
+      params: { includeArtist: "true", includeAlbum: "true" },
+    });
   }
 );
 
 export const getLidarrCalendar = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; start: string; end: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v1/calendar?apikey=${integration.apiKey}&start=${ctx.data.start}&end=${ctx.data.end}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v1/calendar", {
+      params: {
+        start: ctx.data.start,
+        end: ctx.data.end,
+      },
+    });
   }
 );
 
 export const getLidarrDiskSpace = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v1/diskspace?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v1/diskspace");
   }
 );
 
 export const getLidarrHealth = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const url = `${integration.url}/api/v1/health?apikey=${integration.apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    return client.getOrThrow("/api/v1/health");
   }
 );
 
-// Uptime Kuma-specific endpoints
+// ============================================================================
+// UPTIME KUMA ENDPOINTS
+// ============================================================================
+
 export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; statusPageSlug?: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
     const slug = ctx.data.statusPageSlug || "default";
 
-    // Fetch both status page config and heartbeat data
-    const [statusResponse, heartbeatResponse] = await Promise.all([
-      fetch(`${integration.url}/api/status-page/${slug}`),
-      fetch(`${integration.url}/api/status-page/heartbeat/${slug}`),
+    // Fetch both status page config and heartbeat data in parallel
+    const [statusResult, heartbeatResult] = await Promise.all([
+      client.get(`/api/status-page/${slug}`),
+      client.get(`/api/status-page/heartbeat/${slug}`),
     ]);
 
-    if (!statusResponse.ok) throw new Error(`HTTP ${statusResponse.status}`);
+    if (!statusResult.success) {
+      throw new Error("error" in statusResult ? statusResult.error : "Request failed");
+    }
 
-    const data = await statusResponse.json();
+    const data = statusResult.data as Record<string, any>;
 
     // Try to get heartbeat data from separate endpoint
-    let heartbeatList: Record<string, Array<{ status: number }>> = {};
-    if (heartbeatResponse.ok) {
-      const heartbeatData = await heartbeatResponse.json();
+    let heartbeatList: Record<string, Array<{ status: number; ping?: number; time?: string }>> = {};
+    if (heartbeatResult.success) {
+      const heartbeatData = heartbeatResult.data as Record<string, any>;
       heartbeatList = heartbeatData.heartbeatList || heartbeatData || {};
     }
 
@@ -624,17 +282,17 @@ export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
               monitor.ping = latestHeartbeat.ping ?? null;
 
               // Calculate uptime percentage from heartbeats
-              const upHeartbeats = heartbeats.filter((h: { status: number }) => h.status === 1).length;
+              const upHeartbeats = heartbeats.filter((h) => h.status === 1).length;
               monitor.uptime = heartbeats.length > 0 ? (upHeartbeats / heartbeats.length) * 100 : 0;
 
               // Get average response time
               const pings = heartbeats
-                .filter((h: { ping?: number }) => h.ping !== undefined && h.ping !== null)
-                .map((h: { ping: number }) => h.ping);
-              monitor.avgPing = pings.length > 0 ? Math.round(pings.reduce((a: number, b: number) => a + b, 0) / pings.length) : null;
+                .filter((h) => h.ping !== undefined && h.ping !== null)
+                .map((h) => h.ping as number);
+              monitor.avgPing = pings.length > 0 ? Math.round(pings.reduce((a, b) => a + b, 0) / pings.length) : null;
 
               // Include recent heartbeats for the uptime graph (last 30)
-              monitor.recentHeartbeats = heartbeats.slice(-30).map((h: { status: number; ping?: number; time?: string }) => ({
+              monitor.recentHeartbeats = heartbeats.slice(-30).map((h) => ({
                 status: h.status,
                 ping: h.ping,
                 time: h.time,
@@ -678,15 +336,17 @@ export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
   }
 );
 
+// ============================================================================
+// JELLYFIN ENDPOINTS
+// ============================================================================
+
 // Helper to build Jellyfin auth headers
-// Uses the modern Authorization header format recommended by Jellyfin
 function getJellyfinHeaders(token: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
   if (token) {
     // Modern Jellyfin auth - Authorization header with MediaBrowser format
-    // This works with both API keys and user access tokens
     headers["Authorization"] = `MediaBrowser Token="${token}", Client="AppMap", Device="Server", DeviceId="appmap-dashboard", Version="1.0.0"`;
     // Also include legacy headers for older Jellyfin versions
     headers["X-Emby-Token"] = token;
@@ -716,7 +376,7 @@ async function getJellyfinAccessToken(
   if (integration.username && integration.password) {
     try {
       const authUrl = `${integration.url}/Users/AuthenticateByName`;
-  
+
       const authHeaders = {
         "Content-Type": "application/json",
         "Authorization": `MediaBrowser Client="AppMap", Device="Server", DeviceId="appmap-dashboard-${integration.id}", Version="1.0.0"`,
@@ -731,14 +391,12 @@ async function getJellyfinAccessToken(
         }),
       });
 
-
       if (response.ok) {
         const data = await response.json();
         const token = data.AccessToken;
         const userId = data.User?.Id || "";
 
-
-        // Cache the token for 23 hours (Jellyfin tokens typically don't expire but we refresh periodically)
+        // Cache the token for 23 hours
         jellyfinTokenCache.set(integration.id, {
           token,
           userId,
@@ -760,24 +418,11 @@ async function getJellyfinAccessToken(
   return null;
 }
 
-// Jellyfin-specific endpoints
 export const getJellyfinSessions = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    const integration = client.getIntegration();
 
     // Get access token (supports both API key and username/password auth)
     let auth = await getJellyfinAccessToken(integration);
@@ -786,7 +431,6 @@ export const getJellyfinSessions = createServerFn({ method: "POST" }).handler(
     const headers = getJellyfinHeaders(auth.token);
     const url = `${integration.url}/Sessions?ActiveWithinSeconds=960`;
 
-    // ActiveWithinSeconds=960 filters to sessions active in last 16 minutes
     let response = await fetch(url, { headers });
 
     // If 401, clear cache and retry with fresh auth
@@ -800,6 +444,7 @@ export const getJellyfinSessions = createServerFn({ method: "POST" }).handler(
 
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     const data = await response.json();
+
     // Handle both array response and wrapped response
     if (Array.isArray(data)) return data;
     if (data.Items && Array.isArray(data.Items)) return data.Items;
@@ -809,23 +454,10 @@ export const getJellyfinSessions = createServerFn({ method: "POST" }).handler(
 
 export const getJellyfinLatest = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; limit: number } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    const integration = client.getIntegration();
 
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    // Helper function to fetch with current auth
     const fetchLatest = async (auth: { token: string; userId: string }) => {
       const headers = getJellyfinHeaders(auth.token);
 
@@ -863,6 +495,7 @@ export const getJellyfinLatest = createServerFn({ method: "POST" }).handler(
 
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     const data = await response.json();
+
     // Handle both array response and wrapped response
     if (Array.isArray(data)) return data;
     if (data.Items && Array.isArray(data.Items)) return data.Items;
@@ -870,39 +503,16 @@ export const getJellyfinLatest = createServerFn({ method: "POST" }).handler(
   }
 );
 
-// Get Jellyfin library statistics
 export const getJellyfinLibraryStats = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    const integration = client.getIntegration();
 
     const auth = await getJellyfinAccessToken(integration);
     if (!auth) throw new Error("No authentication configured for Jellyfin");
 
     const headers = getJellyfinHeaders(auth.token);
-
-    // Fetch item counts by type
-    const fetchCount = async (type: string) => {
-      const url = `${integration.url}/Items/Counts`;
-      const response = await fetch(url, { headers });
-      if (response.ok) {
-        return response.json();
-      }
-      return null;
-    };
 
     // Get library info
     const [countsResponse, librariesResponse] = await Promise.all([
@@ -930,24 +540,11 @@ export const getJellyfinLibraryStats = createServerFn({ method: "POST" }).handle
   }
 );
 
-// Get Jellyfin system information
 export const getJellyfinSystemInfo = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId);
+    const integration = client.getIntegration();
 
     const auth = await getJellyfinAccessToken(integration);
     if (!auth) throw new Error("No authentication configured for Jellyfin");
@@ -972,159 +569,41 @@ export const getJellyfinSystemInfo = createServerFn({ method: "POST" }).handler(
   }
 );
 
-// Docker-specific endpoints
+// ============================================================================
+// DOCKER ENDPOINTS
+// ============================================================================
+
 export const getDockerContainers = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; all?: boolean } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      // Docker API endpoint for containers
-      // all=true shows stopped containers too
-      const allParam = ctx.data.all ? "true" : "false";
-      const url = `${integration.url}/containers/json?all=${allParam}`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 15000 });
+    const params = { all: ctx.data.all ? "true" : "false" };
+    return client.getOrThrow("/containers/json", { params });
   }
 );
 
 export const getDockerContainerStats = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string; containerId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      // Get one-shot stats (stream=false)
-      const url = `${integration.url}/containers/${ctx.data.containerId}/stats?stream=false`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 10000 });
+    return client.getOrThrow(`/containers/${ctx.data.containerId}/stats`, {
+      params: { stream: "false" },
+    });
   }
 );
 
 export const getDockerInfo = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const url = `${integration.url}/info`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 10000 });
+    return client.getOrThrow("/info");
   }
 );
 
-// TrueNAS-specific endpoints
+// ============================================================================
+// TRUENAS TYPES
+// ============================================================================
+
 export type TrueNASApp = {
   name: string;
   id: string;
@@ -1142,118 +621,6 @@ export type TrueNASApp = {
   };
 };
 
-export const getTrueNASApps = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const url = `${integration.url}/api/v2.0/app`;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (integration.apiKey) {
-        headers["Authorization"] = `Bearer ${integration.apiKey}`;
-      }
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return Array.isArray(data) ? data as TrueNASApp[] : [];
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
-  }
-);
-
-export const getTrueNASSystemInfo = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const url = `${integration.url}/api/v2.0/system/info`;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (integration.apiKey) {
-        headers["Authorization"] = `Bearer ${integration.apiKey}`;
-      }
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
-  }
-);
-
-// TrueNAS Pool status
 export type TrueNASPool = {
   id: number;
   name: string;
@@ -1287,63 +654,6 @@ export type TrueNASPool = {
   };
 };
 
-export const getTrueNASPools = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const url = `${integration.url}/api/v2.0/pool`;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (integration.apiKey) {
-        headers["Authorization"] = `Bearer ${integration.apiKey}`;
-      }
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return Array.isArray(data) ? data as TrueNASPool[] : [];
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
-  }
-);
-
-// TrueNAS Disk status
 export type TrueNASDisk = {
   identifier: string;
   name: string;
@@ -1359,63 +669,6 @@ export type TrueNASDisk = {
   smartoptions?: string;
 };
 
-export const getTrueNASDisks = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const url = `${integration.url}/api/v2.0/disk`;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (integration.apiKey) {
-        headers["Authorization"] = `Bearer ${integration.apiKey}`;
-      }
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return Array.isArray(data) ? data as TrueNASDisk[] : [];
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
-  }
-);
-
-// TrueNAS Network Interfaces
 export type TrueNASInterface = {
   id: string;
   name: string;
@@ -1433,58 +686,46 @@ export type TrueNASInterface = {
   };
 };
 
+// ============================================================================
+// TRUENAS ENDPOINTS
+// ============================================================================
+
+export const getTrueNASApps = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 15000 });
+    return client.getArray<TrueNASApp>("/api/v2.0/app");
+  }
+);
+
+export const getTrueNASSystemInfo = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 10000 });
+    return client.getOrThrow("/api/v2.0/system/info");
+  }
+);
+
+export const getTrueNASPools = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 10000 });
+    return client.getArray<TrueNASPool>("/api/v2.0/pool");
+  }
+);
+
+export const getTrueNASDisks = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }) => {
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 10000 });
+    return client.getArray<TrueNASDisk>("/api/v2.0/disk");
+  }
+);
+
 export const getTrueNASInterfaces = createServerFn({ method: "POST" }).handler(
   async (ctx: { data: { integrationId: string } }) => {
-    const { getDb } = await import("./get-db");
-    const { eq, and } = await import("drizzle-orm");
-    const { getAuthenticatedSession } = await import("./auth-utils.server");
-    const { integrations } = await import("@/database/schema/integrations");
-
-    const db = await getDb();
-    const session = await getAuthenticatedSession();
-
-    const [integration] = await db
-      .select()
-      .from(integrations)
-      .where(and(eq(integrations.id, ctx.data.integrationId), eq(integrations.userId, session.user.id)))
-      .limit(1);
-
-    if (!integration) throw new Error("Integration not found");
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const url = `${integration.url}/api/v2.0/interface`;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (integration.apiKey) {
-        headers["Authorization"] = `Bearer ${integration.apiKey}`;
-      }
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return Array.isArray(data) ? data as TrueNASInterface[] : [];
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timed out");
-      }
-      throw error;
-    }
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 10000 });
+    return client.getArray<TrueNASInterface>("/api/v2.0/interface");
   }
 );
