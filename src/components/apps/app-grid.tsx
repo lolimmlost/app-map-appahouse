@@ -84,12 +84,8 @@ export function AppGrid({
   }, [apps, groupByCategory]);
 
   const gridClasses = cn(
-    viewMode === "list" ? "flex flex-col gap-1.5" : "grid gap-2 sm:gap-2.5",
-    viewMode === "grid" && columns === 2 && "grid-cols-1 sm:grid-cols-2",
-    viewMode === "grid" && columns === 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-    viewMode === "grid" && columns === 4 && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
-    viewMode === "grid" && columns === 5 && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
-    viewMode === "grid" && columns === 6 && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+    viewMode === "list" ? "flex flex-col gap-1" : "grid gap-1.5 sm:gap-2",
+    viewMode === "grid" && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
   );
 
   if (apps.length === 0) {
