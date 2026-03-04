@@ -9,15 +9,10 @@ import * as schema from "@/database/schema"
 const _serverOnly = serverOnly$(true);
 
 // Parse trusted origins from environment variable (comma-separated)
-const envTrustedOrigins = process.env.TRUSTED_ORIGINS
-    ? process.env.TRUSTED_ORIGINS.split(',').map(origin => origin.trim())
+// e.g. TRUSTED_ORIGINS=https://appmap.appahouse.com,http://localhost:4175
+const trustedOrigins = process.env.TRUSTED_ORIGINS
+    ? process.env.TRUSTED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
     : [];
-
-const trustedOrigins = [
-    'http://localhost:4175',
-    'https://dev5.appahouse.com',
-    ...envTrustedOrigins
-];
 
 export const auth = betterAuth({
     secret: process.env.BETTER_AUTH_SECRET!,
