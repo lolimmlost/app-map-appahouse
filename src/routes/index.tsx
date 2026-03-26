@@ -6,6 +6,7 @@ import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
 import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, type AppFormData } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
+import { LinksGrid } from "@/components/links";
 import { ServiceDiscoveryDialog } from "@/components/discovery";
 import { getApps } from "@/lib/server/apps.server";
 import { getCategories } from "@/lib/server/categories.server";
@@ -424,6 +425,9 @@ function DashboardPage() {
       {showDependencyGraph && (
         <DependencyGraphView className="mb-2" />
       )}
+
+      {/* Links Section */}
+      <LinksGrid />
 
       {/* Widgets Section */}
       <WidgetGrid reorderMode={reorderMode} />

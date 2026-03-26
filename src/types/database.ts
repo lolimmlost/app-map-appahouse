@@ -132,6 +132,33 @@ export interface UserSettings {
     showHealthDots: boolean | null
     healthBarStyle: "dot" | "border" | "none" | null
     sidebarCollapsed: boolean | null
+    searxngEnabled: boolean | null
+    searxngUrl: string | null
+}
+
+// Link types
+export interface LinkGroup {
+    id: string
+    name: string
+    icon: string | null
+    sortOrder: number | null
+    userId: string
+    createdAt: Date
+    updatedAt: Date
+    links?: Link[]
+}
+
+export interface Link {
+    id: string
+    name: string
+    url: string
+    icon: string | null
+    description: string | null
+    sortOrder: number | null
+    groupId: string
+    userId: string
+    createdAt: Date
+    updatedAt: Date
 }
 
 // Alert types

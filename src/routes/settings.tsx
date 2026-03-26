@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Save, RefreshCw, Palette, LayoutGrid, Activity } from "lucide-react";
+import { Save, RefreshCw, Palette, LayoutGrid, Activity, Search } from "lucide-react";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -27,6 +28,8 @@ type SettingsFormData = {
   showHealthDots: boolean;
   healthBarStyle: "dot" | "border" | "none";
   theme: string;
+  searxngEnabled: boolean;
+  searxngUrl: string;
 };
 
 const defaultSettings: SettingsFormData = {
@@ -35,6 +38,8 @@ const defaultSettings: SettingsFormData = {
   showHealthDots: true,
   healthBarStyle: "dot",
   theme: "system",
+  searxngEnabled: false,
+  searxngUrl: "",
 };
 
 function SettingsPage() {
@@ -63,6 +68,8 @@ function SettingsPage() {
         showHealthDots: s.showHealthDots ?? true,
         healthBarStyle: s.healthBarStyle ?? "dot",
         theme: s.theme ?? "system",
+        searxngEnabled: s.searxngEnabled ?? false,
+        searxngUrl: s.searxngUrl ?? "",
       });
     }
   }, [settingsData?.settings]);
@@ -77,6 +84,8 @@ function SettingsPage() {
           showHealthDots: data.showHealthDots,
           healthBarStyle: data.healthBarStyle,
           theme: data.theme,
+          searxngEnabled: data.searxngEnabled,
+          searxngUrl: data.searxngUrl,
         },
       }),
     onSuccess: () => {
@@ -293,6 +302,44 @@ function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Web Search */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                <CardTitle>Web Search</CardTitle>
+              </div>
+              <CardDescription>Search the web from the command palette using SearXNG</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Enable SearXNG Search</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show web results in the command palette (Cmd+K)
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.searxngEnabled}
+                  onCheckedChange={(checked) => handleChange("searxngEnabled", checked)}
+                />
+              </div>
+              {formData.searxngEnabled && (
+                <div className="space-y-2">
+                  <Label>SearXNG Instance URL</Label>
+                  <Input
+                    placeholder="http://10.0.0.30:30053"
+                    value={formData.searxngUrl}
+                    onChange={(e) => handleChange("searxngUrl", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The URL of your SearXNG instance. Must have the JSON API enabled.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
