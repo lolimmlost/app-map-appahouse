@@ -198,14 +198,12 @@ export function TopStatusBar({ clockWidget, weatherWidget, className }: TopStatu
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-card border",
+        "inline-flex flex-wrap items-center gap-6 px-3 py-2 rounded-lg bg-card border",
         className
       )}
     >
-      <div className="flex items-center gap-6">
-        {clockWidget && <InlineClock widget={clockWidget} />}
-        {weatherWidget && <InlineWeather widget={weatherWidget} />}
-      </div>
+      {clockWidget && <InlineClock widget={clockWidget} />}
+      {weatherWidget && <InlineWeather widget={weatherWidget} />}
     </div>
   );
 }
