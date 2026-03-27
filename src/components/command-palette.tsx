@@ -4,7 +4,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import {
   ExternalLink,
+  Globe,
   Layers,
+  Loader2,
   Tags,
   Settings,
   Plus,
@@ -31,6 +33,8 @@ import { Badge } from "@/components/ui/badge";
 import { getApps } from "@/lib/server/apps.server";
 import { getTags } from "@/lib/server/tags.server";
 import { getCategories } from "@/lib/server/categories.server";
+import { getUserSettings } from "@/lib/server/user-settings.server";
+import { searchSearxng } from "@/lib/server/searxng.server";
 import type { App } from "@/types/database";
 import type { Category } from "@/types/database";
 
@@ -43,6 +47,8 @@ interface CommandPaletteProps {
 // Client-only wrapper to avoid SSR issues with useQuery
 function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { data: session } = useAuthenticate();
@@ -67,6 +73,29 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
     queryFn: () => getCategories(),
     enabled: !!session?.user,
   });
+
+  // Fetch user settings (for SearXNG config)
+  const { data: settingsData } = useQuery({
+    queryKey: ["userSettings"],
+    queryFn: () => getUserSettings(),
+    enabled: !!session?.user,
+  });
+  const searxngEnabled = settingsData?.settings?.searxngEnabled ?? false;
+
+  // Debounce search input for SearXNG
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // SearXNG web search query
+  const { data: searxngData, isFetching: isSearxngLoading } = useQuery({
+    queryKey: ["searxng", debouncedSearch],
+    queryFn: () => searchSearxng({ data: { query: debouncedSearch } }),
+    enabled: searxngEnabled && open && debouncedSearch.length >= 2,
+    staleTime: 60000,
+  });
+  const searxngResults = searxngData?.results ?? [];
 
   const apps = appsData?.apps ?? [];
   const tags = tagsData?.tags ?? [];
@@ -165,8 +194,8 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
         <span className="sr-only">Search</span>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search apps, categories, tags, notes..." />
+      <CommandDialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setSearch(""); }}>
+        <CommandInput placeholder="Search apps, categories, tags, notes..." value={search} onValueChange={setSearch} />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
 
@@ -358,6 +387,49 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
               </CommandItem>
             )}
           </CommandGroup>
+
+          {/* SearXNG Web Search */}
+          {searxngEnabled && search.length >= 2 && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="Search with SearXNG" forceMount>
+                {isSearxngLoading ? (
+                  <CommandItem disabled value="searxng-loading" forceMount>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground">Searching the web...</span>
+                  </CommandItem>
+                ) : searxngResults.length > 0 ? (
+                  searxngResults.map((result, index) => (
+                    <CommandItem
+                      key={`searxng-${index}`}
+                      value={`searxng-${result.title}-${result.url}`}
+                      forceMount
+                      onSelect={() => {
+                        window.open(result.url, "_blank", "noopener,noreferrer");
+                        setOpen(false);
+                      }}
+                    >
+                      <Globe className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium truncate block">{result.title}</span>
+                        {result.content && (
+                          <span className="text-muted-foreground text-xs truncate block">
+                            {result.content.slice(0, 100)}
+                          </span>
+                        )}
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    </CommandItem>
+                  ))
+                ) : debouncedSearch.length >= 2 ? (
+                  <CommandItem disabled value="searxng-empty" forceMount>
+                    <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">No web results found</span>
+                  </CommandItem>
+                ) : null}
+              </CommandGroup>
+            </>
+          )}
         </CommandList>
       </CommandDialog>
     </>

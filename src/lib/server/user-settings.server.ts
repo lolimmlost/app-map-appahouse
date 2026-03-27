@@ -42,6 +42,8 @@ type UpdateUserSettingsData = {
     healthBarStyle?: "dot" | "border" | "none";
     theme?: string;
     customTheme?: Record<string, string>;
+    searxngEnabled?: boolean;
+    searxngUrl?: string;
   };
 };
 
@@ -76,6 +78,8 @@ export const updateUserSettings = createServerFn({ method: "POST" }).handler(
           healthBarStyle: data.healthBarStyle,
           theme: data.theme,
           customTheme: data.customTheme,
+          searxngEnabled: data.searxngEnabled,
+          searxngUrl: data.searxngUrl,
         })
         .where(eq(userSettings.userId, session.user.id))
         .returning();
@@ -92,6 +96,8 @@ export const updateUserSettings = createServerFn({ method: "POST" }).handler(
           healthBarStyle: data.healthBarStyle ?? "dot",
           theme: data.theme ?? "system",
           customTheme: data.customTheme,
+          searxngEnabled: data.searxngEnabled ?? false,
+          searxngUrl: data.searxngUrl,
         })
         .returning();
       return { settings: created };

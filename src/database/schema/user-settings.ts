@@ -14,6 +14,8 @@ export const userSettings = pgTable("user_settings", {
   showHealthDots: boolean("show_health_dots").default(true),
   healthBarStyle: healthBarStyleEnum("health_bar_style").default("dot"),
   sidebarCollapsed: boolean("sidebar_collapsed").default(false),
+  searxngEnabled: boolean("searxng_enabled").default(false),
+  searxngUrl: text("searxng_url"),
 });
 
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({
