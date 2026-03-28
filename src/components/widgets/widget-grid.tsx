@@ -480,17 +480,17 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
 
   return (
     <div className="space-y-3">
-      {/* Top Status Bar - Clock & Weather */}
-      {(clockWidget || weatherWidget) && (
-        <TopStatusBar clockWidget={clockWidget} weatherWidget={weatherWidget} />
-      )}
-
-      {/* Widgets Section Header */}
-      <div className="flex items-center justify-between">
-        {gridWidgets.length > 0 && (
-          <h2 className="text-sm font-semibold text-muted-foreground">Widgets</h2>
-        )}
-        <div className={cn("flex items-center gap-2", gridWidgets.length === 0 ? "ml-auto" : "")}>
+      {/* Widgets Section Header — clock/weather merged in */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          {(clockWidget || weatherWidget) && (
+            <TopStatusBar clockWidget={clockWidget} weatherWidget={weatherWidget} />
+          )}
+          {gridWidgets.length > 0 && (
+            <h2 className="text-sm font-semibold text-muted-foreground whitespace-nowrap">Widgets</h2>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           {/* Layout mode toggle */}
           <div className="flex items-center border rounded-md">
             <Button
