@@ -291,9 +291,9 @@ export function AppCard({
       <ContextMenuTrigger asChild>
         <Card
           className={cn(
-            "group relative transition-colors",
-            hasValidUrl && !selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40",
-            selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40",
+            "group relative transition-[box-shadow,border-color,background-color] duration-200",
+            hasValidUrl && !selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40 hover:card-elevation-hover",
+            selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40 hover:card-elevation-hover",
             !hasValidUrl && !selectionMode && "opacity-75",
             healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
             borderClass,

@@ -26,6 +26,15 @@
     --status-offline: hsl(0 84% 60%);
     --status-unknown: hsl(220 9% 46%);
     --status-pending: hsl(45 93% 47%);
+    /* Layered soft depth — contact shadow + ambient, low opacity, warm-neutral. */
+    --shadow-card:
+        0 1px 2px -1px rgb(16 18 24 / 0.08),
+        0 3px 8px -2px rgb(16 18 24 / 0.06),
+        0 12px 28px -8px rgb(16 18 24 / 0.07);
+    --shadow-card-hover:
+        0 1px 2px -1px rgb(16 18 24 / 0.10),
+        0 6px 14px -3px rgb(16 18 24 / 0.10),
+        0 18px 40px -12px rgb(16 18 24 / 0.12);
 }
 
 .dark {
@@ -41,6 +50,16 @@
     --status-offline: hsl(0 72% 51%);
     --status-unknown: hsl(220 13% 50%);
     --status-pending: hsl(45 93% 47%);
+    /* Dark depth: a top-edge light catch (cards are lit from above) + a soft
+       grounding shadow. Shadows alone don't read on a dark surface. */
+    --shadow-card:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.05),
+        0 1px 2px 0 rgb(0 0 0 / 0.45),
+        0 12px 32px -12px rgb(0 0 0 / 0.65);
+    --shadow-card-hover:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+        0 2px 6px 0 rgb(0 0 0 / 0.5),
+        0 18px 44px -14px rgb(0 0 0 / 0.75);
 }
 
 @theme inline {
@@ -56,6 +75,16 @@
     --color-status-offline: var(--status-offline);
     --color-status-unknown: var(--status-unknown);
     --color-status-pending: var(--status-pending);
+}
+
+/* Human card depth: layered soft shadows (contact + ambient) in light; in dark,
+   depth comes from a top-edge light catch + a soft grounding shadow, since
+   shadows barely read on a dark surface. Theme-aware via CSS variables. */
+@utility card-elevation {
+    box-shadow: var(--shadow-card);
+}
+@utility card-elevation-hover {
+    box-shadow: var(--shadow-card-hover);
 }
 
 /* Crisp uppercase micro-label for section/column headers (ops-panel look). */
