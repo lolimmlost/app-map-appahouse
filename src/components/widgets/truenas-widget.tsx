@@ -235,24 +235,24 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
   // Get pool status icon
   const getPoolStatusIcon = (pool: TrueNASPool) => {
     if (pool.status === "ONLINE" && pool.healthy) {
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
+      return <CheckCircle className="h-4 w-4 text-success" />;
     } else if (pool.status === "DEGRADED") {
-      return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      return <AlertCircle className="h-4 w-4 text-warning" />;
     }
-    return <XCircle className="h-4 w-4 text-red-500" />;
+    return <XCircle className="h-4 w-4 text-error" />;
   };
 
   // Get app status badge
   const getAppStatusBadge = (state: TrueNASApp["state"]) => {
     switch (state) {
       case "RUNNING":
-        return <Badge variant="outline" className="border-green-500 text-green-500 text-xs">Running</Badge>;
+        return <Badge variant="outline" className="border-success text-success text-xs">Running</Badge>;
       case "STOPPED":
-        return <Badge variant="outline" className="border-gray-500 text-gray-500 text-xs">Stopped</Badge>;
+        return <Badge variant="outline" className="border-border text-muted-foreground text-xs">Stopped</Badge>;
       case "DEPLOYING":
-        return <Badge variant="outline" className="border-blue-500 text-blue-500 text-xs">Deploying</Badge>;
+        return <Badge variant="outline" className="border-info text-info text-xs">Deploying</Badge>;
       case "CRASHED":
-        return <Badge variant="outline" className="border-red-500 text-red-500 text-xs">Crashed</Badge>;
+        return <Badge variant="outline" className="border-error text-error text-xs">Crashed</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">{state}</Badge>;
     }
@@ -341,9 +341,9 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                   Pools ({pools.length})
                 </span>
                 {pools.every((p) => p.status === "ONLINE" && p.healthy) ? (
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-success" />
                 ) : pools.some((p) => p.status !== "ONLINE" || !p.healthy) ? (
-                  <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  <AlertCircle className="h-3 w-3 text-warning" />
                 ) : null}
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 pt-2">
@@ -363,9 +363,9 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                           variant="outline"
                           className={cn(
                             "text-xs",
-                            pool.status === "ONLINE" && pool.healthy && "border-green-500 text-green-500",
-                            pool.status === "DEGRADED" && "border-yellow-500 text-yellow-500",
-                            (pool.status !== "ONLINE" && pool.status !== "DEGRADED") && "border-red-500 text-red-500"
+                            pool.status === "ONLINE" && pool.healthy && "border-success text-success",
+                            pool.status === "DEGRADED" && "border-warning text-warning",
+                            (pool.status !== "ONLINE" && pool.status !== "DEGRADED") && "border-error text-error"
                           )}
                         >
                           {pool.status}
@@ -377,9 +377,9 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                             value={usedPercent}
                             className={cn(
                               "h-1.5 flex-1",
-                              usedPercent >= 90 && "[&>div]:bg-red-500",
-                              usedPercent >= 75 && usedPercent < 90 && "[&>div]:bg-yellow-500",
-                              usedPercent < 75 && "[&>div]:bg-green-500"
+                              usedPercent >= 90 && "[&>div]:bg-error",
+                              usedPercent >= 75 && usedPercent < 90 && "[&>div]:bg-warning",
+                              usedPercent < 75 && "[&>div]:bg-success"
                             )}
                           />
                           <span className="text-xs text-muted-foreground min-w-[70px] text-right">
@@ -388,7 +388,7 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                         </div>
                       )}
                       {pool.scan && pool.scan.function === "SCRUB" && pool.scan.state === "SCANNING" && (
-                        <div className="mt-1 text-xs text-blue-500">
+                        <div className="mt-1 text-xs text-info">
                           Scrub in progress: {pool.scan.percentage.toFixed(1)}%
                         </div>
                       )}
@@ -428,8 +428,8 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                         <span
                           className={cn(
                             "flex items-center gap-0.5",
-                            disk.temperature >= 50 && "text-red-500",
-                            disk.temperature >= 40 && disk.temperature < 50 && "text-yellow-500",
+                            disk.temperature >= 50 && "text-error",
+                            disk.temperature >= 40 && disk.temperature < 50 && "text-warning",
                             disk.temperature < 40 && "text-muted-foreground"
                           )}
                         >
@@ -461,11 +461,11 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                   Apps ({apps.length})
                 </span>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-green-500">
+                  <span className="text-xs text-success">
                     {apps.filter((a) => a.state === "RUNNING").length}
                   </span>
                   {apps.some((a) => a.state === "CRASHED") && (
-                    <span className="text-xs text-red-500">
+                    <span className="text-xs text-error">
                       / {apps.filter((a) => a.state === "CRASHED").length} crashed
                     </span>
                   )}
@@ -478,7 +478,7 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                     className={cn(
                       "flex items-center justify-between p-1.5 rounded text-xs",
                       app.state === "RUNNING" && "bg-muted/30",
-                      app.state === "CRASHED" && "bg-red-500/10",
+                      app.state === "CRASHED" && "bg-error/10",
                       app.state === "STOPPED" && "bg-muted/20"
                     )}
                   >
@@ -528,8 +528,8 @@ export function TrueNASWidget({ widget, onEdit, onDelete, onResize }: TrueNASWid
                         className={cn(
                           "text-xs",
                           iface.state?.link_state === "LINK_STATE_UP"
-                            ? "border-green-500 text-green-500"
-                            : "border-gray-500 text-gray-500"
+                            ? "border-success text-success"
+                            : "border-border text-muted-foreground"
                         )}
                       >
                         {iface.state?.link_state === "LINK_STATE_UP" ? "Up" : "Down"}

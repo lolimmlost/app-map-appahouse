@@ -162,26 +162,26 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
   const getStatusIcon = (status: number) => {
     switch (status) {
       case 1:
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case 0:
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-error" />;
       case 3:
-        return <AlertCircle className="h-4 w-4 text-blue-500" />;
+        return <AlertCircle className="h-4 w-4 text-info" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <AlertCircle className="h-4 w-4 text-warning" />;
     }
   };
 
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 1:
-        return <Badge variant="outline" className="border-green-500 text-green-500 text-xs">Up</Badge>;
+        return <Badge variant="outline" className="border-success text-success text-xs">Up</Badge>;
       case 0:
-        return <Badge variant="outline" className="border-red-500 text-red-500 text-xs">Down</Badge>;
+        return <Badge variant="outline" className="border-error text-error text-xs">Down</Badge>;
       case 3:
-        return <Badge variant="outline" className="border-blue-500 text-blue-500 text-xs">Maint</Badge>;
+        return <Badge variant="outline" className="border-info text-info text-xs">Maint</Badge>;
       default:
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-500 text-xs">Pending</Badge>;
+        return <Badge variant="outline" className="border-warning text-warning text-xs">Pending</Badge>;
     }
   };
 
@@ -196,10 +196,10 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
             key={i}
             className={cn(
               "flex-1 h-full rounded-[2px] min-w-[3px] max-w-[6px] transition-all",
-              hb.status === 1 && "bg-green-500",
-              hb.status === 0 && "bg-red-500",
-              hb.status === 2 && "bg-yellow-500",
-              hb.status === 3 && "bg-blue-500"
+              hb.status === 1 && "bg-success",
+              hb.status === 0 && "bg-error",
+              hb.status === 2 && "bg-warning",
+              hb.status === 3 && "bg-info"
             )}
             title={`${hb.status === 1 ? "Up" : hb.status === 0 ? "Down" : "Pending"}${hb.ping ? ` - ${hb.ping}ms` : ""}`}
           />
@@ -300,18 +300,18 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-success" />
                   {upCount}
                 </span>
                 {downCount > 0 && (
                   <span className="flex items-center gap-1">
-                    <XCircle className="h-3 w-3 text-red-500" />
+                    <XCircle className="h-3 w-3 text-error" />
                     {downCount}
                   </span>
                 )}
                 {pendingCount > 0 && (
                   <span className="flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                    <AlertCircle className="h-3 w-3 text-warning" />
                     {pendingCount}
                   </span>
                 )}
@@ -346,10 +346,10 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                         className={cn(
                           "rounded-md",
                           isCompact ? "p-1.5" : "p-2",
-                          monitor.status === 0 && "bg-red-500/10",
+                          monitor.status === 0 && "bg-error/10",
                           monitor.status === 1 && "bg-muted/50",
-                          monitor.status === 2 && "bg-yellow-500/10",
-                          monitor.status === 3 && "bg-blue-500/10"
+                          monitor.status === 2 && "bg-warning/10",
+                          monitor.status === 3 && "bg-info/10"
                         )}
                       >
                         {isCompact ? (
@@ -384,9 +384,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                   <span
                                     className={cn(
                                       "text-xs font-medium min-w-[45px] text-right",
-                                      monitor.uptime >= 99 && "text-green-500",
-                                      monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
-                                      monitor.uptime < 95 && "text-red-500"
+                                      monitor.uptime >= 99 && "text-success",
+                                      monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
+                                      monitor.uptime < 95 && "text-error"
                                     )}
                                   >
                                     {monitor.uptime.toFixed(1)}%
@@ -400,9 +400,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 <span
                                   className={cn(
                                     "text-xs font-medium",
-                                    monitor.uptime >= 99 && "text-green-500",
-                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
-                                    monitor.uptime < 95 && "text-red-500"
+                                    monitor.uptime >= 99 && "text-success",
+                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
+                                    monitor.uptime < 95 && "text-error"
                                   )}
                                 >
                                   {monitor.uptime.toFixed(1)}% uptime
@@ -438,7 +438,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                 <div className="mt-3 pt-3 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                      <AlertTriangle className="h-3 w-3 text-warning" />
                       <span className="text-xs font-medium">Recent Incidents</span>
                       <Badge variant="outline" className="text-xs h-4 px-1">{allIncidents.length}</Badge>
                     </div>
@@ -460,9 +460,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
                             {incident.type === "down" ? (
-                              <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                              <XCircle className="h-3 w-3 text-error shrink-0" />
                             ) : (
-                              <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
+                              <TrendingUp className="h-3 w-3 text-success shrink-0" />
                             )}
                             <span className="truncate text-muted-foreground">
                               {incident.monitorName}

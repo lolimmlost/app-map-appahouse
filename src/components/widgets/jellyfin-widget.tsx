@@ -390,16 +390,16 @@ export function JellyfinWidget({ widget, onEdit, onDelete, onResize }: JellyfinW
                           key={session.Id}
                           className={cn(
                             "p-2 rounded-md",
-                            session.PlayState?.IsPaused ? "bg-yellow-500/10" : "bg-green-500/10"
+                            session.PlayState?.IsPaused ? "bg-warning/10" : "bg-success/10"
                           )}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-start gap-2 flex-1 min-w-0">
                               <div className="mt-0.5">
                                 {session.PlayState?.IsPaused ? (
-                                  <Pause className="h-4 w-4 text-yellow-500" />
+                                  <Pause className="h-4 w-4 text-warning" />
                                 ) : (
-                                  <Play className="h-4 w-4 text-green-500" />
+                                  <Play className="h-4 w-4 text-success" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0 text-sm">
@@ -421,8 +421,8 @@ export function JellyfinWidget({ widget, onEdit, onDelete, onResize }: JellyfinW
                               className={cn(
                                 "h-1.5 flex-1",
                                 session.PlayState?.IsPaused
-                                  ? "[&>div]:bg-yellow-500"
-                                  : "[&>div]:bg-green-500"
+                                  ? "[&>div]:bg-warning"
+                                  : "[&>div]:bg-success"
                               )}
                             />
                             <span className="text-xs text-muted-foreground min-w-[80px] text-right">
@@ -572,7 +572,7 @@ export function JellyfinWidget({ widget, onEdit, onDelete, onResize }: JellyfinW
                   <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                     <Server className="h-3 w-3" /> Server
                     {serverInfo.hasUpdateAvailable && (
-                      <Badge variant="default" className="ml-1 text-[10px] px-1 py-0 bg-yellow-500 text-yellow-950">
+                      <Badge variant="default" className="ml-1 text-[10px] px-1 py-0 bg-warning/15 text-warning">
                         Update
                       </Badge>
                     )}
@@ -594,7 +594,7 @@ export function JellyfinWidget({ widget, onEdit, onDelete, onResize }: JellyfinW
                       <div className="flex items-center gap-1">
                         <span className="font-medium">{serverInfo.version}</span>
                         {serverInfo.hasUpdateAvailable && (
-                          <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500">
+                          <Badge variant="outline" className="text-[10px] text-warning border-warning">
                             Update available
                           </Badge>
                         )}

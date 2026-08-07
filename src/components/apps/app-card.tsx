@@ -64,7 +64,7 @@ const healthBorderColors: Record<HealthStatus, string> = {
 
 const dependencyStatusColors: Record<DependencyStatus, string> = {
   healthy: "bg-status-online",
-  degraded: "bg-yellow-500",
+  degraded: "bg-warning",
   offline: "bg-status-offline",
 };
 
@@ -291,9 +291,9 @@ export function AppCard({
       <ContextMenuTrigger asChild>
         <Card
           className={cn(
-            "group relative transition-all",
-            hasValidUrl && !selectionMode && "cursor-pointer hover:shadow-md hover:border-primary/30",
-            selectionMode && "cursor-pointer hover:shadow-md",
+            "group relative transition-colors",
+            hasValidUrl && !selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40",
+            selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40",
             !hasValidUrl && !selectionMode && "opacity-75",
             healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
             borderClass,

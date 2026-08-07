@@ -32,40 +32,40 @@ interface IncidentTimelineProps {
 const severityConfig: Record<IncidentSeverity, { icon: typeof AlertTriangle; color: string; bg: string }> = {
   minor: {
     icon: Info,
-    color: "text-yellow-500",
-    bg: "bg-yellow-500/10",
+    color: "text-warning",
+    bg: "bg-warning/10",
   },
   major: {
     icon: AlertCircle,
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
+    color: "text-warning",
+    bg: "bg-warning/10",
   },
   critical: {
     icon: AlertTriangle,
-    color: "text-red-500",
-    bg: "bg-red-500/10",
+    color: "text-error",
+    bg: "bg-error/10",
   },
 };
 
 const statusConfig: Record<IncidentStatus, { icon: typeof Clock; color: string; label: string }> = {
   investigating: {
     icon: Clock,
-    color: "text-yellow-500",
+    color: "text-warning",
     label: "Investigating",
   },
   identified: {
     icon: AlertCircle,
-    color: "text-orange-500",
+    color: "text-warning",
     label: "Identified",
   },
   monitoring: {
     icon: Info,
-    color: "text-blue-500",
+    color: "text-info",
     label: "Monitoring",
   },
   resolved: {
     icon: CheckCircle,
-    color: "text-green-500",
+    color: "text-success",
     label: "Resolved",
   },
 };
@@ -180,7 +180,7 @@ export function IncidentTimeline({ incidents, maxItems = 5, showEmpty = true, cl
   if (incidents.length === 0 && showEmpty) {
     return (
       <div className={cn("text-center py-8", className)}>
-        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+        <CheckCircle className="h-12 w-12 text-success mx-auto mb-3" />
         <h3 className="font-medium text-lg mb-1">No active incidents</h3>
         <p className="text-sm text-muted-foreground">
           All systems are operating normally
@@ -196,7 +196,7 @@ export function IncidentTimeline({ incidents, maxItems = 5, showEmpty = true, cl
   return (
     <div className={cn("space-y-3", className)}>
       <h2 className="text-lg font-semibold flex items-center gap-2">
-        <AlertCircle className="h-5 w-5 text-yellow-500" />
+        <AlertCircle className="h-5 w-5 text-warning" />
         Active Incidents
       </h2>
       <div className="space-y-3">

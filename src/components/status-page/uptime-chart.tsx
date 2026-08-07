@@ -14,12 +14,12 @@ interface UptimeChartProps {
 }
 
 function getStatusColor(uptime: number): string {
-  if (uptime >= 99) return "bg-green-500";
-  if (uptime >= 95) return "bg-green-400";
-  if (uptime >= 90) return "bg-yellow-500";
-  if (uptime >= 75) return "bg-orange-500";
-  if (uptime > 0) return "bg-red-500";
-  return "bg-gray-500";
+  if (uptime >= 99) return "bg-success";
+  if (uptime >= 95) return "bg-success";
+  if (uptime >= 90) return "bg-warning";
+  if (uptime >= 75) return "bg-warning";
+  if (uptime > 0) return "bg-error";
+  return "bg-muted-foreground";
 }
 
 function formatDate(dateStr: string): string {
@@ -64,7 +64,7 @@ export function UptimeChart({ data, days = 90, className }: UptimeChartProps) {
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{days} day uptime</span>
-        <span className="text-sm font-medium text-green-500">
+        <span className="text-sm font-medium text-success">
           {overallUptime.toFixed(2)}%
         </span>
       </div>
@@ -77,7 +77,7 @@ export function UptimeChart({ data, days = 90, className }: UptimeChartProps) {
                 <div
                   className={cn(
                     "h-8 flex-1 rounded-sm transition-all hover:scale-110 cursor-pointer",
-                    day.status === "unknown" ? "bg-gray-700/50" : getStatusColor(day.uptime)
+                    day.status === "unknown" ? "bg-muted-foreground/50" : getStatusColor(day.uptime)
                   )}
                   style={{ minWidth: "2px", maxWidth: "8px" }}
                 />
@@ -119,11 +119,11 @@ export function UptimeSummary({
   className,
 }: UptimeSummaryProps) {
   const getUptimeColor = (value: number) => {
-    if (value >= 99.9) return "text-green-400";
-    if (value >= 99) return "text-green-500";
-    if (value >= 95) return "text-yellow-500";
-    if (value >= 90) return "text-orange-500";
-    return "text-red-500";
+    if (value >= 99.9) return "text-success";
+    if (value >= 99) return "text-success";
+    if (value >= 95) return "text-warning";
+    if (value >= 90) return "text-warning";
+    return "text-error";
   };
 
   return (

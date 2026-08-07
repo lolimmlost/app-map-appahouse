@@ -11,33 +11,33 @@ interface StatusIndicatorProps {
 
 const statusConfig: Record<StatusType, { color: string; bgColor: string; label: string; pulseColor: string }> = {
   online: {
-    color: "text-green-500",
-    bgColor: "bg-green-500",
-    pulseColor: "bg-green-400",
+    color: "text-success",
+    bgColor: "bg-success",
+    pulseColor: "bg-success",
     label: "Operational",
   },
   offline: {
-    color: "text-red-500",
-    bgColor: "bg-red-500",
-    pulseColor: "bg-red-400",
+    color: "text-error",
+    bgColor: "bg-error",
+    pulseColor: "bg-error",
     label: "Outage",
   },
   degraded: {
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500",
-    pulseColor: "bg-yellow-400",
+    color: "text-warning",
+    bgColor: "bg-warning",
+    pulseColor: "bg-warning",
     label: "Degraded",
   },
   unknown: {
-    color: "text-gray-400",
-    bgColor: "bg-gray-400",
-    pulseColor: "bg-gray-300",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted-foreground",
+    pulseColor: "bg-muted",
     label: "Unknown",
   },
   maintenance: {
-    color: "text-blue-500",
-    bgColor: "bg-blue-500",
-    pulseColor: "bg-blue-400",
+    color: "text-info",
+    bgColor: "bg-info",
+    pulseColor: "bg-info",
     label: "Maintenance",
   },
 };
@@ -81,29 +81,29 @@ interface OverallStatusBannerProps {
 
 const bannerConfig: Record<StatusType, { bg: string; border: string; text: string }> = {
   online: {
-    bg: "bg-green-500/10",
-    border: "border-green-500/20",
-    text: "text-green-400",
+    bg: "bg-success/10",
+    border: "border-success/20",
+    text: "text-success",
   },
   offline: {
-    bg: "bg-red-500/10",
-    border: "border-red-500/20",
-    text: "text-red-400",
+    bg: "bg-error/10",
+    border: "border-error/20",
+    text: "text-error",
   },
   degraded: {
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/20",
-    text: "text-yellow-400",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
   },
   unknown: {
-    bg: "bg-gray-500/10",
-    border: "border-gray-500/20",
-    text: "text-gray-400",
+    bg: "bg-muted-foreground/10",
+    border: "border-border/20",
+    text: "text-muted-foreground",
   },
   maintenance: {
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
-    text: "text-blue-400",
+    bg: "bg-info/10",
+    border: "border-info/20",
+    text: "text-info",
   },
 };
 

@@ -315,18 +315,18 @@ export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidge
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 text-sm flex-wrap">
                 <span className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  <AlertCircle className="h-3 w-3 text-warning" />
                   <span className="font-medium">{wantedCount}</span> missing
                 </span>
                 {showQueue && (
                   <span className="flex items-center gap-1">
-                    <Download className="h-3 w-3 text-blue-500" />
+                    <Download className="h-3 w-3 text-info" />
                     <span className="font-medium">{queue.length}</span> queue
                   </span>
                 )}
                 {showCalendar && calendar.length > 0 && (
                   <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3 text-purple-500" />
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
                     <span className="font-medium">{calendar.length}</span> upcoming
                   </span>
                 )}
@@ -334,11 +334,11 @@ export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidge
                   <span className="flex items-center gap-1">
                     {health.length > 0 ? (
                       <>
-                        <AlertTriangle className="h-3 w-3 text-orange-500" />
-                        <span className="font-medium text-orange-500">{health.length}</span>
+                        <AlertTriangle className="h-3 w-3 text-warning" />
+                        <span className="font-medium text-warning">{health.length}</span>
                       </>
                     ) : (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <CheckCircle className="h-3 w-3 text-success" />
                     )}
                   </span>
                 )}
@@ -438,7 +438,7 @@ export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidge
                           key={ep.id}
                           className={cn(
                             "flex items-center justify-between p-1.5 rounded-md cursor-pointer hover:bg-muted/80 transition-colors text-sm",
-                            ep.hasFile ? "bg-green-500/10" : "bg-muted/50"
+                            ep.hasFile ? "bg-success/10" : "bg-muted/50"
                           )}
                           onClick={() => handleOpenSeries(ep.series.id)}
                         >
@@ -474,7 +474,7 @@ export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidge
                           <span className="truncate flex-1">{disk.label || disk.path}</span>
                           <span className={cn(
                             "text-xs",
-                            isLow ? "text-red-500" : isWarning ? "text-yellow-500" : "text-muted-foreground"
+                            isLow ? "text-error" : isWarning ? "text-warning" : "text-muted-foreground"
                           )}>
                             {formatSize(disk.freeSpace)} free
                           </span>
@@ -483,7 +483,7 @@ export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidge
                           value={usedPercent}
                           className={cn(
                             "h-1.5",
-                            isLow ? "[&>div]:bg-red-500" : isWarning ? "[&>div]:bg-yellow-500" : ""
+                            isLow ? "[&>div]:bg-error" : isWarning ? "[&>div]:bg-warning" : ""
                           )}
                         />
                       </div>
@@ -503,13 +503,13 @@ export function SonarrWidget({ widget, onEdit, onDelete, onResize }: SonarrWidge
                       key={idx}
                       className={cn(
                         "p-2 rounded-md text-sm",
-                        issue.type === "error" ? "bg-red-500/10" : "bg-yellow-500/10"
+                        issue.type === "error" ? "bg-error/10" : "bg-warning/10"
                       )}
                     >
                       <div className="flex items-start gap-2">
                         <AlertTriangle className={cn(
                           "h-3 w-3 mt-0.5 shrink-0",
-                          issue.type === "error" ? "text-red-500" : "text-yellow-500"
+                          issue.type === "error" ? "text-error" : "text-warning"
                         )} />
                         <span className="text-xs">{issue.message}</span>
                       </div>

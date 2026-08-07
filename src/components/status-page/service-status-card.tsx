@@ -67,7 +67,7 @@ export function ServiceStatusCard({
     return (
       <div
         className={cn(
-          "flex flex-col p-4 rounded-lg border bg-card hover:border-primary/50 transition-colors",
+          "flex flex-col p-4 rounded-lg border bg-card hover:border-ring transition-colors",
           className
         )}
       >
@@ -103,13 +103,13 @@ export function ServiceStatusCard({
             {responseTime !== undefined && (
               <span className="flex items-center gap-1">
                 <Zap className="h-3 w-3" />
-                {responseTime}ms
+                <span className="font-mono tabular-nums">{responseTime}ms</span>
               </span>
             )}
             {uptime !== undefined && (
               <span className="flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                {uptime.toFixed(2)}%
+                <span className="font-mono tabular-nums">{uptime.toFixed(2)}%</span>
               </span>
             )}
           </div>
@@ -122,7 +122,7 @@ export function ServiceStatusCard({
   return (
     <div
       className={cn(
-        "flex items-center justify-between p-4 rounded-lg border bg-card hover:border-primary/50 transition-colors",
+        "flex items-center justify-between p-4 rounded-lg border bg-card hover:border-ring transition-colors",
         className
       )}
     >
@@ -157,13 +157,13 @@ export function ServiceStatusCard({
             {responseTime !== undefined && (
               <span className="flex items-center gap-1" title="Response time">
                 <Zap className="h-4 w-4" />
-                {responseTime}ms
+                <span className="font-mono tabular-nums">{responseTime}ms</span>
               </span>
             )}
             {uptime !== undefined && (
               <span className="flex items-center gap-1" title="Uptime (30 days)">
                 <TrendingUp className="h-4 w-4" />
-                {uptime.toFixed(2)}%
+                <span className="font-mono tabular-nums">{uptime.toFixed(2)}%</span>
               </span>
             )}
             {lastChecked && (
