@@ -79,6 +79,28 @@
     box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 16%, transparent);
 }
 
+/* Shared AppaHouse "by AppaHouse" brand mark — the neon-flicker glow is the
+   identity shared across AppaHouse apps (Virtual TV, friend-profile). The text
+   colour is toned to gold here; the glow keeps the shared coral/yellow. */
+@keyframes appa-neon-flicker {
+    0%, 18%, 22%, 55%, 100% {
+        text-shadow: 0 0 4px #ffd93d, 0 0 11px #ffd93d, 0 0 19px #ffd93d, 0 0 40px #ff6b6b, 0 0 80px #ff6b6b;
+        opacity: 1;
+    }
+    20% { text-shadow: none; opacity: 0.6; }
+    57% { text-shadow: none; opacity: 0.5; }
+    58% { text-shadow: 0 0 2px #ffd93d, 0 0 6px #ffd93d; opacity: 0.8; }
+}
+
+@utility appa-neon {
+    color: #e0a500;
+    animation: appa-neon-flicker 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .appa-neon { animation: none; }
+}
+
 /** iOS Dynamic System Font Scaling */
 /* @supports (-webkit-touch-callout:none) {
 	html {

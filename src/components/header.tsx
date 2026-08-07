@@ -5,6 +5,7 @@ import { Map, Settings, Tags, Layers, Menu, Plug, LayoutGrid, BarChart3, Activit
 import { ModeToggle } from "./mode-toggle";
 import { Button } from "./ui/button";
 import { CommandPalette } from "./command-palette";
+import { AppaHouseMark, WhatsNew } from "./whats-new";
 import {
   Sheet,
   SheetContent,
@@ -65,9 +66,10 @@ export function Header() {
           </SheetContent>
         </Sheet>
 
-        <Link to="/" className="flex items-center gap-2 font-semibold">
+        <Link to="/" className="flex items-center gap-2.5 font-semibold">
           <Map className="h-5 w-5" />
           <span className="hidden sm:inline">App Map</span>
+          <AppaHouseMark className="hidden sm:block" />
         </Link>
 
         {/* Desktop nav - responsive: hidden on mobile, icons on md-lg, full labels on xl */}
@@ -84,6 +86,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-2">
+        <WhatsNew />
         <CommandPalette />
         <ModeToggle />
         <UserButton size="icon" />
