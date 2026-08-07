@@ -58,6 +58,27 @@
     --color-status-pending: var(--status-pending);
 }
 
+/* Crisp uppercase micro-label for section/column headers (ops-panel look). */
+@utility panel-label {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    font-weight: 500;
+}
+
+/* Small "wired-in" status dot: fill + a faint halo, driven by the text color.
+   Set the color with a text class, e.g. text-status-online or text-success. */
+@utility status-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 16%, transparent);
+}
+
 /** iOS Dynamic System Font Scaling */
 /* @supports (-webkit-touch-callout:none) {
 	html {

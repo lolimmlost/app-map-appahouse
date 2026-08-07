@@ -49,10 +49,10 @@ interface AppCardProps {
 }
 
 const healthColors: Record<HealthStatus, string> = {
-  online: "bg-status-online",
-  offline: "bg-status-offline",
-  unknown: "bg-status-unknown",
-  checking: "bg-status-pending animate-pulse",
+  online: "text-status-online",
+  offline: "text-status-offline",
+  unknown: "text-status-unknown",
+  checking: "text-status-pending animate-pulse",
 };
 
 const healthBorderColors: Record<HealthStatus, string> = {
@@ -63,9 +63,9 @@ const healthBorderColors: Record<HealthStatus, string> = {
 };
 
 const dependencyStatusColors: Record<DependencyStatus, string> = {
-  healthy: "bg-status-online",
-  degraded: "bg-warning",
-  offline: "bg-status-offline",
+  healthy: "text-status-online",
+  degraded: "text-warning",
+  offline: "text-status-offline",
 };
 
 export function AppCard({
@@ -346,7 +346,7 @@ export function AppCard({
             {healthBarStyle === "dot" && app.healthCheckEnabled && (
               <div
                 className={cn(
-                  "absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-background",
+                  "absolute -right-0.5 -top-0.5 status-dot",
                   healthColors[healthStatus]
                 )}
               />
@@ -355,7 +355,7 @@ export function AppCard({
             {dependencyStatus && dependencyStatus !== "healthy" && (
               <div
                 className={cn(
-                  "absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full border border-background",
+                  "absolute -left-0.5 -top-0.5 status-dot",
                   dependencyStatusColors[dependencyStatus]
                 )}
                 title={dependencyStatus === "degraded"

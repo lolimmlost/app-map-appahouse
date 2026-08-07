@@ -261,7 +261,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
               <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Network className="h-4 w-4 text-muted-foreground" />
-                  <span>Network</span>
+                  <span className="panel-label">Network</span>
                 </div>
                 {stats.network.map((iface) => (
                   <div
@@ -283,7 +283,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
               <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Thermometer className="h-4 w-4 text-muted-foreground" />
-                  <span>Temperatures</span>
+                  <span className="panel-label">Temperatures</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {stats.temperatures.map((temp, i) => (
@@ -308,7 +308,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
               <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Activity className="h-4 w-4 text-muted-foreground" />
-                  <span>Top Processes</span>
+                  <span className="panel-label">Top Processes</span>
                 </div>
                 <div className="space-y-1">
                   {stats.processes.slice(0, 5).map((proc) => (

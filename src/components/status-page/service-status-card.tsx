@@ -189,7 +189,7 @@ interface ServiceGroupProps {
 export function ServiceGroup({ name, children, className }: ServiceGroupProps) {
   return (
     <div className={cn("space-y-2", className)}>
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
+      <h2 className="panel-label px-1">
         {name}
       </h2>
       <div className="space-y-2">{children}</div>
