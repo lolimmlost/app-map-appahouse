@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch } from "lucide-react";
+import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
 import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, type AppFormData } from "@/components/apps";
@@ -248,30 +257,6 @@ function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
-          {/* Refresh health button */}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 sm:h-9 sm:w-9"
-            onClick={() => refreshHealth()}
-            disabled={isHealthLoading}
-            title="Refresh health status"
-          >
-            <Activity className={`h-5 w-5 sm:h-4 sm:w-4 ${isHealthLoading ? "animate-pulse" : ""}`} />
-          </Button>
-
-          {/* Refresh apps button */}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 sm:h-9 sm:w-9"
-            onClick={() => refetchApps()}
-            disabled={isAppsLoading}
-            title="Refresh apps"
-          >
-            <RefreshCw className={`h-5 w-5 sm:h-4 sm:w-4 ${isAppsLoading ? "animate-spin" : ""}`} />
-          </Button>
-
           {/* View toggle */}
           <div className="flex items-center border rounded-md">
             <Button
@@ -292,116 +277,75 @@ function DashboardPage() {
             </Button>
           </div>
 
-          {/* Reorder toggle */}
-          <Button
-            variant={reorderMode ? "secondary" : "outline"}
-            size="icon"
-            className="sm:hidden h-11 w-11"
-            onClick={toggleReorderMode}
-            disabled={selectionMode}
-            title={reorderMode ? "Exit Reorder Mode" : "Reorder Apps"}
-          >
-            <GripVertical className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={reorderMode ? "secondary" : "outline"}
-            size="sm"
-            className="hidden sm:flex"
-            onClick={toggleReorderMode}
-            disabled={selectionMode}
-          >
-            <GripVertical className="h-4 w-4 mr-2" />
-            {reorderMode ? "Done" : "Reorder"}
-          </Button>
+          {/* Overflow menu: secondary + rare actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 sm:h-9 sm:w-9"
+                title="More actions"
+              >
+                <MoreHorizontal className="h-5 w-5 sm:h-4 sm:w-4" />
+                <span className="sr-only">More actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel>View</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem
+                checked={groupByCategory}
+                onCheckedChange={() => setGroupByCategory(!groupByCategory)}
+                disabled={reorderMode}
+              >
+                <Settings2 className="mr-2 h-4 w-4" />
+                Group by category
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showDependencyGraph}
+                onCheckedChange={() => setShowDependencyGraph(!showDependencyGraph)}
+                data-testid="dependency-graph-toggle"
+              >
+                <GitBranch className="mr-2 h-4 w-4" />
+                Dependencies
+              </DropdownMenuCheckboxItem>
 
-          {/* Selection mode toggle */}
-          <Button
-            variant={selectionMode ? "secondary" : "outline"}
-            size="icon"
-            className="sm:hidden h-11 w-11"
-            onClick={toggleSelectionMode}
-            disabled={reorderMode}
-            title={selectionMode ? "Exit Selection Mode" : "Select Apps"}
-            data-testid="selection-mode-toggle"
-          >
-            <CheckSquare className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={selectionMode ? "secondary" : "outline"}
-            size="sm"
-            className="hidden sm:flex"
-            onClick={toggleSelectionMode}
-            disabled={reorderMode}
-            data-testid="selection-mode-toggle-desktop"
-          >
-            <CheckSquare className="h-4 w-4 mr-2" />
-            {selectionMode ? "Done" : "Select"}
-          </Button>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Edit</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem
+                checked={reorderMode}
+                onCheckedChange={() => toggleReorderMode()}
+                disabled={selectionMode}
+              >
+                <GripVertical className="mr-2 h-4 w-4" />
+                Reorder apps
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={selectionMode}
+                onCheckedChange={() => toggleSelectionMode()}
+                disabled={reorderMode}
+                data-testid="selection-mode-toggle"
+              >
+                <CheckSquare className="mr-2 h-4 w-4" />
+                Select apps
+              </DropdownMenuCheckboxItem>
 
-          {/* Group toggle */}
-          <Button
-            variant={groupByCategory ? "secondary" : "outline"}
-            size="icon"
-            className="sm:hidden h-11 w-11"
-            onClick={() => setGroupByCategory(!groupByCategory)}
-            disabled={reorderMode}
-            title="Group by Category"
-          >
-            <Settings2 className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={groupByCategory ? "secondary" : "outline"}
-            size="sm"
-            className="hidden sm:flex"
-            onClick={() => setGroupByCategory(!groupByCategory)}
-            disabled={reorderMode}
-          >
-            <Settings2 className="h-4 w-4 mr-2" />
-            Group by Category
-          </Button>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setDiscoveryOpen(true)}>
+                <Radar className="mr-2 h-4 w-4" />
+                Discover services
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => refreshHealth()} disabled={isHealthLoading}>
+                <Activity className="mr-2 h-4 w-4" />
+                Refresh health
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => refetchApps()} disabled={isAppsLoading}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh apps
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* Dependency Graph toggle */}
-          <Button
-            variant={showDependencyGraph ? "secondary" : "outline"}
-            size="icon"
-            className="sm:hidden h-11 w-11"
-            onClick={() => setShowDependencyGraph(!showDependencyGraph)}
-            title={showDependencyGraph ? "Hide Dependencies" : "Show Dependencies"}
-            data-testid="dependency-graph-toggle"
-          >
-            <GitBranch className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={showDependencyGraph ? "secondary" : "outline"}
-            size="sm"
-            className="hidden sm:flex"
-            onClick={() => setShowDependencyGraph(!showDependencyGraph)}
-            data-testid="dependency-graph-toggle-desktop"
-          >
-            <GitBranch className="h-4 w-4 mr-2" />
-            Dependencies
-          </Button>
-
-          {/* Discover button */}
-          <Button
-            variant="outline"
-            size="icon"
-            className="sm:hidden h-11 w-11"
-            onClick={() => setDiscoveryOpen(true)}
-            title="Discover Services"
-          >
-            <Radar className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden sm:flex"
-            onClick={() => setDiscoveryOpen(true)}
-          >
-            <Radar className="h-4 w-4 mr-2" />
-            Discover
-          </Button>
-
-          {/* Add app button */}
+          {/* Add app (primary) */}
           <Button size="icon" className="sm:hidden h-11 w-11" onClick={() => setFormOpen(true)}>
             <Plus className="h-5 w-5" />
           </Button>

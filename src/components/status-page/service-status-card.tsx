@@ -67,7 +67,7 @@ export function ServiceStatusCard({
     return (
       <div
         className={cn(
-          "flex flex-col p-4 rounded-lg border bg-card hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200",
+          "flex flex-col p-4 rounded-lg border bg-card card-elevation hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200",
           className
         )}
       >
@@ -122,7 +122,7 @@ export function ServiceStatusCard({
   return (
     <div
       className={cn(
-        "flex items-center justify-between p-4 rounded-lg border bg-card hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200",
+        "flex items-center justify-between p-4 rounded-lg border bg-card card-elevation hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200",
         className
       )}
     >

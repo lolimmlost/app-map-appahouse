@@ -172,7 +172,7 @@ export function HealthStatusHistory({
               {filteredHistory.map((entry, index) => (
                 <div
                   key={`${entry.appId}-${entry.checkedAt}-${index}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:shadow-md transition-all duration-200 hover:border-primary/30"
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:card-elevation-hover hover:border-ring transition-[box-shadow,border-color,background-color] duration-200"
                 >
                   <div className="flex-shrink-0">
                     {getStatusIcon(entry.status)}
@@ -540,7 +540,7 @@ export function ServiceReliabilityTable({
               {services.map((service) => (
                 <div
                   key={service.appId}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 hover:shadow-md transition-all duration-200 hover:border-primary/30"
+                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 hover:card-elevation-hover hover:border-ring transition-[box-shadow,border-color,background-color] duration-200"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">

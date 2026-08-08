@@ -56,7 +56,7 @@ export function StatusPageCard({
 
   return (
     <>
-      <Card className="hover:border-primary/50 transition-colors">
+      <Card className="hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
