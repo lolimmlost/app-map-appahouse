@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal } from "lucide-react";
+import { Plus, LayoutGrid, List, Table2, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +36,7 @@ function DashboardPage() {
   const [notesApp, setNotesApp] = useState<App | null>(null);
   const [sharingApp, setSharingApp] = useState<App | null>(null);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [reorderMode, setReorderMode] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -270,10 +270,20 @@ function DashboardPage() {
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="icon"
-              className="rounded-l-none h-11 w-11 sm:h-9 sm:w-9"
+              className="rounded-none border-x h-11 w-11 sm:h-9 sm:w-9"
               onClick={() => setViewMode("list")}
+              title="List view"
             >
               <List className="h-5 w-5 sm:h-4 sm:w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="icon"
+              className="rounded-l-none h-11 w-11 sm:h-9 sm:w-9"
+              onClick={() => setViewMode("table")}
+              title="Table view"
+            >
+              <Table2 className="h-5 w-5 sm:h-4 sm:w-4" />
             </Button>
           </div>
 
@@ -410,7 +420,7 @@ function DashboardPage() {
             healthStatuses={healthStatuses}
             healthBarStyle={healthBarStyle}
             columns={4}
-            viewMode={viewMode}
+            viewMode={viewMode === "table" ? "list" : viewMode}
             onEditApp={handleEdit}
             onDeleteApp={handleDelete}
             onViewNotes={handleViewNotes}

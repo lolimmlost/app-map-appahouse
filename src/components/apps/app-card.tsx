@@ -37,7 +37,7 @@ interface AppCardProps {
   healthStatus?: HealthStatus;
   dependencyStatus?: DependencyStatus;
   healthBarStyle?: "dot" | "border" | "none";
-  viewMode?: "grid" | "list";
+  viewMode?: "grid" | "list" | "table";
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (app: App) => void;

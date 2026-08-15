@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { AppCard, type HealthStatus, type DependencyStatus } from "./app-card";
+import { AppTable } from "./app-table";
 import { SwipeableCard } from "./swipeable-card";
 import type { App, Tag } from "@/types/database";
 import type { Category } from "@/types/database";
@@ -16,7 +17,7 @@ interface AppGridProps {
   dependencyStatuses?: Record<string, DependencyStatus>;
   healthBarStyle?: "dot" | "border" | "none";
   columns?: number;
-  viewMode?: "grid" | "list";
+  viewMode?: "grid" | "list" | "table";
   groupByCategory?: boolean;
   selectionMode?: boolean;
   selectedIds?: Set<string>;
@@ -119,6 +120,22 @@ export function AppGrid({
               </span>
             </div>
           )}
+          {viewMode === "table" ? (
+            <AppTable
+              apps={group.apps}
+              healthStatuses={healthStatuses}
+              dependencyStatuses={dependencyStatuses}
+              showCategory={!groupByCategory}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onSelectApp={onSelectApp}
+              onEditApp={onEditApp}
+              onDeleteApp={onDeleteApp}
+              onViewNotes={onViewNotes}
+              onPinApp={onPinApp}
+              onShareApp={onShareApp}
+            />
+          ) : (
           <div className={gridClasses}>
             {group.apps.map((app) => (
               <SwipeableCard
@@ -146,6 +163,7 @@ export function AppGrid({
               </SwipeableCard>
             ))}
           </div>
+          )}
         </div>
       ))}
     </div>
