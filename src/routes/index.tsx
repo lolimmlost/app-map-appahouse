@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, LayoutGrid, List, Table2, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal } from "lucide-react";
+import { Plus, LayoutGrid, List, Table2, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal, PanelLeft, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
-import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, type AppFormData, type AppMetrics } from "@/components/apps";
+import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, OpsSidebar, type AppFormData, type AppMetrics } from "@/components/apps";
+import { hostParts } from "@/components/apps/host";
+import type { HealthStatus } from "@/components/apps/app-card";
 import { WidgetGrid } from "@/components/widgets";
 import { LinksGrid } from "@/components/links";
 import { ServiceDiscoveryDialog } from "@/components/discovery";
@@ -42,6 +44,12 @@ function DashboardPage() {
   const [reorderMode, setReorderMode] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Ops-console sidebar: visibility + the filters it drives across the dashboard.
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeStatus, setActiveStatus] = useState<HealthStatus | null>(null);
+  const [activeHost, setActiveHost] = useState<string | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   // App mutations hook
   const {
@@ -264,6 +272,20 @@ function DashboardPage() {
   const tags = tagsData?.tags ?? [];
   const healthBarStyle = settingsData?.settings?.healthBarStyle ?? "dot";
 
+  // Sidebar-driven filters — applied to every view mode.
+  const hasFilters = !!(activeStatus || activeHost || activeCategoryId);
+  const visibleApps = apps.filter((app) => {
+    if (activeStatus && (healthStatuses[app.id] ?? "unknown") !== activeStatus) return false;
+    if (activeCategoryId && app.categoryId !== activeCategoryId) return false;
+    if (activeHost) {
+      const host = hostParts(app.localUrl)?.host ?? hostParts(app.remoteUrl)?.host;
+      if (host !== activeHost) return false;
+    }
+    return true;
+  });
+  const clearFilters = () => { setActiveStatus(null); setActiveHost(null); setActiveCategoryId(null); };
+  const activeCategoryName = categories.find((c) => c.id === activeCategoryId)?.name;
+
   return (
     <main className="container mx-auto flex flex-col gap-4 p-4 sm:p-6">
       {/* Header */}
@@ -278,6 +300,18 @@ function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
+          {/* Sidebar toggle */}
+          <Button
+            variant={sidebarOpen ? "secondary" : "outline"}
+            size="icon"
+            className="h-11 w-11 sm:h-9 sm:w-9"
+            onClick={() => setSidebarOpen((o) => !o)}
+            title={sidebarOpen ? "Hide console" : "Show console"}
+          >
+            <PanelLeft className="h-5 w-5 sm:h-4 sm:w-4" />
+            <span className="sr-only">Toggle ops console</span>
+          </Button>
+
           {/* View toggle */}
           <div className="flex items-center border rounded-md">
             <Button
@@ -387,6 +421,52 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Ops console shell: left sidebar + main column */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        {sidebarOpen && (
+          <div className="lg:sticky lg:top-4 lg:w-60 shrink-0">
+            <OpsSidebar
+              apps={apps}
+              categories={categories}
+              healthStatuses={healthStatuses}
+              enabled={!!session?.user}
+              activeStatus={activeStatus}
+              activeHost={activeHost}
+              activeCategoryId={activeCategoryId}
+              onToggleStatus={(s) => setActiveStatus((cur) => (cur === s ? null : s))}
+              onToggleHost={(h) => setActiveHost((cur) => (cur === h ? null : h))}
+              onToggleCategory={(id) => setActiveCategoryId((cur) => (cur === id ? null : id))}
+              onClose={() => setSidebarOpen(false)}
+            />
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1 flex flex-col gap-4">
+          {/* Active filter chips */}
+          {hasFilters && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="panel-label">Filtered</span>
+              {activeStatus && (
+                <FilterChip label={activeStatus} onClear={() => setActiveStatus(null)} />
+              )}
+              {activeHost && (
+                <FilterChip label={activeHost} mono onClear={() => setActiveHost(null)} />
+              )}
+              {activeCategoryName && (
+                <FilterChip label={activeCategoryName} onClear={() => setActiveCategoryId(null)} />
+              )}
+              <button
+                onClick={clearFilters}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                Clear all
+              </button>
+              <span className="text-xs text-muted-foreground/70 font-mono tabular-nums">
+                {visibleApps.length}/{apps.length}
+              </span>
+            </div>
+          )}
+
       {/* Quick Links */}
       {apps.filter(app => app.pinned).length > 0 && (
         <QuickLinksBar
@@ -450,9 +530,19 @@ function DashboardPage() {
             reorderEnabled={true}
           />
         </div>
+      ) : hasFilters && visibleApps.length === 0 && apps.length > 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <div className="text-muted-foreground">
+            <p className="text-base font-medium">No apps match these filters</p>
+            <p className="text-sm mt-1 font-mono tabular-nums">0 of {apps.length}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        </div>
       ) : (
         <AppGrid
-          apps={apps}
+          apps={visibleApps}
           healthStatuses={healthStatuses}
           dependencyStatuses={dependencyStatuses}
           metrics={tableMetrics}
@@ -470,6 +560,8 @@ function DashboardPage() {
           onShareApp={handleShare}
         />
       )}
+        </div>
+      </div>
 
       {/* App Form Dialog */}
       <AppForm
@@ -502,5 +594,16 @@ function DashboardPage() {
         app={sharingApp ?? undefined}
       />
     </main>
+  );
+}
+
+function FilterChip({ label, onClear, mono }: { label: string; onClear: () => void; mono?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 pl-2 pr-1 py-0.5 text-xs capitalize">
+      <span className={mono ? "font-mono normal-case" : undefined}>{label}</span>
+      <button onClick={onClear} className="rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Remove filter">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
   );
 }

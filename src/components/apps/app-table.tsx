@@ -171,14 +171,7 @@ export function AppTable({
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [statusFilter, setStatusFilter] = useState<HealthStatus[]>([]);
   const [protocolFilter, setProtocolFilter] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-
-  const categories = useMemo(
-    () => Array.from(new Set(apps.map((a) => a.category?.name).filter(Boolean) as string[])),
-    [apps],
-  );
 
   const toggle = <T,>(list: T[], value: T) =>
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -191,11 +184,8 @@ export function AppTable({
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = apps.filter((app) => {
-      const st = healthStatuses[app.id] ?? "unknown";
       if (q && !`${app.name} ${app.localUrl ?? ""} ${app.remoteUrl ?? ""}`.toLowerCase().includes(q)) return false;
-      if (statusFilter.length && !statusFilter.includes(st)) return false;
       if (protocolFilter.length && !protocolFilter.includes(app.healthCheckType ?? "none")) return false;
-      if (categoryFilter.length && !categoryFilter.includes(app.category?.name ?? "")) return false;
       return true;
     });
 
@@ -216,7 +206,7 @@ export function AppTable({
       const cmp = av < bv ? -1 : av > bv ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [apps, healthStatuses, metrics, query, statusFilter, protocolFilter, categoryFilter, sortKey, sortDir]);
+  }, [apps, healthStatuses, metrics, query, protocolFilter, sortKey, sortDir]);
 
   const groups = useMemo(() => {
     if (!groupByCategory) return [{ name: "", items: rows }];
@@ -264,20 +254,6 @@ export function AppTable({
           className="h-8 min-w-0 max-w-xs font-mono text-xs"
         />
         <div className="flex shrink-0 items-center gap-1.5">
-          <FilterMenu
-            label="Status"
-            options={["online", "offline", "checking", "unknown"]}
-            selected={statusFilter}
-            onToggle={(v) => setStatusFilter((s) => toggle(s, v as HealthStatus))}
-          />
-          {categories.length ? (
-            <FilterMenu
-              label="Category"
-              options={categories}
-              selected={categoryFilter}
-              onToggle={(v) => setCategoryFilter((s) => toggle(s, v))}
-            />
-          ) : null}
           <FilterMenu
             label="Protocol"
             options={["http", "tcp", "uptime_kuma"]}
