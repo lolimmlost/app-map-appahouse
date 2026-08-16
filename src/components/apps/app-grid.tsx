@@ -128,18 +128,18 @@ export function AppGrid({
       {groupedApps.map((group) => (
         <div key={group.category?.id ?? "uncategorized"}>
           {groupByCategory && (
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-2">
               {group.category?.icon && (
-                <span className="text-base">{group.category.icon}</span>
+                <span className="text-sm">{group.category.icon}</span>
               )}
               <h2
-                className="text-sm font-semibold"
+                className="panel-label"
                 style={group.category?.color ? { color: group.category.color } : undefined}
               >
                 {group.category?.name ?? "Uncategorized"}
               </h2>
-              <span className="text-xs text-muted-foreground">
-                ({group.apps.length})
+              <span className="font-mono tabular-nums text-xs text-muted-foreground/70">
+                {group.apps.length}
               </span>
             </div>
           )}

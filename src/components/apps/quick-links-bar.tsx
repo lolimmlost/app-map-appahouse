@@ -90,7 +90,7 @@ export function QuickLinksBar({
           <div
             key={app.id}
             className={cn(
-              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-lg border bg-card p-1 sm:p-1 p-1.5 shadow-sm overflow-hidden",
+              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-md border bg-card p-1 sm:p-1 p-1.5 overflow-hidden transition-colors hover:border-ring hover:bg-muted/40",
               healthBarStyle === "border" && healthStatus && [
                 "border-2",
                 healthBorderColors[healthStatus]

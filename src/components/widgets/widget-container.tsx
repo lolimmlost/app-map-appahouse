@@ -59,7 +59,7 @@ export function WidgetContainer({
         <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             {icon}
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <CardTitle className="panel-label">{title}</CardTitle>
           </div>
           <div className="flex items-center gap-1">
             {headerActions}
