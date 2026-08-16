@@ -48,6 +48,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     navigate={(href) => navigate({ to: href })}
                     replace={(href) => navigate({ to: href, replace: true })}
                     Link={({ href, ...props }) => <Link to={href} {...props} />}
+                    genericOAuth={
+                        import.meta.env.VITE_AUTHENTIK_ENABLED === "true"
+                            ? { providers: [{ provider: "authentik", name: "Authentik" }] }
+                            : undefined
+                    }
                 >
                     {children}
 
