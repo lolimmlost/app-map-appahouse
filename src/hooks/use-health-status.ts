@@ -15,8 +15,11 @@ type AppBackoffState = {
   nextCheckTime: number;
 };
 
+export type HealthResultInfo = { responseTime?: number; lastChecked?: string };
+
 export function useHealthStatus(enabled = true, pollingInterval = 30000) {
   const [healthStatuses, setHealthStatuses] = useState<Record<string, HealthStatus>>({});
+  const [healthResults, setHealthResults] = useState<Record<string, HealthResultInfo>>({});
   const backoffStateRef = useRef<Record<string, AppBackoffState>>({});
   const queryClient = useQueryClient();
 
@@ -130,10 +133,16 @@ export function useHealthStatus(enabled = true, pollingInterval = 30000) {
   useEffect(() => {
     if (data?.results) {
       const statuses: Record<string, HealthStatus> = {};
+      const results: Record<string, HealthResultInfo> = {};
       for (const result of data.results) {
         statuses[result.appId] = result.status;
+        results[result.appId] = {
+          responseTime: result.responseTime,
+          lastChecked: result.lastChecked,
+        };
       }
       setHealthStatuses(statuses);
+      setHealthResults(results);
 
       // Update backoff state based on results
       updateBackoffState(data.results);
@@ -153,6 +162,7 @@ export function useHealthStatus(enabled = true, pollingInterval = 30000) {
 
   return {
     healthStatuses,
+    healthResults,
     isLoading,
     refreshHealth,
     getBackoffInfo,

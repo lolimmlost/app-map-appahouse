@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, LayoutGrid, List, Table2, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal } from "lucide-react";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthenticate } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
-import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, type AppFormData } from "@/components/apps";
+import { AppGrid, SortableAppGrid, AppForm, AppNotesDialog, QuickLinksBar, BulkActionsBar, ShareDialog, DependencyGraphView, type AppFormData, type AppMetrics } from "@/components/apps";
 import { WidgetGrid } from "@/components/widgets";
 import { LinksGrid } from "@/components/links";
 import { ServiceDiscoveryDialog } from "@/components/discovery";
@@ -21,6 +21,7 @@ import { getApps } from "@/lib/server/apps.server";
 import { getCategories } from "@/lib/server/categories.server";
 import { getTags } from "@/lib/server/tags.server";
 import { getUserSettings } from "@/lib/server/user-settings.server";
+import { getAnalyticsSummary } from "@/lib/server/analytics.server";
 import { useHealthStatus } from "@/hooks/use-health-status";
 import { useAppMutations } from "@/hooks/use-app-mutations";
 import { useDependencyStatuses } from "@/hooks/use-dependency-status";
@@ -64,7 +65,7 @@ function DashboardPage() {
   });
 
   // Health status polling
-  const { healthStatuses, isLoading: isHealthLoading, refreshHealth } = useHealthStatus(
+  const { healthStatuses, healthResults, isLoading: isHealthLoading, refreshHealth } = useHealthStatus(
     !!session?.user,
     30000 // Poll every 30 seconds
   );
@@ -104,6 +105,26 @@ function DashboardPage() {
     enabled: !!session?.user,
     staleTime: 60000,
   });
+
+  // Aggregated 30d metrics (uptime %) for the table view — reuses the analytics summary.
+  const { data: analyticsData } = useQuery({
+    queryKey: ["analytics-summary", "30d"],
+    queryFn: () => getAnalyticsSummary({ data: { range: "30d" } }),
+    enabled: !!session?.user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Merge live latency/last-checked (health cache) with aggregated uptime (analytics).
+  const tableMetrics = useMemo(() => {
+    const map: Record<string, AppMetrics> = {};
+    for (const [appId, r] of Object.entries(healthResults)) {
+      map[appId] = { responseTime: r.responseTime, lastChecked: r.lastChecked };
+    }
+    for (const summary of analyticsData?.apps ?? []) {
+      map[summary.appId] = { ...map[summary.appId], uptime: summary.uptimePercentage };
+    }
+    return map;
+  }, [healthResults, analyticsData]);
 
   const handleSubmit = (data: AppFormData) => {
     if (editingApp) {
@@ -434,6 +455,7 @@ function DashboardPage() {
           apps={apps}
           healthStatuses={healthStatuses}
           dependencyStatuses={dependencyStatuses}
+          metrics={tableMetrics}
           healthBarStyle={healthBarStyle}
           columns={4}
           viewMode={viewMode}

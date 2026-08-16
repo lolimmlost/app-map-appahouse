@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { AppCard, type HealthStatus, type DependencyStatus } from "./app-card";
-import { AppTable } from "./app-table";
+import { AppTable, type AppMetrics } from "./app-table";
 import { SwipeableCard } from "./swipeable-card";
 import type { App, Tag } from "@/types/database";
 import type { Category } from "@/types/database";
@@ -15,6 +15,7 @@ interface AppGridProps {
   apps: AppWithRelations[];
   healthStatuses?: Record<string, HealthStatus>;
   dependencyStatuses?: Record<string, DependencyStatus>;
+  metrics?: Record<string, AppMetrics>;
   healthBarStyle?: "dot" | "border" | "none";
   columns?: number;
   viewMode?: "grid" | "list" | "table";
@@ -33,6 +34,7 @@ export function AppGrid({
   apps,
   healthStatuses = {},
   dependencyStatuses = {},
+  metrics = {},
   healthBarStyle = "dot",
   columns = 4,
   viewMode = "grid",
@@ -100,6 +102,27 @@ export function AppGrid({
     );
   }
 
+  // Table mode is one self-contained table (its own grouping, sort, filter).
+  if (viewMode === "table") {
+    return (
+      <AppTable
+        apps={apps}
+        healthStatuses={healthStatuses}
+        dependencyStatuses={dependencyStatuses}
+        metrics={metrics}
+        groupByCategory={groupByCategory}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onSelectApp={onSelectApp}
+        onEditApp={onEditApp}
+        onDeleteApp={onDeleteApp}
+        onViewNotes={onViewNotes}
+        onPinApp={onPinApp}
+        onShareApp={onShareApp}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       {groupedApps.map((group) => (
@@ -120,22 +143,6 @@ export function AppGrid({
               </span>
             </div>
           )}
-          {viewMode === "table" ? (
-            <AppTable
-              apps={group.apps}
-              healthStatuses={healthStatuses}
-              dependencyStatuses={dependencyStatuses}
-              showCategory={!groupByCategory}
-              selectionMode={selectionMode}
-              selectedIds={selectedIds}
-              onSelectApp={onSelectApp}
-              onEditApp={onEditApp}
-              onDeleteApp={onDeleteApp}
-              onViewNotes={onViewNotes}
-              onPinApp={onPinApp}
-              onShareApp={onShareApp}
-            />
-          ) : (
           <div className={gridClasses}>
             {group.apps.map((app) => (
               <SwipeableCard
@@ -163,7 +170,6 @@ export function AppGrid({
               </SwipeableCard>
             ))}
           </div>
-          )}
         </div>
       ))}
     </div>
