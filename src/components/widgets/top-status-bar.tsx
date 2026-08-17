@@ -118,10 +118,10 @@ function InlineClock({ widget }: { widget: WidgetWithConfig }) {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <Clock className="h-4 w-4 text-muted-foreground" />
+    <div className="flex items-center gap-2.5">
+      <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="flex flex-col">
-        <span className="text-lg font-semibold tabular-nums leading-tight">
+        <span className="font-mono text-lg font-semibold tabular-nums leading-tight">
           {formatTime(time)}
         </span>
         <span className="text-xs text-muted-foreground leading-tight">
@@ -163,23 +163,23 @@ function InlineWeather({ widget }: { widget: WidgetWithConfig }) {
   const tempUnit = units === "imperial" ? "F" : "C";
 
   return (
-    <div className="flex items-center gap-3">
-      <WeatherIcon className="h-5 w-5 text-primary" />
+    <div className="flex items-center gap-2.5">
+      <WeatherIcon className="h-5 w-5 shrink-0 text-primary" />
       <div className="flex flex-col">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold leading-tight">
+          <span className="font-mono text-lg font-semibold tabular-nums leading-tight">
             {weather.temperature}°{tempUnit}
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="truncate text-xs text-muted-foreground">
             {weatherInfo.description}
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground leading-tight">
-          <span className="flex items-center gap-0.5">
-            <MapPin className="h-3 w-3" />
-            {weather.locationName}
+          <span className="flex min-w-0 items-center gap-0.5">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{weather.locationName}</span>
           </span>
-          <span className="flex items-center gap-0.5">
+          <span className="flex shrink-0 items-center gap-0.5 font-mono tabular-nums">
             <Droplets className="h-3 w-3" />
             {weather.humidity}%
           </span>
@@ -198,11 +198,14 @@ export function TopStatusBar({ clockWidget, weatherWidget, className }: TopStatu
   return (
     <div
       className={cn(
-        "inline-flex flex-wrap items-center gap-6",
+        "flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-1.5",
         className
       )}
     >
       {clockWidget && <InlineClock widget={clockWidget} />}
+      {clockWidget && weatherWidget && (
+        <div className="h-8 w-px shrink-0 bg-border" />
+      )}
       {weatherWidget && <InlineWeather widget={weatherWidget} />}
     </div>
   );

@@ -487,7 +487,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
             <TopStatusBar clockWidget={clockWidget} weatherWidget={weatherWidget} />
           )}
           {gridWidgets.length > 0 && (
-            <h2 className="text-sm font-semibold text-muted-foreground whitespace-nowrap">Widgets</h2>
+            <h2 className="panel-label whitespace-nowrap">Widgets</h2>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
