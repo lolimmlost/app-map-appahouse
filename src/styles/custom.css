@@ -13,6 +13,18 @@
     cursor: pointer;
 }
 
+/* iOS Safari zooms the whole page when a focused input's font-size is < 16px,
+   which breaks the layout when opening the table filter/search on mobile. Force
+   >= 16px on small screens; desktop keeps the denser text-xs sizing. The :not()
+   selectors also raise specificity above Tailwind's .text-xs utility. */
+@media (max-width: 640px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+        font-size: 16px;
+    }
+}
+
 :root {
     --warning: hsl(38 92% 50%);
     --warning-foreground: hsl(48 96% 89%);

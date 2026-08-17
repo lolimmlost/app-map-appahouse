@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, LayoutGrid, List, Table2, Settings2, RefreshCw, Activity, Radar, GripVertical, CheckSquare, GitBranch, MoreHorizontal, PanelLeft, X } from "lucide-react";
@@ -39,14 +39,21 @@ function DashboardPage() {
   const [notesApp, setNotesApp] = useState<App | null>(null);
   const [sharingApp, setSharingApp] = useState<App | null>(null);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("table");
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [reorderMode, setReorderMode] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Ops-console sidebar: visibility + the filters it drives across the dashboard.
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Ops console: closed by default (esp. mobile, where it would push apps off
+  // the first screen); auto-open on desktop widths after mount.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches) {
+      setSidebarOpen(true);
+    }
+  }, []);
   const [activeStatus, setActiveStatus] = useState<HealthStatus | null>(null);
   const [activeHost, setActiveHost] = useState<string | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
