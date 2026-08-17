@@ -298,33 +298,33 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
           <div className="space-y-3">
             {/* Summary */}
             <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3 text-success" />
+              <div className="flex items-center gap-3 font-mono tabular-nums">
+                <span className="flex items-center gap-1 text-success">
+                  <CheckCircle className="h-3 w-3" />
                   {upCount}
                 </span>
                 {downCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <XCircle className="h-3 w-3 text-error" />
+                  <span className="flex items-center gap-1 text-error">
+                    <XCircle className="h-3 w-3" />
                     {downCount}
                   </span>
                 )}
                 {pendingCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3 text-warning" />
+                  <span className="flex items-center gap-1 text-warning">
+                    <AlertCircle className="h-3 w-3" />
                     {pendingCount}
                   </span>
                 )}
               </div>
               <span className="text-muted-foreground">
-                {allMonitors.length} monitors
+                <span className="font-mono tabular-nums">{allMonitors.length}</span> monitors
               </span>
             </div>
 
             {/* Monitor List */}
             <Collapsible open={monitorsExpanded} onOpenChange={setMonitorsExpanded}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Monitors</span>
+                <span className="panel-label">Monitors</span>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                     {monitorsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -334,20 +334,22 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
               <CollapsibleContent>
                 {displayMonitors.length > 0 ? (
                   <div className={cn(
-                    "mt-2",
+                    "mt-1.5",
                     // Use grid layout when wide, single column when narrow
-                    isWide ? "grid grid-cols-2 gap-2" : "space-y-1.5",
+                    isWide ? "grid grid-cols-2 gap-1.5" : "space-y-0.5",
                     // Compact mode uses tighter grid
-                    isCompact && isWide && "grid-cols-3 gap-1.5"
+                    isCompact && isWide && "grid-cols-3 gap-1"
                   )}>
                     {displayMonitors.map((monitor) => (
                       <div
                         key={monitor.id}
                         className={cn(
-                          "rounded-md",
-                          isCompact ? "p-1.5" : "p-2",
+                          "rounded-md transition-colors",
+                          isCompact ? "px-1.5 py-1" : "px-2 py-1",
+                          // Up monitors stay quiet (hover only); problems get a tinted
+                          // alert background so they stand out in a long list.
                           monitor.status === 0 && "bg-error/10",
-                          monitor.status === 1 && "bg-muted/50",
+                          monitor.status === 1 && "hover:bg-muted/50",
                           monitor.status === 2 && "bg-warning/10",
                           monitor.status === 3 && "bg-info/10"
                         )}
