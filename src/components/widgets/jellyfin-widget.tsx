@@ -459,28 +459,28 @@ export function JellyfinWidget({ widget, onEdit, onDelete, onResize }: JellyfinW
                     {libraryStats.movies > 0 && (
                       <div className="p-2 rounded-md bg-muted/50 text-center">
                         <Film className="h-4 w-4 mx-auto text-muted-foreground" />
-                        <div className="text-lg font-semibold">{formatNumber(libraryStats.movies)}</div>
+                        <div className="text-lg font-mono font-semibold tabular-nums">{formatNumber(libraryStats.movies)}</div>
                         <div className="text-[10px] text-muted-foreground">Movies</div>
                       </div>
                     )}
                     {libraryStats.series > 0 && (
                       <div className="p-2 rounded-md bg-muted/50 text-center">
                         <Tv className="h-4 w-4 mx-auto text-muted-foreground" />
-                        <div className="text-lg font-semibold">{formatNumber(libraryStats.series)}</div>
+                        <div className="text-lg font-mono font-semibold tabular-nums">{formatNumber(libraryStats.series)}</div>
                         <div className="text-[10px] text-muted-foreground">Series</div>
                       </div>
                     )}
                     {libraryStats.episodes > 0 && (
                       <div className="p-2 rounded-md bg-muted/50 text-center">
                         <Play className="h-4 w-4 mx-auto text-muted-foreground" />
-                        <div className="text-lg font-semibold">{formatNumber(libraryStats.episodes)}</div>
+                        <div className="text-lg font-mono font-semibold tabular-nums">{formatNumber(libraryStats.episodes)}</div>
                         <div className="text-[10px] text-muted-foreground">Episodes</div>
                       </div>
                     )}
                     {libraryStats.music > 0 && (
                       <div className="p-2 rounded-md bg-muted/50 text-center">
                         <Music className="h-4 w-4 mx-auto text-muted-foreground" />
-                        <div className="text-lg font-semibold">{formatNumber(libraryStats.music)}</div>
+                        <div className="text-lg font-mono font-semibold tabular-nums">{formatNumber(libraryStats.music)}</div>
                         <div className="text-[10px] text-muted-foreground">Tracks</div>
                       </div>
                     )}

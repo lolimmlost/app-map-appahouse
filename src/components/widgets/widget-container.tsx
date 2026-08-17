@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { MoreVertical, Pencil, Trash2, RefreshCw, Maximize2, Square, RectangleHorizontal, Rows3 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -54,20 +53,25 @@ export function WidgetContainer({
   const currentSize = (widget.config as WidgetConfig)?.size || "small";
 
   return (
-    <Card className={cn("group relative h-full", className)}>
+    <div
+      className={cn(
+        "group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card card-elevation",
+        className
+      )}
+    >
       {title && (
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+          <div className="flex min-w-0 items-center gap-2 text-muted-foreground [&>svg]:h-3.5 [&>svg]:w-3.5">
             {icon}
-            <CardTitle className="panel-label">{title}</CardTitle>
+            <span className="panel-label truncate">{title}</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 text-xs">
             {headerActions}
             {onRefresh && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                 onClick={onRefresh}
                 disabled={isLoading}
               >
@@ -124,11 +128,11 @@ export function WidgetContainer({
               </DropdownMenu>
             )}
           </div>
-        </CardHeader>
+        </div>
       )}
-      <CardContent className={cn(!title && "pt-4")}>
+      <div className="flex-1 p-3">
         {children}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
