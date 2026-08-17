@@ -480,17 +480,21 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
 
   return (
     <div className="space-y-3">
-      {/* Widgets Section Header — clock/weather merged in */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          {(clockWidget || weatherWidget) && (
-            <TopStatusBar clockWidget={clockWidget} weatherWidget={weatherWidget} />
-          )}
+      {/* Widgets Section Header — clock/weather merged in.
+          Stacks on mobile so the status strip never collides with the controls. */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        {(clockWidget || weatherWidget) && (
+          <TopStatusBar
+            clockWidget={clockWidget}
+            weatherWidget={weatherWidget}
+            className="w-full sm:w-auto min-w-0"
+          />
+        )}
+        <div className="flex items-center justify-between gap-2 sm:justify-end sm:flex-1">
           {gridWidgets.length > 0 && (
             <h2 className="panel-label whitespace-nowrap">Widgets</h2>
           )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
           {/* Layout mode toggle */}
           <div className="flex items-center border rounded-md">
             <Button
@@ -612,6 +616,7 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
             )}
           </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
 

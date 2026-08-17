@@ -79,7 +79,7 @@ export function QuickLinksBar({
     <div
       className={cn(
         // Mobile: two fixed rows that scroll horizontally, to cap vertical space.
-        "grid grid-flow-col grid-rows-2 auto-cols-[minmax(9.5rem,1fr)] gap-2 overflow-x-auto pb-1 snap-x -mx-4 px-4",
+        "grid grid-flow-col grid-rows-2 auto-cols-[11.5rem] gap-2 overflow-x-auto pb-1 snap-x -mx-4 px-4",
         // Desktop: normal wrapping row.
         "sm:mx-0 sm:flex sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0",
         className

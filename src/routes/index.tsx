@@ -306,12 +306,12 @@ function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
+        <div className="flex items-center gap-1.5">
           {/* Sidebar toggle */}
           <Button
             variant={sidebarOpen ? "secondary" : "outline"}
             size="icon"
-            className="h-11 w-11 sm:h-9 sm:w-9"
+            className="h-10 w-10 sm:h-9 sm:w-9"
             onClick={() => setSidebarOpen((o) => !o)}
             title={sidebarOpen ? "Hide console" : "Show console"}
           >
@@ -324,7 +324,7 @@ function DashboardPage() {
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="icon"
-              className="rounded-r-none h-11 w-11 sm:h-9 sm:w-9"
+              className="rounded-r-none h-10 w-10 sm:h-9 sm:w-9"
               onClick={() => setViewMode("grid")}
             >
               <LayoutGrid className="h-5 w-5 sm:h-4 sm:w-4" />
@@ -332,7 +332,7 @@ function DashboardPage() {
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="icon"
-              className="rounded-none border-x h-11 w-11 sm:h-9 sm:w-9"
+              className="rounded-none border-x h-10 w-10 sm:h-9 sm:w-9"
               onClick={() => setViewMode("list")}
               title="List view"
             >
@@ -341,7 +341,7 @@ function DashboardPage() {
             <Button
               variant={viewMode === "table" ? "secondary" : "ghost"}
               size="icon"
-              className="rounded-l-none h-11 w-11 sm:h-9 sm:w-9"
+              className="rounded-l-none h-10 w-10 sm:h-9 sm:w-9"
               onClick={() => setViewMode("table")}
               title="Table view"
             >
@@ -355,7 +355,7 @@ function DashboardPage() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-11 w-11 sm:h-9 sm:w-9"
+                className="h-10 w-10 sm:h-9 sm:w-9"
                 title="More actions"
               >
                 <MoreHorizontal className="h-5 w-5 sm:h-4 sm:w-4" />
@@ -417,11 +417,11 @@ function DashboardPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Add app (primary) */}
-          <Button size="icon" className="sm:hidden h-11 w-11" onClick={() => setFormOpen(true)}>
+          {/* Add app (primary) — anchored to the right */}
+          <Button size="icon" className="sm:hidden h-10 w-10 ml-auto" onClick={() => setFormOpen(true)}>
             <Plus className="h-5 w-5" />
           </Button>
-          <Button className="hidden sm:flex" onClick={() => setFormOpen(true)}>
+          <Button className="hidden sm:flex ml-auto" onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add App
           </Button>
