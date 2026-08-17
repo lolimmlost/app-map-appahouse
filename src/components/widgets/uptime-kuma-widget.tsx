@@ -367,14 +367,14 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 <HeartbeatGraph heartbeats={monitor.recentHeartbeats.slice(-16)} />
                               )}
                               {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
-                                <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                                <span className="w-12 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
                                   {monitor.ping}ms
                                 </span>
                               )}
                               {monitor.uptime !== undefined && monitor.uptime > 0 && (
                                 <span
                                   className={cn(
-                                    "font-mono text-[10px] font-medium tabular-nums",
+                                    "w-11 text-right font-mono text-[10px] font-medium tabular-nums",
                                     monitor.uptime >= 99 && "text-success",
                                     monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
                                     monitor.uptime < 95 && "text-error"
