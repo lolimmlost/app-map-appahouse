@@ -355,10 +355,35 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                         )}
                       >
                         {isCompact ? (
-                          // Compact mode: just icon and name
-                          <div className="flex items-center gap-1.5">
-                            {getStatusIcon(monitor.status)}
-                            <span className="text-xs truncate font-medium">{monitor.name}</span>
+                          // Compact mode: dense single-line row that still surfaces
+                          // heartbeat / ping / uptime on the right (respects settings).
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {getStatusIcon(monitor.status)}
+                              <span className="text-xs truncate font-medium">{monitor.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {showHeartbeatGraph && monitor.recentHeartbeats && monitor.recentHeartbeats.length > 0 && (
+                                <HeartbeatGraph heartbeats={monitor.recentHeartbeats.slice(-16)} />
+                              )}
+                              {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
+                                <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                                  {monitor.ping}ms
+                                </span>
+                              )}
+                              {monitor.uptime !== undefined && monitor.uptime > 0 && (
+                                <span
+                                  className={cn(
+                                    "font-mono text-[10px] font-medium tabular-nums",
+                                    monitor.uptime >= 99 && "text-success",
+                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
+                                    monitor.uptime < 95 && "text-error"
+                                  )}
+                                >
+                                  {monitor.uptime.toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           // Detailed mode
@@ -396,8 +421,10 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 )}
                               </div>
                             )}
-                            {/* Show uptime percentage without heartbeats if graph disabled but uptime exists */}
-                            {!showHeartbeatGraph && monitor.uptime !== undefined && monitor.uptime > 0 && (
+                            {/* Show uptime % whenever the heartbeat graph won't render
+                                (disabled, or no heartbeat data) but uptime exists. */}
+                            {(!showHeartbeatGraph || !monitor.recentHeartbeats || monitor.recentHeartbeats.length === 0) &&
+                              monitor.uptime !== undefined && monitor.uptime > 0 && (
                               <div className="mt-1.5 flex items-center justify-end">
                                 <span
                                   className={cn(
