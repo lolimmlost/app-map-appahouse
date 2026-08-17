@@ -118,7 +118,7 @@ export function OpsSidebar({
   const fmtGB = (b: number) => `${(b / 1024 ** 3).toFixed(1)}G`;
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-5 rounded-lg border bg-card card-elevation p-3 text-sm">
+    <aside className="flex w-full lg:w-60 shrink-0 flex-col gap-5 rounded-lg border bg-card card-elevation p-3 text-sm">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="min-w-0">
