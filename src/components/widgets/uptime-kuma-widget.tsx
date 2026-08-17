@@ -368,7 +368,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                               </div>
                               <div className="flex items-center gap-2">
                                 {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono tabular-nums" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
                                     <Clock className="h-3 w-3" />
                                     {monitor.ping}ms
                                   </span>
@@ -383,7 +383,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 {monitor.uptime !== undefined && monitor.uptime > 0 && (
                                   <span
                                     className={cn(
-                                      "text-xs font-medium min-w-[45px] text-right",
+                                      "text-xs font-mono font-medium tabular-nums min-w-[45px] text-right",
                                       monitor.uptime >= 99 && "text-success",
                                       monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
                                       monitor.uptime < 95 && "text-error"
@@ -399,7 +399,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                               <div className="mt-1.5 flex items-center justify-end">
                                 <span
                                   className={cn(
-                                    "text-xs font-medium",
+                                    "text-xs font-mono font-medium tabular-nums",
                                     monitor.uptime >= 99 && "text-success",
                                     monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
                                     monitor.uptime < 95 && "text-error"

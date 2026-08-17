@@ -203,39 +203,37 @@ export function WeatherWidget({ widget, onEdit, onDelete, onResize }: WeatherWid
             <div className="h-4 bg-muted animate-pulse rounded mx-auto w-32" />
           </div>
         ) : weather ? (
-          <div className="flex flex-col items-center py-2">
-            {/* Main temperature display */}
+          <div className="space-y-2">
+            {/* Temp + description + location on one row */}
             <div className="flex items-center gap-3">
-              <WeatherIcon className="h-12 w-12 text-primary" />
-              <div className="text-4xl font-bold">
-                {weather.temperature}°{tempUnit}
+              <WeatherIcon className="h-10 w-10 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <div className="font-mono text-3xl font-bold tabular-nums leading-none">
+                  {weather.temperature}°{tempUnit}
+                </div>
+                <div className="mt-1 truncate text-xs text-muted-foreground">
+                  {weatherInfo.description}
+                </div>
+              </div>
+              <div className="ml-auto flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span className="truncate">{weather.locationName}</span>
               </div>
             </div>
 
-            {/* Weather description */}
-            <div className="text-sm text-muted-foreground mt-1">
-              {weatherInfo.description}
-            </div>
-
-            {/* Location */}
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-              <MapPin className="h-3 w-3" />
-              {weather.locationName}
-            </div>
-
-            {/* Details */}
-            <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1" title="Feels like">
-                <span>Feels {weather.apparentTemperature}°</span>
-              </div>
-              <div className="flex items-center gap-1" title="Humidity">
+            {/* Details row */}
+            <div className="flex items-center gap-4 border-t border-border/50 pt-2 text-xs text-muted-foreground">
+              <span title="Feels like">
+                Feels <span className="font-mono tabular-nums">{weather.apparentTemperature}°</span>
+              </span>
+              <span className="flex items-center gap-1" title="Humidity">
                 <Droplets className="h-3 w-3" />
-                <span>{weather.humidity}%</span>
-              </div>
-              <div className="flex items-center gap-1" title="Wind speed">
+                <span className="font-mono tabular-nums">{weather.humidity}%</span>
+              </span>
+              <span className="flex items-center gap-1" title="Wind speed">
                 <Wind className="h-3 w-3" />
-                <span>{weather.windSpeed} {windUnit}</span>
-              </div>
+                <span className="font-mono tabular-nums">{weather.windSpeed} {windUnit}</span>
+              </span>
             </div>
           </div>
         ) : (

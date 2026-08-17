@@ -76,7 +76,15 @@ export function QuickLinksBar({
   };
 
   return (
-    <div className={cn("grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2", className)}>
+    <div
+      className={cn(
+        // Mobile: two fixed rows that scroll horizontally, to cap vertical space.
+        "grid grid-flow-col grid-rows-2 auto-cols-[minmax(9.5rem,1fr)] gap-2 overflow-x-auto pb-1 snap-x -mx-4 px-4",
+        // Desktop: normal wrapping row.
+        "sm:mx-0 sm:flex sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0",
+        className
+      )}
+    >
       {apps.map((app) => {
         const hasLocalUrl = !!app.localUrl?.trim();
         const hasRemoteUrl = !!app.remoteUrl?.trim();
@@ -90,7 +98,7 @@ export function QuickLinksBar({
           <div
             key={app.id}
             className={cn(
-              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-md border bg-card p-1 sm:p-1 p-1.5 overflow-hidden transition-colors hover:border-ring hover:bg-muted/40",
+              "relative flex items-center gap-0.5 sm:gap-0.5 gap-1 rounded-md border bg-card p-1 sm:p-1 p-1.5 overflow-hidden snap-start transition-colors hover:border-ring hover:bg-muted/40",
               healthBarStyle === "border" && healthStatus && [
                 "border-2",
                 healthBorderColors[healthStatus]

@@ -331,18 +331,18 @@ export function LidarrWidget({ widget, onEdit, onDelete, onResize }: LidarrWidge
               <div className="flex items-center gap-3 text-sm flex-wrap">
                 <span className="flex items-center gap-1">
                   <AlertCircle className="h-3 w-3 text-warning" />
-                  <span className="font-medium">{wantedCount}</span> wanted
+                  <span className="font-mono tabular-nums font-medium">{wantedCount}</span> wanted
                 </span>
                 {showQueue && (
                   <span className="flex items-center gap-1">
                     <Download className="h-3 w-3 text-info" />
-                    <span className="font-medium">{queue.length}</span> queue
+                    <span className="font-mono tabular-nums font-medium">{queue.length}</span> queue
                   </span>
                 )}
                 {showCalendar && calendar.length > 0 && (
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">{calendar.length}</span> upcoming
+                    <span className="font-mono tabular-nums font-medium">{calendar.length}</span> upcoming
                   </span>
                 )}
                 {showHealth && (
@@ -350,7 +350,7 @@ export function LidarrWidget({ widget, onEdit, onDelete, onResize }: LidarrWidge
                     {health.length > 0 ? (
                       <>
                         <AlertTriangle className="h-3 w-3 text-warning" />
-                        <span className="font-medium text-warning">{health.length}</span>
+                        <span className="font-mono tabular-nums font-medium text-warning">{health.length}</span>
                       </>
                     ) : (
                       <CheckCircle className="h-3 w-3 text-success" />

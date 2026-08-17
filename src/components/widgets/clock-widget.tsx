@@ -170,20 +170,22 @@ export function ClockWidget({ widget, onEdit, onDelete, onResize }: ClockWidgetP
           </Button>
         }
       >
-        <div className="flex flex-col items-center justify-center py-4">
-          <div className="text-4xl font-bold tabular-nums tracking-tight">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="text-3xl font-mono font-bold tabular-nums tracking-tight leading-none">
             {formatTime(time)}
           </div>
-          {formattedDate && (
-            <div className="text-sm text-muted-foreground mt-2">
-              {formattedDate}
-            </div>
-          )}
-          {timezone && (
-            <div className="text-xs text-muted-foreground mt-1">
-              {TIMEZONES.find(tz => tz.value === timezone)?.label || timezone}
-            </div>
-          )}
+          <div className="min-w-0 text-right">
+            {formattedDate && (
+              <div className="truncate text-xs text-muted-foreground">
+                {formattedDate}
+              </div>
+            )}
+            {timezone && (
+              <div className="truncate font-mono text-[10px] text-muted-foreground/70">
+                {TIMEZONES.find(tz => tz.value === timezone)?.label || timezone}
+              </div>
+            )}
+          </div>
         </div>
       </WidgetContainer>
 

@@ -318,18 +318,18 @@ export function RadarrWidget({ widget, onEdit, onDelete, onResize }: RadarrWidge
               <div className="flex items-center gap-3 text-sm flex-wrap">
                 <span className="flex items-center gap-1">
                   <AlertCircle className="h-3 w-3 text-warning" />
-                  <span className="font-medium">{missing.length}</span> wanted
+                  <span className="font-mono tabular-nums font-medium">{missing.length}</span> wanted
                 </span>
                 {showQueue && (
                   <span className="flex items-center gap-1">
                     <Download className="h-3 w-3 text-info" />
-                    <span className="font-medium">{queue.length}</span> queue
+                    <span className="font-mono tabular-nums font-medium">{queue.length}</span> queue
                   </span>
                 )}
                 {showCalendar && calendar.length > 0 && (
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">{calendar.length}</span> upcoming
+                    <span className="font-mono tabular-nums font-medium">{calendar.length}</span> upcoming
                   </span>
                 )}
                 {showHealth && (
@@ -337,7 +337,7 @@ export function RadarrWidget({ widget, onEdit, onDelete, onResize }: RadarrWidge
                     {health.length > 0 ? (
                       <>
                         <AlertTriangle className="h-3 w-3 text-warning" />
-                        <span className="font-medium text-warning">{health.length}</span>
+                        <span className="font-mono tabular-nums font-medium text-warning">{health.length}</span>
                       </>
                     ) : (
                       <CheckCircle className="h-3 w-3 text-success" />
