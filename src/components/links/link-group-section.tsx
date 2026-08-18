@@ -74,7 +74,7 @@ export function LinkGroupSection({
       {group.links.map((link) => (
         <div
           key={link.id}
-          className="group relative flex items-center gap-1 sm:gap-0.5 rounded-lg border bg-card p-1 sm:p-1 shadow-sm overflow-hidden"
+          className="group relative flex items-center gap-1 sm:gap-0.5 rounded-md border bg-card p-1 sm:p-1 overflow-hidden transition-colors hover:border-ring hover:bg-muted/40"
         >
           <Button
             variant="ghost"

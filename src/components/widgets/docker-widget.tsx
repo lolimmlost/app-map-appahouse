@@ -61,13 +61,13 @@ type DockerInfo = {
 };
 
 const stateColors: Record<string, string> = {
-  running: "bg-green-500",
-  paused: "bg-yellow-500",
-  restarting: "bg-yellow-500",
-  exited: "bg-red-500",
-  dead: "bg-red-500",
-  created: "bg-gray-400",
-  removing: "bg-orange-500",
+  running: "bg-success",
+  paused: "bg-warning",
+  restarting: "bg-warning",
+  exited: "bg-error",
+  dead: "bg-error",
+  created: "bg-muted-foreground",
+  removing: "bg-warning",
 };
 
 
@@ -272,18 +272,17 @@ export function DockerWidget({ widget, onEdit, onDelete, onResize }: DockerWidge
               <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    <span className="h-2 w-2 rounded-full bg-success" />
                     {runningCount} running
                   </span>
                   {stoppedCount > 0 && (
                     <span className="flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="h-2 w-2 rounded-full bg-error" />
                       {stoppedCount} stopped
                     </span>
                   )}
                 </div>
-                <span title={dockerInfo.OperatingSystem}>
-                  {dockerInfo.Name}
+                <span className="font-mono" title={dockerInfo.OperatingSystem}>{dockerInfo.Name}
                 </span>
               </div>
             )}
@@ -296,32 +295,30 @@ export function DockerWidget({ widget, onEdit, onDelete, onResize }: DockerWidge
                     key={container.Id}
                     className={cn(
                       "flex items-center justify-between p-2 rounded-md transition-colors",
-                      container.State === "running" ? "bg-green-500/10" : "bg-muted/50"
+                      container.State === "running" ? "bg-success/10" : "bg-muted/50"
                     )}
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <div
                         className={cn(
                           "h-2 w-2 rounded-full shrink-0",
-                          stateColors[container.State] || "bg-gray-400"
+                          stateColors[container.State] || "bg-muted-foreground"
                         )}
                         title={container.State}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium truncate">
-                            {getContainerName(container)}
+                          <span className="text-sm font-mono font-medium truncate">{getContainerName(container)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="truncate">{getImageName(container.Image)}</span>
+                          <span className="truncate font-mono">{getImageName(container.Image)}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       {container.Ports && container.Ports.length > 0 && container.Ports[0].PublicPort && (
-                        <Badge variant="outline" className="text-xs">
-                          :{container.Ports[0].PublicPort}
+                        <Badge variant="outline" className="text-xs font-mono">:{container.Ports[0].PublicPort}
                         </Badge>
                       )}
                       <span className="text-xs text-muted-foreground">

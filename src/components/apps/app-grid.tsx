@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { AppCard, type HealthStatus, type DependencyStatus } from "./app-card";
+import { AppTable, type AppMetrics } from "./app-table";
 import { SwipeableCard } from "./swipeable-card";
 import type { App, Tag } from "@/types/database";
 import type { Category } from "@/types/database";
@@ -14,9 +15,10 @@ interface AppGridProps {
   apps: AppWithRelations[];
   healthStatuses?: Record<string, HealthStatus>;
   dependencyStatuses?: Record<string, DependencyStatus>;
+  metrics?: Record<string, AppMetrics>;
   healthBarStyle?: "dot" | "border" | "none";
   columns?: number;
-  viewMode?: "grid" | "list";
+  viewMode?: "grid" | "list" | "table";
   groupByCategory?: boolean;
   selectionMode?: boolean;
   selectedIds?: Set<string>;
@@ -32,6 +34,7 @@ export function AppGrid({
   apps,
   healthStatuses = {},
   dependencyStatuses = {},
+  metrics = {},
   healthBarStyle = "dot",
   columns = 4,
   viewMode = "grid",
@@ -99,23 +102,44 @@ export function AppGrid({
     );
   }
 
+  // Table mode is one self-contained table (its own grouping, sort, filter).
+  if (viewMode === "table") {
+    return (
+      <AppTable
+        apps={apps}
+        healthStatuses={healthStatuses}
+        dependencyStatuses={dependencyStatuses}
+        metrics={metrics}
+        groupByCategory={groupByCategory}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onSelectApp={onSelectApp}
+        onEditApp={onEditApp}
+        onDeleteApp={onDeleteApp}
+        onViewNotes={onViewNotes}
+        onPinApp={onPinApp}
+        onShareApp={onShareApp}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       {groupedApps.map((group) => (
         <div key={group.category?.id ?? "uncategorized"}>
           {groupByCategory && (
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-2">
               {group.category?.icon && (
-                <span className="text-base">{group.category.icon}</span>
+                <span className="text-sm">{group.category.icon}</span>
               )}
               <h2
-                className="text-sm font-semibold"
+                className="panel-label"
                 style={group.category?.color ? { color: group.category.color } : undefined}
               >
                 {group.category?.name ?? "Uncategorized"}
               </h2>
-              <span className="text-xs text-muted-foreground">
-                ({group.apps.length})
+              <span className="font-mono tabular-nums text-xs text-muted-foreground/70">
+                {group.apps.length}
               </span>
             </div>
           )}

@@ -37,7 +37,7 @@ interface AppCardProps {
   healthStatus?: HealthStatus;
   dependencyStatus?: DependencyStatus;
   healthBarStyle?: "dot" | "border" | "none";
-  viewMode?: "grid" | "list";
+  viewMode?: "grid" | "list" | "table";
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (app: App) => void;
@@ -49,10 +49,10 @@ interface AppCardProps {
 }
 
 const healthColors: Record<HealthStatus, string> = {
-  online: "bg-status-online",
-  offline: "bg-status-offline",
-  unknown: "bg-status-unknown",
-  checking: "bg-status-pending animate-pulse",
+  online: "text-status-online",
+  offline: "text-status-offline",
+  unknown: "text-status-unknown",
+  checking: "text-status-pending animate-pulse",
 };
 
 const healthBorderColors: Record<HealthStatus, string> = {
@@ -63,9 +63,9 @@ const healthBorderColors: Record<HealthStatus, string> = {
 };
 
 const dependencyStatusColors: Record<DependencyStatus, string> = {
-  healthy: "bg-status-online",
-  degraded: "bg-yellow-500",
-  offline: "bg-status-offline",
+  healthy: "text-status-online",
+  degraded: "text-warning",
+  offline: "text-status-offline",
 };
 
 export function AppCard({
@@ -291,9 +291,9 @@ export function AppCard({
       <ContextMenuTrigger asChild>
         <Card
           className={cn(
-            "group relative transition-all",
-            hasValidUrl && !selectionMode && "cursor-pointer hover:shadow-md hover:border-primary/30",
-            selectionMode && "cursor-pointer hover:shadow-md",
+            "group relative gap-0 py-0 transition-[box-shadow,border-color,background-color] duration-200",
+            hasValidUrl && !selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40 hover:card-elevation-hover",
+            selectionMode && "cursor-pointer hover:border-ring hover:bg-muted/40 hover:card-elevation-hover",
             !hasValidUrl && !selectionMode && "opacity-75",
             healthBarStyle === "border" && app.healthCheckEnabled && "border-2",
             borderClass,
@@ -346,7 +346,7 @@ export function AppCard({
             {healthBarStyle === "dot" && app.healthCheckEnabled && (
               <div
                 className={cn(
-                  "absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-background",
+                  "absolute -right-0.5 -top-0.5 status-dot",
                   healthColors[healthStatus]
                 )}
               />
@@ -355,7 +355,7 @@ export function AppCard({
             {dependencyStatus && dependencyStatus !== "healthy" && (
               <div
                 className={cn(
-                  "absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full border border-background",
+                  "absolute -left-0.5 -top-0.5 status-dot",
                   dependencyStatusColors[dependencyStatus]
                 )}
                 title={dependencyStatus === "degraded"

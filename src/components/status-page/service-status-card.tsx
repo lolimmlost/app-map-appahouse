@@ -67,7 +67,7 @@ export function ServiceStatusCard({
     return (
       <div
         className={cn(
-          "flex flex-col p-4 rounded-lg border bg-card hover:border-primary/50 transition-colors",
+          "flex flex-col p-4 rounded-lg border bg-card card-elevation hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200",
           className
         )}
       >
@@ -103,13 +103,13 @@ export function ServiceStatusCard({
             {responseTime !== undefined && (
               <span className="flex items-center gap-1">
                 <Zap className="h-3 w-3" />
-                {responseTime}ms
+                <span className="font-mono tabular-nums">{responseTime}ms</span>
               </span>
             )}
             {uptime !== undefined && (
               <span className="flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                {uptime.toFixed(2)}%
+                <span className="font-mono tabular-nums">{uptime.toFixed(2)}%</span>
               </span>
             )}
           </div>
@@ -122,7 +122,7 @@ export function ServiceStatusCard({
   return (
     <div
       className={cn(
-        "flex items-center justify-between p-4 rounded-lg border bg-card hover:border-primary/50 transition-colors",
+        "flex items-center justify-between p-4 rounded-lg border bg-card card-elevation hover:border-ring hover:card-elevation-hover transition-[box-shadow,border-color,background-color] duration-200",
         className
       )}
     >
@@ -157,13 +157,13 @@ export function ServiceStatusCard({
             {responseTime !== undefined && (
               <span className="flex items-center gap-1" title="Response time">
                 <Zap className="h-4 w-4" />
-                {responseTime}ms
+                <span className="font-mono tabular-nums">{responseTime}ms</span>
               </span>
             )}
             {uptime !== undefined && (
               <span className="flex items-center gap-1" title="Uptime (30 days)">
                 <TrendingUp className="h-4 w-4" />
-                {uptime.toFixed(2)}%
+                <span className="font-mono tabular-nums">{uptime.toFixed(2)}%</span>
               </span>
             )}
             {lastChecked && (
@@ -189,7 +189,7 @@ interface ServiceGroupProps {
 export function ServiceGroup({ name, children, className }: ServiceGroupProps) {
   return (
     <div className={cn("space-y-2", className)}>
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
+      <h2 className="panel-label px-1">
         {name}
       </h2>
       <div className="space-y-2">{children}</div>

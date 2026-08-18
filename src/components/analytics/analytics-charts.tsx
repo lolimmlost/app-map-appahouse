@@ -33,9 +33,9 @@ export function AccessTrendChart({
   }, [data]);
 
   return (
-    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent pb-2 pt-3 px-4">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="card-elevation">
+      <CardHeader className="border-b border-border pb-2 pt-3 px-4">
+        <CardTitle className="panel-label">{title}</CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="pb-3 px-4">
@@ -99,9 +99,9 @@ export function UptimeTrendChart({
   }, [data]);
 
   return (
-    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/10 pb-2 pt-3 px-4">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="card-elevation">
+      <CardHeader className="bg-success/5 border-b border-border pb-2 pt-3 px-4">
+        <CardTitle className="panel-label">{title}</CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="pb-3 px-4">
@@ -167,9 +167,9 @@ export function ResponseTimeChart({
   }, [data]);
 
   return (
-    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/10 pb-2 pt-3 px-4">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="card-elevation">
+      <CardHeader className="bg-info/5 border-b border-border pb-2 pt-3 px-4">
+        <CardTitle className="panel-label">{title}</CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="pb-3 px-4">
@@ -239,9 +239,9 @@ export function MostUsedAppsChart({
 
   if (chartData.length === 0) {
     return (
-      <Card className="shadow-lg border-2">
-        <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
-          <CardTitle className="text-base">{title}</CardTitle>
+      <Card className="card-elevation">
+        <CardHeader className="border-b border-border pb-2 pt-3 px-4">
+          <CardTitle className="panel-label">{title}</CardTitle>
           <CardDescription className="text-xs">{description}</CardDescription>
         </CardHeader>
         <CardContent className="pb-3 px-4">
@@ -254,9 +254,9 @@ export function MostUsedAppsChart({
   }
 
   return (
-    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="card-elevation">
+      <CardHeader className="border-b border-border pb-2 pt-3 px-4">
+        <CardTitle className="panel-label">{title}</CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="pb-3 px-4">
@@ -320,9 +320,9 @@ export function AppReliabilityChart({
 
   if (chartData.length === 0) {
     return (
-      <Card className="shadow-lg border-2">
-        <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
-          <CardTitle className="text-base">{title}</CardTitle>
+      <Card className="card-elevation">
+        <CardHeader className="border-b border-border pb-2 pt-3 px-4">
+          <CardTitle className="panel-label">{title}</CardTitle>
           <CardDescription className="text-xs">{description}</CardDescription>
         </CardHeader>
         <CardContent className="pb-3 px-4">
@@ -335,9 +335,9 @@ export function AppReliabilityChart({
   }
 
   return (
-    <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-2 pt-3 px-4">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="card-elevation">
+      <CardHeader className="border-b border-border pb-2 pt-3 px-4">
+        <CardTitle className="panel-label">{title}</CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="pb-3 px-4">

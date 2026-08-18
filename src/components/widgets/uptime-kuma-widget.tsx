@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getUptimeKumaStatus } from "@/lib/server/widget-proxy.server";
 import { updateWidget } from "@/lib/server/widgets.server";
+import { uptimeTextClass } from "@/components/apps/host";
 import type { Widget, WidgetConfig } from "@/types/database";
 import type { Integration } from "@/types/database";
 
@@ -162,26 +163,26 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
   const getStatusIcon = (status: number) => {
     switch (status) {
       case 1:
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case 0:
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-error" />;
       case 3:
-        return <AlertCircle className="h-4 w-4 text-blue-500" />;
+        return <AlertCircle className="h-4 w-4 text-info" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <AlertCircle className="h-4 w-4 text-warning" />;
     }
   };
 
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 1:
-        return <Badge variant="outline" className="border-green-500 text-green-500 text-xs">Up</Badge>;
+        return <Badge variant="outline" className="border-success text-success text-xs">Up</Badge>;
       case 0:
-        return <Badge variant="outline" className="border-red-500 text-red-500 text-xs">Down</Badge>;
+        return <Badge variant="outline" className="border-error text-error text-xs">Down</Badge>;
       case 3:
-        return <Badge variant="outline" className="border-blue-500 text-blue-500 text-xs">Maint</Badge>;
+        return <Badge variant="outline" className="border-info text-info text-xs">Maint</Badge>;
       default:
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-500 text-xs">Pending</Badge>;
+        return <Badge variant="outline" className="border-warning text-warning text-xs">Pending</Badge>;
     }
   };
 
@@ -196,10 +197,10 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
             key={i}
             className={cn(
               "flex-1 h-full rounded-[2px] min-w-[3px] max-w-[6px] transition-all",
-              hb.status === 1 && "bg-green-500",
-              hb.status === 0 && "bg-red-500",
-              hb.status === 2 && "bg-yellow-500",
-              hb.status === 3 && "bg-blue-500"
+              hb.status === 1 && "bg-success",
+              hb.status === 0 && "bg-error",
+              hb.status === 2 && "bg-warning",
+              hb.status === 3 && "bg-info"
             )}
             title={`${hb.status === 1 ? "Up" : hb.status === 0 ? "Down" : "Pending"}${hb.ping ? ` - ${hb.ping}ms` : ""}`}
           />
@@ -298,33 +299,33 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
           <div className="space-y-3">
             {/* Summary */}
             <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+              <div className="flex items-center gap-3 font-mono tabular-nums">
+                <span className="flex items-center gap-1 text-success">
+                  <CheckCircle className="h-3 w-3" />
                   {upCount}
                 </span>
                 {downCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <XCircle className="h-3 w-3 text-red-500" />
+                  <span className="flex items-center gap-1 text-error">
+                    <XCircle className="h-3 w-3" />
                     {downCount}
                   </span>
                 )}
                 {pendingCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  <span className="flex items-center gap-1 text-warning">
+                    <AlertCircle className="h-3 w-3" />
                     {pendingCount}
                   </span>
                 )}
               </div>
               <span className="text-muted-foreground">
-                {allMonitors.length} monitors
+                <span className="font-mono tabular-nums">{allMonitors.length}</span> monitors
               </span>
             </div>
 
             {/* Monitor List */}
             <Collapsible open={monitorsExpanded} onOpenChange={setMonitorsExpanded}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Monitors</span>
+                <span className="panel-label">Monitors</span>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                     {monitorsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -334,29 +335,54 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
               <CollapsibleContent>
                 {displayMonitors.length > 0 ? (
                   <div className={cn(
-                    "mt-2",
+                    "mt-1.5",
                     // Use grid layout when wide, single column when narrow
-                    isWide ? "grid grid-cols-2 gap-2" : "space-y-1.5",
+                    isWide ? "grid grid-cols-2 gap-1.5" : "space-y-0.5",
                     // Compact mode uses tighter grid
-                    isCompact && isWide && "grid-cols-3 gap-1.5"
+                    isCompact && isWide && "grid-cols-3 gap-1"
                   )}>
                     {displayMonitors.map((monitor) => (
                       <div
                         key={monitor.id}
                         className={cn(
-                          "rounded-md",
-                          isCompact ? "p-1.5" : "p-2",
-                          monitor.status === 0 && "bg-red-500/10",
-                          monitor.status === 1 && "bg-muted/50",
-                          monitor.status === 2 && "bg-yellow-500/10",
-                          monitor.status === 3 && "bg-blue-500/10"
+                          "rounded-md transition-colors",
+                          isCompact ? "px-1.5 py-1" : "px-2 py-1",
+                          // Up monitors stay quiet (hover only); problems get a tinted
+                          // alert background so they stand out in a long list.
+                          monitor.status === 0 && "bg-error/10",
+                          monitor.status === 1 && "hover:bg-muted/50",
+                          monitor.status === 2 && "bg-warning/10",
+                          monitor.status === 3 && "bg-info/10"
                         )}
                       >
                         {isCompact ? (
-                          // Compact mode: just icon and name
-                          <div className="flex items-center gap-1.5">
-                            {getStatusIcon(monitor.status)}
-                            <span className="text-xs truncate font-medium">{monitor.name}</span>
+                          // Compact mode: dense single-line row that still surfaces
+                          // heartbeat / ping / uptime on the right (respects settings).
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {getStatusIcon(monitor.status)}
+                              <span className="text-xs truncate font-medium">{monitor.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {showHeartbeatGraph && monitor.recentHeartbeats && monitor.recentHeartbeats.length > 0 && (
+                                <HeartbeatGraph heartbeats={monitor.recentHeartbeats.slice(-16)} />
+                              )}
+                              {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
+                                <span className="w-12 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+                                  {monitor.ping}ms
+                                </span>
+                              )}
+                              {monitor.uptime !== undefined && monitor.uptime > 0 && (
+                                <span
+                                  className={cn(
+                                    "w-11 text-right font-mono text-[10px] font-medium tabular-nums",
+                                    uptimeTextClass(monitor.uptime)
+                                  )}
+                                >
+                                  {monitor.uptime.toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           // Detailed mode
@@ -368,7 +394,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                               </div>
                               <div className="flex items-center gap-2">
                                 {showResponseTime && monitor.ping !== null && monitor.ping !== undefined && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono tabular-nums" title={monitor.avgPing ? `Avg: ${monitor.avgPing}ms` : undefined}>
                                     <Clock className="h-3 w-3" />
                                     {monitor.ping}ms
                                   </span>
@@ -383,10 +409,8 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 {monitor.uptime !== undefined && monitor.uptime > 0 && (
                                   <span
                                     className={cn(
-                                      "text-xs font-medium min-w-[45px] text-right",
-                                      monitor.uptime >= 99 && "text-green-500",
-                                      monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
-                                      monitor.uptime < 95 && "text-red-500"
+                                      "text-xs font-mono font-medium tabular-nums min-w-[45px] text-right",
+                                    uptimeTextClass(monitor.uptime)
                                     )}
                                   >
                                     {monitor.uptime.toFixed(1)}%
@@ -394,15 +418,15 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 )}
                               </div>
                             )}
-                            {/* Show uptime percentage without heartbeats if graph disabled but uptime exists */}
-                            {!showHeartbeatGraph && monitor.uptime !== undefined && monitor.uptime > 0 && (
+                            {/* Show uptime % whenever the heartbeat graph won't render
+                                (disabled, or no heartbeat data) but uptime exists. */}
+                            {(!showHeartbeatGraph || !monitor.recentHeartbeats || monitor.recentHeartbeats.length === 0) &&
+                              monitor.uptime !== undefined && monitor.uptime > 0 && (
                               <div className="mt-1.5 flex items-center justify-end">
                                 <span
                                   className={cn(
-                                    "text-xs font-medium",
-                                    monitor.uptime >= 99 && "text-green-500",
-                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-yellow-500",
-                                    monitor.uptime < 95 && "text-red-500"
+                                    "text-xs font-mono font-medium tabular-nums",
+                                    uptimeTextClass(monitor.uptime)
                                   )}
                                 >
                                   {monitor.uptime.toFixed(1)}% uptime
@@ -438,7 +462,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                 <div className="mt-3 pt-3 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                      <AlertTriangle className="h-3 w-3 text-warning" />
                       <span className="text-xs font-medium">Recent Incidents</span>
                       <Badge variant="outline" className="text-xs h-4 px-1">{allIncidents.length}</Badge>
                     </div>
@@ -460,9 +484,9 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
                             {incident.type === "down" ? (
-                              <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                              <XCircle className="h-3 w-3 text-error shrink-0" />
                             ) : (
-                              <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
+                              <TrendingUp className="h-3 w-3 text-success shrink-0" />
                             )}
                             <span className="truncate text-muted-foreground">
                               {incident.monitorName}

@@ -51,8 +51,8 @@ export const Route = createRootRoute({
                         position: absolute;
                         inset: 0;
                         background-image:
-                            linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+                            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
                         background-size: 50px 50px;
                         animation: loader-grid-move 20s linear infinite;
                     }
@@ -66,7 +66,7 @@ export const Route = createRootRoute({
                         position: absolute;
                         width: 600px;
                         height: 600px;
-                        background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(147, 51, 234, 0.08) 30%, transparent 70%);
+                        background: radial-gradient(circle, rgba(255, 217, 61, 0.10) 0%, rgba(255, 107, 107, 0.07) 30%, transparent 70%);
                         border-radius: 50%;
                         animation: loader-glow-pulse 4s ease-in-out infinite;
                     }
@@ -116,8 +116,8 @@ export const Route = createRootRoute({
                         min-width: 38px;
                         min-height: 38px;
                         border-radius: 10px;
-                        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-                        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+                        background: linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%);
+                        box-shadow: 0 0 20px rgba(255, 107, 107, 0.35), inset 0 1px 0 rgba(255,255,255,0.1);
                         animation: loader-tile-pulse 2s ease-in-out infinite;
                     }
                     #app-loader .loader-tile:nth-child(1) { animation-delay: 0s; }
@@ -140,7 +140,7 @@ export const Route = createRootRoute({
                     #app-loader .loader-progress-bar {
                         height: 100%;
                         width: 100%;
-                        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+                        background: linear-gradient(90deg, #FFD93D, #FF6B6B);
                         border-radius: 6px;
                         transform-origin: left center;
                         animation: loader-progress-fill 500ms ease-out forwards;
@@ -238,10 +238,10 @@ function RootDocument() {
                             gap: '8px',
                             marginBottom: '32px',
                         }}>
-                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
-                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
-                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
-                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%)' }}></div>
+                            <div className="loader-tile" style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%)' }}></div>
                         </div>
                         {/* Progress bar */}
                         <div style={{
@@ -255,7 +255,7 @@ function RootDocument() {
                             <div id="loader-progress" style={{
                                 height: '6px',
                                 width: '100%',
-                                background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                                background: 'linear-gradient(90deg, #FFD93D, #FF6B6B)',
                                 borderRadius: '6px',
                                 transformOrigin: 'left center',
                                 transform: 'scaleX(0)',
@@ -278,6 +278,22 @@ function RootDocument() {
                             letterSpacing: '0.1em',
                             textTransform: 'uppercase',
                         }}>Homelab Dashboard</div>
+                        {/* Shared "by AppaHouse" mark — brand moment on the splash. */}
+                        <div style={{
+                            marginTop: '22px',
+                            textAlign: 'center',
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            lineHeight: 1,
+                        }}>
+                            <span style={{ display: 'block', fontSize: '9px', letterSpacing: '0.2em', color: '#71717a', opacity: 0.6 }}>by</span>
+                            <span style={{
+                                fontSize: '13px',
+                                letterSpacing: '0.1em',
+                                color: '#e0a500',
+                                textShadow: '0 0 8px rgba(255,217,61,0.6), 0 0 22px rgba(255,107,107,0.4)',
+                            }}>AppaHouse</span>
+                        </div>
                     </div>
                 </div>
                 {/* Set loader height and trigger progress bar animation */}

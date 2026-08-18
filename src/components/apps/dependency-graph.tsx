@@ -31,14 +31,14 @@ interface DependencyGraphViewProps {
 }
 
 const dependencyTypeColors: Record<DependencyType, string> = {
-  required: "stroke-red-500",
-  optional: "stroke-yellow-500",
-  weak: "stroke-gray-400",
+  required: "stroke-error",
+  optional: "stroke-warning",
+  weak: "stroke-muted-foreground",
 };
 
 const dependencyStatusColors: Record<string, string> = {
   healthy: "bg-status-online",
-  degraded: "bg-yellow-500",
+  degraded: "bg-warning",
   offline: "bg-status-offline",
 };
 
@@ -781,15 +781,15 @@ export function DependencyGraphView({ className }: DependencyGraphViewProps) {
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-0.5 bg-red-500" />
+              <div className="w-4 h-0.5 bg-error" />
               <span className="text-muted-foreground">Required</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-0.5 bg-yellow-500" />
+              <div className="w-4 h-0.5 bg-warning" />
               <span className="text-muted-foreground">Optional</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-0.5 bg-gray-400" />
+              <div className="w-4 h-0.5 bg-muted-foreground" />
               <span className="text-muted-foreground">Weak</span>
             </div>
           </div>
@@ -831,9 +831,9 @@ export function DependencyGraphView({ className }: DependencyGraphViewProps) {
                         variant="secondary"
                         className={cn(
                           "text-xs",
-                          edge.type === "required" && "bg-red-100 text-red-800",
-                          edge.type === "optional" && "bg-yellow-100 text-yellow-800",
-                          edge.type === "weak" && "bg-gray-100 text-gray-800"
+                          edge.type === "required" && "bg-error/10 text-error",
+                          edge.type === "optional" && "bg-warning/10 text-warning",
+                          edge.type === "weak" && "bg-muted text-muted-foreground"
                         )}
                       >
                         {edge.type}
@@ -867,9 +867,9 @@ export function DependencyGraphView({ className }: DependencyGraphViewProps) {
                         variant="secondary"
                         className={cn(
                           "text-xs",
-                          edge.type === "required" && "bg-red-100 text-red-800",
-                          edge.type === "optional" && "bg-yellow-100 text-yellow-800",
-                          edge.type === "weak" && "bg-gray-100 text-gray-800"
+                          edge.type === "required" && "bg-error/10 text-error",
+                          edge.type === "optional" && "bg-warning/10 text-warning",
+                          edge.type === "weak" && "bg-muted text-muted-foreground"
                         )}
                       >
                         {edge.type}

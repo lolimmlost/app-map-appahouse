@@ -49,6 +49,7 @@ import {
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uptimeTextClass } from "@/components/apps/host";
 import type {
   HealthHistoryEntry,
   UptimeStats,
@@ -101,18 +102,18 @@ export function HealthStatusHistory({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "online":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case "offline":
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-error" />;
       default:
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <AlertTriangle className="h-4 w-4 text-warning" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "online":
-        return <Badge variant="default" className="bg-green-500/10 text-green-500 hover:bg-green-500/20">Online</Badge>;
+        return <Badge variant="default" className="bg-success/10 text-success hover:bg-success/20">Online</Badge>;
       case "offline":
         return <Badge variant="destructive">Offline</Badge>;
       default:
@@ -131,12 +132,12 @@ export function HealthStatusHistory({
   };
 
   return (
-    <Card className="shadow-lg border-2">
-      <CardHeader className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 pb-3 pt-3 px-4">
+    <Card className="card-elevation">
+      <CardHeader className="bg-success/5 border-b border-border pb-3 pt-3 px-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Activity className="h-4 w-4 text-green-600 dark:text-green-500" />
+              <Activity className="h-4 w-4 text-success" />
               Health Status History
             </CardTitle>
             <CardDescription className="text-xs">Recent health check events across all services</CardDescription>
@@ -172,7 +173,7 @@ export function HealthStatusHistory({
               {filteredHistory.map((entry, index) => (
                 <div
                   key={`${entry.appId}-${entry.checkedAt}-${index}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:shadow-md transition-all duration-200 hover:border-primary/30"
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:card-elevation-hover hover:border-ring transition-[box-shadow,border-color,background-color] duration-200"
                 >
                   <div className="flex-shrink-0">
                     {getStatusIcon(entry.status)}
@@ -208,7 +209,7 @@ export function HealthStatusHistory({
                       )}
                     </div>
                     {entry.error && (
-                      <p className="text-xs text-red-500 mt-1 truncate">{entry.error}</p>
+                      <p className="text-xs text-error mt-1 truncate">{entry.error}</p>
                     )}
                   </div>
                 </div>
@@ -238,13 +239,7 @@ export function UptimeStatistics({
   yearlyStats,
   isLoading = false,
 }: UptimeStatisticsProps) {
-  const getUptimeColor = (percentage: number | null) => {
-    if (percentage === null) return "text-muted-foreground";
-    if (percentage >= 99.9) return "text-green-500";
-    if (percentage >= 99) return "text-green-400";
-    if (percentage >= 95) return "text-yellow-500";
-    return "text-red-500";
-  };
+  const getUptimeColor = (percentage: number | null) => uptimeTextClass(percentage);
 
   const getSlaStatus = (percentage: number | null) => {
     if (percentage === null) return { label: "N/A", variant: "secondary" as const };
@@ -273,10 +268,10 @@ export function UptimeStatistics({
   }
 
   return (
-    <Card className="shadow-lg border-2">
-      <CardHeader className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 pb-3 pt-3 px-4">
+    <Card className="card-elevation">
+      <CardHeader className="bg-info/5 border-b border-border pb-3 pt-3 px-4">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Shield className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+          <Shield className="h-4 w-4 text-info" />
           Uptime Statistics
         </CardTitle>
         <CardDescription className="text-xs">SLA metrics and reliability statistics</CardDescription>
@@ -294,25 +289,25 @@ export function UptimeStatistics({
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <div className={cn("text-3xl font-bold", getUptimeColor(stats.uptimePercentage))}>
+                    <div className={cn("text-3xl font-mono font-bold tabular-nums", getUptimeColor(stats.uptimePercentage))}>
                       {stats.uptimePercentage !== null ? `${stats.uptimePercentage.toFixed(2)}%` : "N/A"}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">Uptime</div>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <div className="text-3xl font-bold">
+                    <div className="text-3xl font-mono font-bold tabular-nums">
                       {stats.averageResponseTime !== null ? `${stats.averageResponseTime}ms` : "N/A"}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">Avg Response</div>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <div className="text-3xl font-bold text-green-500">
+                    <div className="text-3xl font-mono font-bold tabular-nums text-success">
                       {stats.successfulChecks.toLocaleString()}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">Successful Checks</div>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <div className="text-3xl font-bold text-red-500">
+                    <div className="text-3xl font-mono font-bold tabular-nums text-error">
                       {stats.failedChecks.toLocaleString()}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">Failed Checks</div>
@@ -423,7 +418,7 @@ export function UptimeStatistics({
             {yearlyStats ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="text-center p-6 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
+                  <div className="text-center p-6 rounded-lg bg-success/10 border border-success/20">
                     <div className={cn("text-4xl font-bold", getUptimeColor(yearlyStats.uptimePercentage))}>
                       {yearlyStats.uptimePercentage !== null
                         ? `${yearlyStats.uptimePercentage.toFixed(3)}%`
@@ -443,13 +438,13 @@ export function UptimeStatistics({
                   </div>
                   <div className="p-3 rounded-lg border flex justify-between">
                     <span className="text-muted-foreground">Successful Checks</span>
-                    <span className="font-semibold text-green-500">
+                    <span className="font-semibold text-success">
                       {yearlyStats.successfulChecks.toLocaleString()}
                     </span>
                   </div>
                   <div className="p-3 rounded-lg border flex justify-between">
                     <span className="text-muted-foreground">Failed Checks</span>
-                    <span className="font-semibold text-red-500">
+                    <span className="font-semibold text-error">
                       {yearlyStats.failedChecks.toLocaleString()}
                     </span>
                   </div>
@@ -490,8 +485,8 @@ export function ServiceReliabilityTable({
 }: ServiceReliabilityTableProps) {
   const getUptimeBadge = (percentage: number | null) => {
     if (percentage === null) return <Badge variant="secondary">N/A</Badge>;
-    if (percentage >= 99.9) return <Badge variant="default" className="bg-green-500">99.9%+</Badge>;
-    if (percentage >= 99) return <Badge variant="default" className="bg-green-400">{percentage.toFixed(1)}%</Badge>;
+    if (percentage >= 99.9) return <Badge variant="default" className="bg-success">99.9%+</Badge>;
+    if (percentage >= 99) return <Badge variant="default" className="bg-success">{percentage.toFixed(1)}%</Badge>;
     if (percentage >= 95) return <Badge variant="secondary">{percentage.toFixed(1)}%</Badge>;
     return <Badge variant="destructive">{percentage.toFixed(1)}%</Badge>;
   };
@@ -516,10 +511,10 @@ export function ServiceReliabilityTable({
   };
 
   return (
-    <Card className="shadow-lg border-2">
-      <CardHeader className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20 pb-3 pt-3 px-4">
+    <Card className="card-elevation">
+      <CardHeader className="bg-muted/30 border-b border-border pb-3 pt-3 px-4">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Server className="h-4 w-4 text-purple-600 dark:text-purple-500" />
+          <Server className="h-4 w-4 text-muted-foreground" />
           Service Reliability
         </CardTitle>
         <CardDescription className="text-xs">Detailed SLA metrics for each service</CardDescription>
@@ -540,7 +535,7 @@ export function ServiceReliabilityTable({
               {services.map((service) => (
                 <div
                   key={service.appId}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 hover:shadow-md transition-all duration-200 hover:border-primary/30"
+                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 hover:card-elevation-hover hover:border-ring transition-[box-shadow,border-color,background-color] duration-200"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
@@ -639,10 +634,10 @@ export function EnhancedResponseTimeChart({
   }
 
   return (
-    <Card className="shadow-lg border-2">
-      <CardHeader className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 pb-2 pt-3 px-4">
+    <Card className="card-elevation">
+      <CardHeader className="bg-warning/5 border-b border-border pb-2 pt-3 px-4">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Zap className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+          <Zap className="h-4 w-4 text-warning" />
           {title}
         </CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
@@ -707,7 +702,7 @@ export function ExportButton({ onExport, isExporting = false }: ExportButtonProp
         size="sm"
         onClick={() => onExport("pdf")}
         disabled={isExporting}
-        className="gap-2 shadow-md hover:shadow-lg transition-shadow"
+        className="gap-2"
       >
         <Download className="h-4 w-4" />
         PDF Report
@@ -717,7 +712,7 @@ export function ExportButton({ onExport, isExporting = false }: ExportButtonProp
         size="sm"
         onClick={() => onExport("csv")}
         disabled={isExporting}
-        className="gap-2 shadow-md hover:shadow-lg transition-shadow"
+        className="gap-2"
       >
         <FileSpreadsheet className="h-4 w-4" />
         CSV
@@ -727,7 +722,7 @@ export function ExportButton({ onExport, isExporting = false }: ExportButtonProp
         size="sm"
         onClick={() => onExport("json")}
         disabled={isExporting}
-        className="gap-2 shadow-md hover:shadow-lg transition-shadow"
+        className="gap-2"
       >
         <FileJson className="h-4 w-4" />
         JSON
@@ -786,10 +781,10 @@ export function SlaSummaryCard({
   const isYearlyMet = yearlyUptime !== null && yearlyUptime >= targetSla;
 
   return (
-    <Card className="shadow-lg border-2 overflow-hidden">
-      <CardHeader className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 pb-3 pt-3 px-4">
+    <Card className="card-elevation overflow-hidden">
+      <CardHeader className="bg-success/5 border-b border-border pb-3 pt-3 px-4">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Shield className="h-4 w-4 text-green-600 dark:text-green-500" />
+          <Shield className="h-4 w-4 text-success" />
           SLA Summary
         </CardTitle>
         <CardDescription className="text-xs">Target: {targetSla}% uptime</CardDescription>
@@ -798,22 +793,22 @@ export function SlaSummaryCard({
         <div className="grid grid-cols-2 gap-4">
           <div
             className={cn(
-              "p-4 rounded-lg border-2 text-center transition-colors",
+              "p-4 rounded-md border text-center transition-colors",
               isMonthlyMet
-                ? "border-green-500/50 bg-green-500/10"
+                ? "border-success/40 bg-success/10"
                 : monthlyUptime !== null
-                ? "border-red-500/50 bg-red-500/10"
+                ? "border-error/40 bg-error/10"
                 : "border-muted"
             )}
           >
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-mono font-bold tabular-nums">
               {monthlyUptime !== null ? `${monthlyUptime.toFixed(2)}%` : "N/A"}
             </div>
             <div className="text-sm text-muted-foreground mt-1">Monthly Uptime</div>
             {monthlyUptime !== null && (
               <div className="mt-2">
                 {isMonthlyMet ? (
-                  <Badge variant="default" className="bg-green-500">
+                  <Badge variant="default" className="bg-success">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     SLA Met
                   </Badge>
@@ -828,22 +823,22 @@ export function SlaSummaryCard({
           </div>
           <div
             className={cn(
-              "p-4 rounded-lg border-2 text-center transition-colors",
+              "p-4 rounded-md border text-center transition-colors",
               isYearlyMet
-                ? "border-green-500/50 bg-green-500/10"
+                ? "border-success/40 bg-success/10"
                 : yearlyUptime !== null
-                ? "border-red-500/50 bg-red-500/10"
+                ? "border-error/40 bg-error/10"
                 : "border-muted"
             )}
           >
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-mono font-bold tabular-nums">
               {yearlyUptime !== null ? `${yearlyUptime.toFixed(2)}%` : "N/A"}
             </div>
             <div className="text-sm text-muted-foreground mt-1">Yearly Uptime</div>
             {yearlyUptime !== null && (
               <div className="mt-2">
                 {isYearlyMet ? (
-                  <Badge variant="default" className="bg-green-500">
+                  <Badge variant="default" className="bg-success">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     SLA Met
                   </Badge>

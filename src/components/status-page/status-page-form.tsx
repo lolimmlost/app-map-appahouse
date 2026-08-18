@@ -278,7 +278,7 @@ export function StatusPageForm({
                             )}
                           </div>
                           {app.healthCheckEnabled && (
-                            <span className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded">
+                            <span className="text-xs bg-success/10 text-success px-2 py-1 rounded">
                               Health Check
                             </span>
                           )}

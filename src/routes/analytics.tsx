@@ -169,9 +169,9 @@ function AnalyticsPage() {
   return (
     <main className="container mx-auto flex flex-col gap-4 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-gradient-to-r from-background via-muted/20 to-background p-4 rounded-lg border-2 shadow-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border bg-card card-elevation">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+          <div className="p-2 rounded-md bg-primary/10">
             <BarChart3 className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -206,11 +206,11 @@ function AnalyticsPage() {
 
       {/* Tabs for Dashboard Sections */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 p-0.5 bg-gradient-to-r from-muted/50 to-muted/30 shadow-sm">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:shadow-md transition-all duration-200">Overview</TabsTrigger>
-          <TabsTrigger value="uptime" className="text-xs sm:text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:shadow-md transition-all duration-200">Uptime & SLA</TabsTrigger>
-          <TabsTrigger value="health" className="text-xs sm:text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:shadow-md transition-all duration-200">Health History</TabsTrigger>
-          <TabsTrigger value="apps" className="text-xs sm:text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:shadow-md transition-all duration-200">App Details</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 p-0.5 ">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm transition-colors">Overview</TabsTrigger>
+          <TabsTrigger value="uptime" className="text-xs sm:text-sm transition-colors">Uptime & SLA</TabsTrigger>
+          <TabsTrigger value="health" className="text-xs sm:text-sm transition-colors">Health History</TabsTrigger>
+          <TabsTrigger value="apps" className="text-xs sm:text-sm transition-colors">App Details</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -357,10 +357,10 @@ function AnalyticsPage() {
       {/* Empty State */}
       {!isLoading && summaryData?.apps?.length === 0 && (
         <div className="text-center py-16 px-6">
-          <div className="inline-flex p-6 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 mb-6">
+          <div className="inline-flex p-6 rounded-full bg-primary/10 mb-6">
             <BarChart3 className="h-16 w-16 text-primary" />
           </div>
-          <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">No Analytics Data Yet</h2>
+          <h2 className="text-2xl font-bold mb-3">No Analytics Data Yet</h2>
           <p className="text-muted-foreground max-w-md mx-auto text-base mb-4">
             Start using your apps to see usage statistics, health trends, and performance metrics here.
           </p>

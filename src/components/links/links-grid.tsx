@@ -163,14 +163,14 @@ export function LinksGrid() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Links</h2>
+        <h2 className="panel-label">Links</h2>
         <Button variant="outline" size="sm" onClick={handleAddGroup}>
           <Plus className="mr-2 h-4 w-4" />
           Add Group
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 snap-x [&>*]:shrink-0 -mx-4 px-4 sm:mx-0 sm:px-0">
         {groups.map((group) => (
           <LinkGroupSection
             key={group.id}

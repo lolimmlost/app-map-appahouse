@@ -13,6 +13,18 @@
     cursor: pointer;
 }
 
+/* iOS Safari zooms the whole page when a focused input's font-size is < 16px,
+   which breaks the layout when opening the table filter/search on mobile. Force
+   >= 16px on small screens; desktop keeps the denser text-xs sizing. The :not()
+   selectors also raise specificity above Tailwind's .text-xs utility. */
+@media (max-width: 640px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+        font-size: 16px;
+    }
+}
+
 :root {
     --warning: hsl(38 92% 50%);
     --warning-foreground: hsl(48 96% 89%);
@@ -26,11 +38,22 @@
     --status-offline: hsl(0 84% 60%);
     --status-unknown: hsl(220 9% 46%);
     --status-pending: hsl(45 93% 47%);
+    /* Layered soft depth — contact shadow + ambient, low opacity, warm-neutral. */
+    --shadow-card:
+        0 1px 2px -1px rgb(16 18 24 / 0.08),
+        0 3px 8px -2px rgb(16 18 24 / 0.06),
+        0 12px 28px -8px rgb(16 18 24 / 0.07);
+    --shadow-card-hover:
+        0 1px 2px -1px rgb(16 18 24 / 0.10),
+        0 6px 14px -3px rgb(16 18 24 / 0.10),
+        0 18px 40px -12px rgb(16 18 24 / 0.12);
 }
 
 .dark {
-    --warning: hsl(48 96% 89%);
-    --warning-foreground: hsl(38 92% 50%);
+    /* Readable amber in dark — the old value was a washed-out cream that made
+       text-warning / bg-warning bars nearly invisible on dark surfaces. */
+    --warning: hsl(41 96% 62%);
+    --warning-foreground: hsl(20 14% 12%);
     --success: hsl(142 71% 45%);
     --success-foreground: hsl(143 76% 95%);
     --error: hsl(0 72% 51%);
@@ -41,6 +64,16 @@
     --status-offline: hsl(0 72% 51%);
     --status-unknown: hsl(220 13% 50%);
     --status-pending: hsl(45 93% 47%);
+    /* Dark depth: a top-edge light catch (cards are lit from above) + a soft
+       grounding shadow. Shadows alone don't read on a dark surface. */
+    --shadow-card:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.05),
+        0 1px 2px 0 rgb(0 0 0 / 0.45),
+        0 12px 32px -12px rgb(0 0 0 / 0.65);
+    --shadow-card-hover:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+        0 2px 6px 0 rgb(0 0 0 / 0.5),
+        0 18px 44px -14px rgb(0 0 0 / 0.75);
 }
 
 @theme inline {
@@ -56,6 +89,59 @@
     --color-status-offline: var(--status-offline);
     --color-status-unknown: var(--status-unknown);
     --color-status-pending: var(--status-pending);
+}
+
+/* Human card depth: layered soft shadows (contact + ambient) in light; in dark,
+   depth comes from a top-edge light catch + a soft grounding shadow, since
+   shadows barely read on a dark surface. Theme-aware via CSS variables. */
+@utility card-elevation {
+    box-shadow: var(--shadow-card);
+}
+@utility card-elevation-hover {
+    box-shadow: var(--shadow-card-hover);
+}
+
+/* Crisp uppercase micro-label for section/column headers (ops-panel look). */
+@utility panel-label {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    font-weight: 500;
+}
+
+/* Small "wired-in" status dot: fill + a faint halo, driven by the text color.
+   Set the color with a text class, e.g. text-status-online or text-success. */
+@utility status-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 16%, transparent);
+}
+
+/* Shared AppaHouse "by AppaHouse" brand mark — the neon-flicker glow is the
+   identity shared across AppaHouse apps (Virtual TV, friend-profile). The text
+   colour is toned to gold here; the glow keeps the shared coral/yellow. */
+@keyframes appa-neon-flicker {
+    0%, 18%, 22%, 55%, 100% {
+        text-shadow: 0 0 4px #ffd93d, 0 0 11px #ffd93d, 0 0 19px #ffd93d, 0 0 40px #ff6b6b, 0 0 80px #ff6b6b;
+        opacity: 1;
+    }
+    20% { text-shadow: none; opacity: 0.6; }
+    57% { text-shadow: none; opacity: 0.5; }
+    58% { text-shadow: 0 0 2px #ffd93d, 0 0 6px #ffd93d; opacity: 0.8; }
+}
+
+@utility appa-neon {
+    color: #e0a500;
+    animation: appa-neon-flicker 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .appa-neon { animation: none; }
 }
 
 /** iOS Dynamic System Font Scaling */

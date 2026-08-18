@@ -255,9 +255,12 @@ export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
 
     // Try to get heartbeat data from separate endpoint
     let heartbeatList: Record<string, Array<{ status: number; ping?: number; time?: string }>> = {};
+    // Uptime Kuma also returns authoritative uptime ratios keyed "<id>_24" / "<id>_720".
+    let uptimeList: Record<string, number> = {};
     if (heartbeatResult.success) {
       const heartbeatData = heartbeatResult.data as Record<string, any>;
       heartbeatList = heartbeatData.heartbeatList || heartbeatData || {};
+      uptimeList = heartbeatData.uptimeList || {};
     }
 
     // Fallback to heartbeatList from main response if separate endpoint didn't work
@@ -281,9 +284,15 @@ export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
               monitor.status = latestHeartbeat.status ?? 2;
               monitor.ping = latestHeartbeat.ping ?? null;
 
-              // Calculate uptime percentage from heartbeats
-              const upHeartbeats = heartbeats.filter((h) => h.status === 1).length;
-              monitor.uptime = heartbeats.length > 0 ? (upHeartbeats / heartbeats.length) * 100 : 0;
+              // Prefer Uptime Kuma's authoritative 24h uptime ratio; fall back to
+              // computing it from the heartbeat window.
+              const uptime24 = uptimeList[`${monitor.id}_24`] ?? uptimeList[`${monitor.id}_720`];
+              if (typeof uptime24 === "number") {
+                monitor.uptime = uptime24 * 100;
+              } else {
+                const upHeartbeats = heartbeats.filter((h) => h.status === 1).length;
+                monitor.uptime = heartbeats.length > 0 ? (upHeartbeats / heartbeats.length) * 100 : 0;
+              }
 
               // Get average response time
               const pings = heartbeats
@@ -323,7 +332,8 @@ export const getUptimeKumaStatus = createServerFn({ method: "POST" }).handler(
               if (monitor.status === undefined) {
                 monitor.status = 2; // pending
               }
-              monitor.uptime = 0;
+              const uptime24 = uptimeList[`${monitor.id}_24`] ?? uptimeList[`${monitor.id}_720`];
+              monitor.uptime = typeof uptime24 === "number" ? uptime24 * 100 : 0;
               monitor.ping = null;
               monitor.avgPing = null;
             }

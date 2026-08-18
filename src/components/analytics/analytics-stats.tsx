@@ -22,21 +22,21 @@ export function StatCard({
   trendValue,
 }: StatCardProps) {
   return (
-    <Card className="overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/30">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3 px-4 bg-gradient-to-br from-muted/30 to-transparent">
-        <CardTitle className="text-xs font-medium">{title}</CardTitle>
+    <Card className="overflow-hidden card-elevation">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3 px-4">
+        <CardTitle className="panel-label">{title}</CardTitle>
         {icon && <div className="text-muted-foreground/70">{icon}</div>}
       </CardHeader>
       <CardContent className="pt-2 pb-3 px-4">
-        <div className="text-xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">{value}</div>
+        <div className="text-xl font-mono font-bold tabular-nums">{value}</div>
         {(description || trendValue) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
             {trend && trendValue && (
               <span
                 className={cn(
-                  "flex items-center gap-0.5 font-medium",
-                  trend === "up" && "text-green-600 dark:text-green-500",
-                  trend === "down" && "text-red-600 dark:text-red-500"
+                  "flex items-center gap-0.5 font-mono tabular-nums font-medium",
+                  trend === "up" && "text-success",
+                  trend === "down" && "text-error"
                 )}
               >
                 {trend === "up" ? (
@@ -121,7 +121,7 @@ export function TopAppsList({
       case "most-used":
       case "least-used":
         return (
-          <Badge variant="secondary" className="ml-auto">
+          <Badge variant="secondary" className="ml-auto font-mono tabular-nums">
             {app.totalAccesses} {app.totalAccesses === 1 ? "access" : "accesses"}
           </Badge>
         );
@@ -135,7 +135,7 @@ export function TopAppsList({
                 ? "secondary"
                 : "destructive"
             }
-            className="ml-auto"
+            className="ml-auto font-mono tabular-nums"
           >
             {app.uptimePercentage !== null ? `${app.uptimePercentage.toFixed(1)}%` : "N/A"}
           </Badge>
@@ -154,14 +154,15 @@ export function TopAppsList({
     }
   };
 
+  // Subtle semantic tint + accent color per list type (on-token, no gradients).
   const getGradientClass = () => {
     switch (type) {
       case "most-used":
-        return "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20";
+        return "bg-info/5 [&_svg]:text-info";
       case "least-used":
-        return "bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20";
+        return "bg-warning/5 [&_svg]:text-warning";
       case "least-reliable":
-        return "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20";
+        return "bg-error/5 [&_svg]:text-error";
     }
   };
 
@@ -188,11 +189,11 @@ export function TopAppsList({
   };
 
   return (
-    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-2">
-      <CardHeader className={cn("pb-2 pt-3 px-4", getGradientClass())}>
+    <Card className="overflow-hidden card-elevation">
+      <CardHeader className={cn("pb-2 pt-3 px-4 border-b border-border", getGradientClass())}>
         <div className="flex items-center gap-2">
           {getIcon()}
-          <CardTitle className="text-base">{title}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
         </div>
         {description && <CardDescription className="mt-0.5 text-xs">{description}</CardDescription>}
       </CardHeader>
@@ -208,13 +209,13 @@ export function TopAppsList({
             {displayApps.map((app, index) => (
               <div
                 key={app.appId}
-                className="group flex items-center gap-2 p-2 rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200 hover:shadow-md"
+                className="group flex items-center gap-2 p-2 rounded-md border hover:border-ring hover:bg-muted/50 transition-colors"
               >
-                <span className="text-xs font-bold text-muted-foreground/60 w-5 group-hover:text-primary transition-colors">
+                <span className="font-mono tabular-nums text-xs font-bold text-muted-foreground/60 w-5">
                   #{index + 1}
                 </span>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="flex-shrink-0 h-7 w-7 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200">
+                  <div className="flex-shrink-0 h-7 w-7 rounded-md bg-muted flex items-center justify-center">
                     {app.appIcon ? (
                       app.appIcon.startsWith("http") ? (
                         <img

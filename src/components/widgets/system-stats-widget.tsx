@@ -44,16 +44,18 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
 
-function getUsageColor(usage: number): string {
-  if (usage >= 90) return "bg-red-500";
-  if (usage >= 75) return "bg-yellow-500";
-  return "bg-green-500";
+// Literal class strings (not interpolated) so Tailwind can generate the
+// child-targeting variant for the Progress fill.
+function getUsageBarClass(usage: number): string {
+  if (usage >= 90) return "[&>div]:bg-error";
+  if (usage >= 75) return "[&>div]:bg-warning";
+  return "[&>div]:bg-success";
 }
 
 function getUsageTextColor(usage: number): string {
-  if (usage >= 90) return "text-red-500";
-  if (usage >= 75) return "text-yellow-500";
-  return "text-green-500";
+  if (usage >= 90) return "text-error";
+  if (usage >= 75) return "text-warning";
+  return "text-success";
 }
 
 export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: SystemStatsWidgetProps) {
@@ -173,7 +175,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
           <div className="space-y-4">
             {/* Hostname */}
             {stats.hostname && (
-              <div className="text-xs text-muted-foreground text-center -mt-1 -mb-2">
+              <div className="text-xs text-muted-foreground text-center -mt-1 -mb-2 font-mono">
                 {stats.hostname}
               </div>
             )}
@@ -189,13 +191,13 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
                       ({stats.cpu.cores} cores)
                     </span>
                   </div>
-                  <span className={cn("font-medium", getUsageTextColor(stats.cpu.usage))}>
+                  <span className={cn("font-mono tabular-nums font-medium", getUsageTextColor(stats.cpu.usage))}>
                     {stats.cpu.usage}%
                   </span>
                 </div>
                 <Progress
                   value={stats.cpu.usage}
-                  className={cn("h-2", `[&>div]:${getUsageColor(stats.cpu.usage)}`)}
+                  className={cn("h-2", getUsageBarClass(stats.cpu.usage))}
                 />
               </div>
             )}
@@ -210,16 +212,16 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      {formatBytes(stats.ram.used)} / {formatBytes(stats.ram.total)}
+                      <span className="font-mono">{formatBytes(stats.ram.used)} / {formatBytes(stats.ram.total)}</span>
                     </span>
-                    <span className={cn("font-medium", getUsageTextColor(stats.ram.usage))}>
+                    <span className={cn("font-mono tabular-nums font-medium", getUsageTextColor(stats.ram.usage))}>
                       {stats.ram.usage}%
                     </span>
                   </div>
                 </div>
                 <Progress
                   value={stats.ram.usage}
-                  className={cn("h-2", `[&>div]:${getUsageColor(stats.ram.usage)}`)}
+                  className={cn("h-2", getUsageBarClass(stats.ram.usage))}
                 />
               </div>
             )}
@@ -238,16 +240,16 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
-                          {formatBytes(disk.used)} / {formatBytes(disk.total)}
+                          <span className="font-mono">{formatBytes(disk.used)} / {formatBytes(disk.total)}</span>
                         </span>
-                        <span className={cn("font-medium", getUsageTextColor(disk.usage))}>
+                        <span className={cn("font-mono tabular-nums font-medium", getUsageTextColor(disk.usage))}>
                           {disk.usage}%
                         </span>
                       </div>
                     </div>
                     <Progress
                       value={disk.usage}
-                      className={cn("h-2", `[&>div]:${getUsageColor(disk.usage)}`)}
+                      className={cn("h-2", getUsageBarClass(disk.usage))}
                     />
                   </div>
                 ))}
@@ -259,17 +261,17 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
               <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Network className="h-4 w-4 text-muted-foreground" />
-                  <span>Network</span>
+                  <span className="panel-label">Network</span>
                 </div>
                 {stats.network.map((iface) => (
                   <div
                     key={iface.name}
                     className="flex items-center justify-between text-xs bg-muted/30 rounded p-1.5"
                   >
-                    <span className="font-medium">{iface.name}</span>
+                    <span className="font-mono font-medium">{iface.name}</span>
                     <div className="flex items-center gap-3 text-muted-foreground">
-                      <span>↓ {formatBytes(iface.bytesIn)}</span>
-                      <span>↑ {formatBytes(iface.bytesOut)}</span>
+                      <span className="font-mono">↓ {formatBytes(iface.bytesIn)}</span>
+                      <span className="font-mono">↑ {formatBytes(iface.bytesOut)}</span>
                     </div>
                   </div>
                 ))}
@@ -281,7 +283,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
               <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Thermometer className="h-4 w-4 text-muted-foreground" />
-                  <span>Temperatures</span>
+                  <span className="panel-label">Temperatures</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {stats.temperatures.map((temp, i) => (
@@ -289,12 +291,12 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
                       key={`${temp.label}-${i}`}
                       className={cn(
                         "text-xs px-2 py-1 rounded",
-                        temp.value >= 80 && "bg-red-500/20 text-red-500",
-                        temp.value >= 60 && temp.value < 80 && "bg-yellow-500/20 text-yellow-500",
+                        temp.value >= 80 && "bg-error/20 text-error",
+                        temp.value >= 60 && temp.value < 80 && "bg-warning/20 text-warning",
                         temp.value < 60 && "bg-muted text-muted-foreground"
                       )}
                     >
-                      {temp.label}: {temp.value}°C
+                      {temp.label}: <span className="font-mono">{temp.value}°C</span>
                     </div>
                   ))}
                 </div>
@@ -306,7 +308,7 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
               <div className="space-y-2 pt-2 mt-2 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Activity className="h-4 w-4 text-muted-foreground" />
-                  <span>Top Processes</span>
+                  <span className="panel-label">Top Processes</span>
                 </div>
                 <div className="space-y-1">
                   {stats.processes.slice(0, 5).map((proc) => (
@@ -318,10 +320,10 @@ export function SystemStatsWidget({ widget, onEdit, onDelete, onResize }: System
                         {proc.name}
                       </span>
                       <div className="flex items-center gap-3 text-muted-foreground">
-                        <span className={cn(proc.cpu > 50 && "text-yellow-500", proc.cpu > 80 && "text-red-500")}>
-                          CPU: {proc.cpu}%
+                        <span className={cn(proc.cpu > 50 && "text-warning", proc.cpu > 80 && "text-error")}>
+                          CPU: <span className="font-mono">{proc.cpu}%</span>
                         </span>
-                        <span>MEM: {proc.memory}%</span>
+                        <span>MEM: <span className="font-mono">{proc.memory}%</span></span>
                       </div>
                     </div>
                   ))}
