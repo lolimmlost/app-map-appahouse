@@ -12,6 +12,12 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build-time public flags (baked into the client bundle by Vite).
+# Coolify passes "Build Variable" env vars as --build-arg; they must be declared
+# as ARG and re-exported as ENV so `vite build` can read import.meta.env.*.
+ARG VITE_AUTHENTIK_ENABLED
+ENV VITE_AUTHENTIK_ENABLED=$VITE_AUTHENTIK_ENABLED
+
 # Build the application
 RUN npm run build
 
