@@ -331,13 +331,24 @@ function SettingsPage() {
                 <div className="space-y-2">
                   <Label>SearXNG Instance URL</Label>
                   <Input
-                    placeholder="http://10.0.0.30:30053"
+                    placeholder="https://search.example.com"
                     value={formData.searxngUrl}
                     onChange={(e) => handleChange("searxngUrl", e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    The URL of your SearXNG instance. Must have the JSON API enabled.
-                  </p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>
+                      Use a URL reachable by <strong>both this server and your browser</strong> —
+                      when behind a reverse proxy, that&rsquo;s the public/proxied address
+                      (e.g. <code className="font-mono">https://search.example.com</code>), not an
+                      internal-only LAN address. The server fetches inline results from it, and the
+                      &ldquo;Search on SearXNG&rdquo; action opens it directly in your browser.
+                    </p>
+                    <p>
+                      Inline results also require the JSON API enabled on the instance
+                      (<code className="font-mono">search.formats: [html, json]</code>). Without it,
+                      the direct search action still works.
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
