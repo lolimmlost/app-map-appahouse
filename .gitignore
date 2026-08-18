@@ -62,3 +62,15 @@ drizzle/meta
 count.txt
 todos.json
 *.bak
+
+# Agent / automation scratch output
+.automaker
+.design-sync
+
+# Test artifacts
+playwright-report
+test-results
+
+# Database backups / dumps (keep tracked drizzle migrations)
+backup_*.sql
+*.dump
