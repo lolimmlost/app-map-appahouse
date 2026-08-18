@@ -44,10 +44,25 @@ export const searchSearxng = createServerFn({ method: "GET" }).handler(
       url.searchParams.set("format", "json");
 
       const response = await fetch(url.toString(), {
+        headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(5000),
       });
 
-      if (!response.ok) return { results: [] as SearxngResult[] };
+      if (!response.ok) {
+        // 403 here almost always means the instance hasn't enabled the JSON
+        // format (search.formats: [html, json] in settings.yml). Surface it so
+        // the UI can fall back to the direct HTML search link.
+        return {
+          results: [] as SearxngResult[],
+          error: response.status === 403 ? "json_disabled" : `http_${response.status}`,
+        };
+      }
+
+      // If JSON isn't enabled some instances return 200 with an HTML body.
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        return { results: [] as SearxngResult[], error: "json_disabled" };
+      }
 
       const data = await response.json();
       const results: SearxngResult[] = (data.results || [])
@@ -61,7 +76,7 @@ export const searchSearxng = createServerFn({ method: "GET" }).handler(
 
       return { results };
     } catch {
-      return { results: [] as SearxngResult[] };
+      return { results: [] as SearxngResult[], error: "unreachable" };
     }
   }
 );
