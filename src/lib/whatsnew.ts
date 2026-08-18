@@ -13,6 +13,14 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    date: "August 18, 2026",
+    items: [
+      "Sign in with Authentik — optional single sign-on now on the login screen",
+      "Signing in with Authentik links to your existing account and drops you straight on the dashboard",
+      "v1.0.0 — first stable release",
+    ],
+  },
+  {
     date: "August 7, 2026",
     items: [
       "Semantic status colours — online/offline/degraded now read at a glance, in light and dark",
