@@ -71,10 +71,19 @@ function normalizeTags(app: AppWithRelations): Tag[] {
   return raw.map((t) => (t && typeof t === "object" && "tag" in t ? (t as { tag: Tag }).tag : (t as Tag)));
 }
 
-function HostCell({ url }: { url?: string | null }) {
+function HostCell({
+  url,
+  appId,
+  kind,
+  onOpen,
+}: {
+  url?: string | null;
+  appId: string;
+  kind: "local" | "remote";
+  onOpen: (appId: string, kind: "local" | "remote") => void;
+}) {
   const parts = hostParts(url);
   const normalized = normalizeUrl(url);
-  const { trackAccess } = useTrackAppAccess();
   if (!parts || !normalized) {
     return <span className="font-mono text-xs text-muted-foreground/40">—</span>;
   }
@@ -83,7 +92,10 @@ function HostCell({ url }: { url?: string | null }) {
       href={normalized}
       target="_blank"
       rel="noreferrer"
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(appId, kind);
+      }}
       className="group/host inline-flex w-full items-baseline gap-1 font-mono text-xs tabular-nums"
       title={url ?? undefined}
     >
@@ -362,6 +374,9 @@ function AppRow({
   const primaryUrl = app.localUrl || app.remoteUrl;
   const hasValidUrl = !!normalizeUrl(primaryUrl);
 
+  const trackHostOpen = (appId: string, kind: "local" | "remote") => {
+    trackAccess({ appId, accessType: kind === "local" ? "open_local" : "open_remote" });
+  };
   const openUrl = (which: "local" | "remote") => {
     const url = which === "local" ? app.localUrl : app.remoteUrl;
     const normalized = normalizeUrl(url);
@@ -372,10 +387,26 @@ function AppRow({
   };
   const copyUrl = async (which: "local" | "remote") => {
     const url = which === "local" ? app.localUrl : app.remoteUrl;
-    if (url) {
-      await navigator.clipboard.writeText(url);
+    if (!url) return;
+    try {
+      // navigator.clipboard is undefined on insecure (plain http) contexts —
+      // common for LAN homelab access — so guard and fall back.
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
       setCopied(which);
       setTimeout(() => setCopied(null), 2000);
+    } catch {
+      /* clipboard blocked — no-op rather than an unhandled rejection */
     }
   };
   const openPrimary = () => {
@@ -461,8 +492,12 @@ function AppRow({
         </span>
       </TableCell>
 
-      <TableCell className="max-w-[13rem]"><HostCell url={app.localUrl} /></TableCell>
-      <TableCell className="hidden max-w-[13rem] sm:table-cell"><HostCell url={app.remoteUrl} /></TableCell>
+      <TableCell className="max-w-[13rem]">
+        <HostCell url={app.localUrl} appId={app.id} kind="local" onOpen={trackHostOpen} />
+      </TableCell>
+      <TableCell className="hidden max-w-[13rem] sm:table-cell">
+        <HostCell url={app.remoteUrl} appId={app.id} kind="remote" onOpen={trackHostOpen} />
+      </TableCell>
 
       <TableCell className="hidden xl:table-cell">
         <div className="flex flex-nowrap items-center gap-1">

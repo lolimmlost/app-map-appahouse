@@ -64,7 +64,10 @@ export function WhatsNew() {
         size="icon"
         className="relative h-9 w-9"
         title="What's new"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          markSeen();
+        }}
       >
         <Sparkles className="h-4 w-4" />
         {!seen && (

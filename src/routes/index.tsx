@@ -281,15 +281,18 @@ function DashboardPage() {
 
   // Sidebar-driven filters — applied to every view mode.
   const hasFilters = !!(activeStatus || activeHost || activeCategoryId);
-  const visibleApps = apps.filter((app) => {
-    if (activeStatus && (healthStatuses[app.id] ?? "unknown") !== activeStatus) return false;
-    if (activeCategoryId && app.categoryId !== activeCategoryId) return false;
-    if (activeHost) {
-      const host = hostParts(app.localUrl)?.host ?? hostParts(app.remoteUrl)?.host;
-      if (host !== activeHost) return false;
-    }
-    return true;
-  });
+  const visibleApps = useMemo(() => {
+    if (!hasFilters) return apps;
+    return apps.filter((app) => {
+      if (activeStatus && (healthStatuses[app.id] ?? "unknown") !== activeStatus) return false;
+      if (activeCategoryId && app.categoryId !== activeCategoryId) return false;
+      if (activeHost) {
+        const host = hostParts(app.localUrl)?.host ?? hostParts(app.remoteUrl)?.host;
+        if (host !== activeHost) return false;
+      }
+      return true;
+    });
+  }, [apps, hasFilters, activeStatus, activeCategoryId, activeHost, healthStatuses]);
   const clearFilters = () => { setActiveStatus(null); setActiveHost(null); setActiveCategoryId(null); };
   const activeCategoryName = categories.find((c) => c.id === activeCategoryId)?.name;
 
