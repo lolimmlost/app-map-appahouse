@@ -1,0 +1,61 @@
+name: Bug report
+description: Report something that isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a bug! Please fill out the sections below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: When I click X, Y happens — I expected Z.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click '...'
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app?
+      options:
+        - Apps / dashboard
+        - Widgets
+        - Authentication / SSO
+        - Integrations / search
+        - Analytics / status pages
+        - Deployment / Docker
+        - Other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: How are you running it, and on what?
+      value: |
+        - Deployment: (Docker / Coolify / local dev)
+        - App version / commit:
+        - Browser & OS:
+        - Node version (if dev):
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Relevant server or browser-console logs, or screenshots. Redact any secrets.
+      render: shell
+    validations:
+      required: false
