@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { uptimeTextClass, uptimeBgClass } from "@/components/apps/host";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface UptimeDay {
@@ -14,12 +15,7 @@ interface UptimeChartProps {
 }
 
 function getStatusColor(uptime: number): string {
-  if (uptime >= 99) return "bg-success";
-  if (uptime >= 95) return "bg-success";
-  if (uptime >= 90) return "bg-warning";
-  if (uptime >= 75) return "bg-warning";
-  if (uptime > 0) return "bg-error";
-  return "bg-muted-foreground";
+  return uptimeBgClass(uptime);
 }
 
 function formatDate(dateStr: string): string {
@@ -118,13 +114,7 @@ export function UptimeSummary({
   avgResponseTime,
   className,
 }: UptimeSummaryProps) {
-  const getUptimeColor = (value: number) => {
-    if (value >= 99.9) return "text-success";
-    if (value >= 99) return "text-success";
-    if (value >= 95) return "text-warning";
-    if (value >= 90) return "text-warning";
-    return "text-error";
-  };
+  const getUptimeColor = (value: number) => uptimeTextClass(value);
 
   return (
     <div className={cn("flex items-center gap-6", className)}>

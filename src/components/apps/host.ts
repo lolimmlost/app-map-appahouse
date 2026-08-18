@@ -42,6 +42,44 @@ export function hostParts(url: string | null | undefined): HostParts | null {
   }
 }
 
+/**
+ * Canonical uptime → semantic level, shared across the table, widgets, status
+ * page and analytics so thresholds don't drift. >=99% healthy, >=95% degraded,
+ * below that unhealthy; null when there's no data.
+ */
+export type UptimeLevel = "success" | "warning" | "error";
+
+export function uptimeLevel(uptime: number | null | undefined): UptimeLevel | null {
+  if (uptime == null || Number.isNaN(uptime)) return null;
+  if (uptime >= 99) return "success";
+  if (uptime >= 95) return "warning";
+  return "error";
+}
+
+// Literal class strings (not interpolated) so Tailwind's scanner keeps them.
+const UPTIME_TEXT: Record<UptimeLevel, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  error: "text-error",
+};
+const UPTIME_BG: Record<UptimeLevel, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  error: "bg-error",
+};
+
+/** `text-*` class for an uptime %; muted when there's no data. */
+export function uptimeTextClass(uptime: number | null | undefined): string {
+  const level = uptimeLevel(uptime);
+  return level ? UPTIME_TEXT[level] : "text-muted-foreground";
+}
+
+/** `bg-*` class for an uptime % (bars/fills); muted when there's no data. */
+export function uptimeBgClass(uptime: number | null | undefined): string {
+  const level = uptimeLevel(uptime);
+  return level ? UPTIME_BG[level] : "bg-muted-foreground";
+}
+
 /** Compact relative time, e.g. "2m ago", "3h ago". */
 export function relativeTime(iso: string | null | undefined): string {
   if (!iso) return "—";

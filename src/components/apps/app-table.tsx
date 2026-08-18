@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useTrackAppAccess } from "@/hooks/use-analytics";
-import { hostParts, normalizeUrl, relativeTime } from "./host";
+import { hostParts, normalizeUrl, relativeTime, uptimeTextClass } from "./host";
 import type { AppWithRelations } from "./app-grid";
 import type { HealthStatus, DependencyStatus } from "./app-card";
 import type { App, Tag } from "@/types/database";
@@ -365,11 +365,7 @@ function AppRow({
   const slow = typeof ms === "number" && ms >= 500;
   const down = health === "offline";
   const uptime = metric?.uptime;
-  const uptimeTone =
-    typeof uptime !== "number" ? "text-muted-foreground"
-      : uptime < 90 ? "text-error"
-      : uptime < 99 ? "text-warning"
-      : "text-muted-foreground";
+  const uptimeTone = uptimeTextClass(uptime);
 
   const primaryUrl = app.localUrl || app.remoteUrl;
   const hasValidUrl = !!normalizeUrl(primaryUrl);

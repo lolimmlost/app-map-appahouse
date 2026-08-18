@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getUptimeKumaStatus } from "@/lib/server/widget-proxy.server";
 import { updateWidget } from "@/lib/server/widgets.server";
+import { uptimeTextClass } from "@/components/apps/host";
 import type { Widget, WidgetConfig } from "@/types/database";
 import type { Integration } from "@/types/database";
 
@@ -375,9 +376,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 <span
                                   className={cn(
                                     "w-11 text-right font-mono text-[10px] font-medium tabular-nums",
-                                    monitor.uptime >= 99 && "text-success",
-                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
-                                    monitor.uptime < 95 && "text-error"
+                                    uptimeTextClass(monitor.uptime)
                                   )}
                                 >
                                   {monitor.uptime.toFixed(1)}%
@@ -411,9 +410,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                   <span
                                     className={cn(
                                       "text-xs font-mono font-medium tabular-nums min-w-[45px] text-right",
-                                      monitor.uptime >= 99 && "text-success",
-                                      monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
-                                      monitor.uptime < 95 && "text-error"
+                                    uptimeTextClass(monitor.uptime)
                                     )}
                                   >
                                     {monitor.uptime.toFixed(1)}%
@@ -429,9 +426,7 @@ export function UptimeKumaWidget({ widget, onEdit, onDelete, onResize }: UptimeK
                                 <span
                                   className={cn(
                                     "text-xs font-mono font-medium tabular-nums",
-                                    monitor.uptime >= 99 && "text-success",
-                                    monitor.uptime >= 95 && monitor.uptime < 99 && "text-warning",
-                                    monitor.uptime < 95 && "text-error"
+                                    uptimeTextClass(monitor.uptime)
                                   )}
                                 >
                                   {monitor.uptime.toFixed(1)}% uptime

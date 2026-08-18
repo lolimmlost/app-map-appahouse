@@ -49,6 +49,7 @@ import {
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uptimeTextClass } from "@/components/apps/host";
 import type {
   HealthHistoryEntry,
   UptimeStats,
@@ -238,13 +239,7 @@ export function UptimeStatistics({
   yearlyStats,
   isLoading = false,
 }: UptimeStatisticsProps) {
-  const getUptimeColor = (percentage: number | null) => {
-    if (percentage === null) return "text-muted-foreground";
-    if (percentage >= 99.9) return "text-success";
-    if (percentage >= 99) return "text-success";
-    if (percentage >= 95) return "text-warning";
-    return "text-error";
-  };
+  const getUptimeColor = (percentage: number | null) => uptimeTextClass(percentage);
 
   const getSlaStatus = (percentage: number | null) => {
     if (percentage === null) return { label: "N/A", variant: "secondary" as const };
