@@ -45,6 +45,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             >
                 <AuthUIProvider
                     authClient={authClient}
+                    redirectTo="/"
                     navigate={(href) => navigate({ to: href })}
                     replace={(href) => navigate({ to: href, replace: true })}
                     Link={({ href, ...props }) => <Link to={href} {...props} />}
