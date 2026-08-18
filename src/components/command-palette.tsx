@@ -81,6 +81,21 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
     enabled: !!session?.user,
   });
   const searxngEnabled = settingsData?.settings?.searxngEnabled ?? false;
+  const searxngUrl = settingsData?.settings?.searxngUrl ?? "";
+
+  // Direct link to the SearXNG instance's HTML search page — always works even
+  // when the JSON API (format=json) is disabled on the instance, which is the
+  // common reason inline results come back empty.
+  const openWebSearch = useCallback(() => {
+    const q = encodeURIComponent(search.trim());
+    if (!q) return;
+    const base = searxngUrl.trim().replace(/\/+$/, "");
+    const target = base
+      ? `${base}/search?q=${q}`
+      : `https://duckduckgo.com/?q=${q}`;
+    window.open(target, "_blank", "noopener,noreferrer");
+    setOpen(false);
+  }, [search, searxngUrl]);
 
   // Debounce search input for SearXNG
   useEffect(() => {
@@ -96,6 +111,7 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
     staleTime: 60000,
   });
   const searxngResults = searxngData?.results ?? [];
+  const searxngError = (searxngData as { error?: string } | undefined)?.error;
 
   const apps = appsData?.apps ?? [];
   const tags = tagsData?.tags ?? [];
@@ -197,7 +213,11 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
       <CommandDialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setSearch(""); }}>
         <CommandInput placeholder="Search apps, categories, tags, notes..." value={search} onValueChange={setSearch} />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>
+            {search.trim().length >= 2
+              ? "No local matches — try the web search below."
+              : "No results found."}
+          </CommandEmpty>
 
           {/* Apps */}
           {apps.length > 0 && (
@@ -388,17 +408,48 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
             )}
           </CommandGroup>
 
-          {/* SearXNG Web Search */}
-          {searxngEnabled && search.length >= 2 && (
+          {/* Web search — always offers a direct escape hatch to run the query,
+              plus inline SearXNG results when the JSON API returns them. */}
+          {search.trim().length >= 2 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Search with SearXNG" forceMount>
-                {isSearxngLoading ? (
+              <CommandGroup heading="Web search" forceMount>
+                {/* Always-available direct search — opens the instance's search
+                    page (or DuckDuckGo if no SearXNG URL is configured). */}
+                <CommandItem
+                  value={`websearch-open-${search}`}
+                  forceMount
+                  onSelect={openWebSearch}
+                >
+                  <Search className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                  <span className="flex-1 truncate">
+                    Search <span className="font-medium">&ldquo;{search.trim()}&rdquo;</span>{" "}
+                    {searxngUrl ? "on SearXNG" : "on the web"}
+                  </span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                </CommandItem>
+
+                {/* Inline results from the JSON API (when enabled + available). */}
+                {searxngEnabled && isSearxngLoading && (
                   <CommandItem disabled value="searxng-loading" forceMount>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin text-muted-foreground" />
-                    <span className="text-muted-foreground">Searching the web...</span>
+                    <span className="text-muted-foreground">Searching the web…</span>
                   </CommandItem>
-                ) : searxngResults.length > 0 ? (
+                )}
+                {searxngEnabled &&
+                  !isSearxngLoading &&
+                  searxngResults.length === 0 &&
+                  searxngError === "json_disabled" &&
+                  debouncedSearch.trim().length >= 2 && (
+                    <CommandItem disabled value="searxng-json-hint" forceMount>
+                      <Globe className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground text-xs">
+                        Inline results need JSON enabled on your SearXNG (search.formats). Use the direct search above.
+                      </span>
+                    </CommandItem>
+                  )}
+                {searxngEnabled &&
+                  !isSearxngLoading &&
                   searxngResults.map((result, index) => (
                     <CommandItem
                       key={`searxng-${index}`}
@@ -420,13 +471,7 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
                       </div>
                       <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     </CommandItem>
-                  ))
-                ) : debouncedSearch.length >= 2 ? (
-                  <CommandItem disabled value="searxng-empty" forceMount>
-                    <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">No web results found</span>
-                  </CommandItem>
-                ) : null}
+                  ))}
               </CommandGroup>
             </>
           )}
