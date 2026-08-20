@@ -67,6 +67,13 @@ todos.json
 .automaker
 .design-sync
 
+# design-sync (staged scripts, build output, machine state)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
 # Test artifacts
 playwright-report
 test-results
@@ -74,3 +81,10 @@ test-results
 # Database backups / dumps (keep tracked drizzle migrations)
 backup_*.sql
 *.dump
+
+# Internal deployment runbooks (contain LAN hosts/secrets — public docs live in docs/)
+AUTHENTIK_SSO_SETUP_appmap.md
+COOLIFY_DEPLOYMENT.md
+DATABASE_MIGRATION.md
+DEPENDENCY_FEATURE_VERIFICATION.md
+check-analytics.js
