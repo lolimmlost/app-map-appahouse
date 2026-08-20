@@ -10,6 +10,18 @@ Built with TanStack Start, React, and Better Auth. Deploys as a single container
 
 ---
 
+## Documentation
+
+Full guides live in [`docs/`](./docs):
+
+- **[Quick start](./docs/quick-start.md)** — running locally in ~5 minutes
+- **[Configuration reference](./docs/configuration.md)** — every environment variable
+- **[Deployment](./docs/deployment.md)** — Docker, Compose, and Coolify
+- **[Authentik SSO](./docs/authentik-sso.md)** — optional single sign-on
+- **[FAQ & troubleshooting](./docs/faq.md)** — common questions and fixes
+
+---
+
 ## Features
 
 - **App catalog** — cards with separate local/remote URLs, health status, and quick
@@ -59,6 +71,9 @@ npm run db:push
 npm run dev
 ```
 
+New to the project? The **[quick-start guide](./docs/quick-start.md)** walks through
+each step, including spinning up a throwaway Postgres.
+
 ### Build & run for production
 
 ```bash
@@ -100,6 +115,9 @@ ${BETTER_AUTH_URL}/api/auth/oauth2/callback/authentik
 > anyone Authentik authenticates can use the app. Restrict access with an Authentik
 > **Application → group binding**.
 
+Step-by-step provider setup (admin UI **and** API), verification, and troubleshooting
+are in the **[Authentik SSO guide](./docs/authentik-sso.md)**.
+
 ---
 
 ## Deployment
@@ -111,6 +129,9 @@ bundle, suitable for Coolify, Docker Compose, or any container host. A
 Build-time public flags (anything `VITE_*`) must be passed as Docker **build args** —
 they are inlined by Vite during `npm run build`, not read at runtime.
 
+See the **[deployment guide](./docs/deployment.md)** for Docker, Compose, and Coolify
+walkthroughs, including the Nixpacks→Dockerfile switch.
+
 ---
 
 ## Database migrations
@@ -119,7 +140,7 @@ Schema lives in `src/database/schema` and migrations in `drizzle/`.
 
 ```bash
 npm run db:push       # push the current schema to the database
-npx drizzle-kit generate   # generate a migration from schema changes
+npm run db:generate   # generate a migration from schema changes
 ```
 
 ---
@@ -136,9 +157,10 @@ npm run check         # Biome lint + format check
 
 ## Contributing
 
-Issues and pull requests are welcome — see
-[`.github/`](./.github) for bug-report and feature-request templates. Please run
-`npm run check` before opening a PR. Security reports: see [`SECURITY.md`](./SECURITY.md).
+Issues and pull requests are welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for
+the workflow and [`.github/`](./.github) for the bug-report and feature-request
+templates. Please run `npm run check` before opening a PR. Security reports: see
+[`SECURITY.md`](./SECURITY.md).
 
 ## License
 
