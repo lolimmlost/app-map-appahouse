@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+- Added a **`docs/`** guide set: quick start, configuration reference, deployment
+  (Docker / Compose / Coolify), Authentik SSO (admin UI + API), and an FAQ.
+- Added **`CONTRIBUTING.md`** and linked the guides from the README and the issue
+  chooser.
+
 ## [1.0.0] - 2026-08-18
 
 First stable release — a self-hosted app dashboard and ops console for the
