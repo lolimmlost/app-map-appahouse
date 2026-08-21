@@ -15,7 +15,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [1.0.0] - 2026-08-18
 
 First stable release — a self-hosted app dashboard and ops console for the
-homelab, deployed at `appmap.appahouse.com`.
+homelab.
 
 ### Authentication
 - Email/password auth via Better Auth, with an account settings view.
