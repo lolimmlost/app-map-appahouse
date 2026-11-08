@@ -13,6 +13,7 @@ export const integrationTypeEnum = pgEnum("integration_type", [
   "portainer",
   "glances",
   "truenas",
+  "home_assistant",
 ]);
 
 export const integrations = pgTable("integrations", {

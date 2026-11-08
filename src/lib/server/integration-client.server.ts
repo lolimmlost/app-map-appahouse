@@ -98,6 +98,7 @@ export class IntegrationClient extends HttpClient {
     // Add authentication based on integration type
     switch (type) {
       case "truenas":
+      case "home_assistant":
         if (apiKey) {
           headers["Authorization"] = `Bearer ${apiKey}`;
         }

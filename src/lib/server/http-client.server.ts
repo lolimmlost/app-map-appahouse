@@ -715,19 +715,23 @@ export async function performHealthCheck(
 }> {
   const client = getDefaultClient();
   const startTime = Date.now();
+  const method = options.method || "HEAD";
+  const send = (m: "HEAD" | "GET") =>
+    client.request(m, url, {
+      timeout: options.timeout || 5000,
+      allowInsecure: options.allowInsecure,
+      headers: {
+        "User-Agent": "AppMap-HealthCheck/1.0",
+      },
+    });
 
   try {
-    const result = await client.request(
-      options.method || "HEAD",
-      url,
-      {
-        timeout: options.timeout || 5000,
-        allowInsecure: options.allowInsecure,
-        headers: {
-          "User-Agent": "AppMap-HealthCheck/1.0",
-        },
-      }
-    );
+    let result = await send(method);
+    // Some servers (e.g. Home Assistant) reject HEAD outright; that says nothing
+    // about whether they're up, so retry the same URL with GET
+    if (method === "HEAD" && (result.status === 405 || result.status === 501)) {
+      result = await send("GET");
+    }
 
     const responseTime = Date.now() - startTime;
 

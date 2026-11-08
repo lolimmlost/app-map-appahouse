@@ -20,7 +20,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database, GripVertical, LayoutGrid, Columns } from "lucide-react";
+import { Plus, Clock, Cloud, Activity, Bookmark, ExternalLink, StickyNote, Film, Tv, Music, Play, ChevronLeft, AlertCircle, Server, Container, Database, GripVertical, LayoutGrid, Columns, House } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -43,6 +43,7 @@ import { JellyfinWidget } from "./jellyfin-widget";
 import { SystemStatsWidget } from "./system-stats-widget";
 import { DockerWidget } from "./docker-widget";
 import { TrueNASWidget } from "./truenas-widget";
+import { HomeAssistantWidget } from "./home-assistant-widget";
 import { WeatherWidget } from "./weather-widget";
 import { TopStatusBar } from "./top-status-bar";
 import { getWidgets, createWidget, deleteWidget, updateWidgetOrder, updateWidget } from "@/lib/server/widgets.server";
@@ -226,6 +227,14 @@ const WIDGET_TYPES = [
     icon: Database,
     requiresIntegration: true,
     integrationType: "truenas",
+  },
+  {
+    type: "home_assistant" as const,
+    name: "Home Assistant",
+    description: "Temperature, humidity & power trends",
+    icon: House,
+    requiresIntegration: true,
+    integrationType: "home_assistant",
   },
   {
     type: "bookmarks" as const,
@@ -443,6 +452,8 @@ export function WidgetGrid({ onEditWidget, reorderMode = false }: WidgetGridProp
         return <DockerWidget key={widget.id} {...commonProps} />;
       case "truenas":
         return <TrueNASWidget key={widget.id} {...commonProps} />;
+      case "home_assistant":
+        return <HomeAssistantWidget key={widget.id} {...commonProps} />;
       case "bookmarks":
         return <BookmarksWidget key={widget.id} {...commonProps} />;
       case "iframe":

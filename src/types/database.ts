@@ -90,7 +90,7 @@ export interface NewCategory {
 }
 
 // Integration types
-export type IntegrationType = "uptime_kuma" | "docker" | "truenas" | "portainer" | "sonarr" | "radarr" | "lidarr" | "jellyfin" | "glances" | "proxmox"
+export type IntegrationType = "uptime_kuma" | "docker" | "truenas" | "portainer" | "sonarr" | "radarr" | "lidarr" | "jellyfin" | "glances" | "proxmox" | "home_assistant"
 
 export interface Integration {
     id: string
@@ -253,7 +253,7 @@ export interface InAppNotification {
 }
 
 // Widget types
-export type WidgetType = "clock" | "weather" | "notes" | "bookmarks" | "iframe" | "uptime_kuma" | "docker" | "system_stats" | "sonarr" | "radarr" | "lidarr" | "jellyfin" | "truenas"
+export type WidgetType = "clock" | "weather" | "notes" | "bookmarks" | "iframe" | "uptime_kuma" | "docker" | "system_stats" | "sonarr" | "radarr" | "lidarr" | "jellyfin" | "truenas" | "home_assistant"
 
 export interface WidgetPosition {
     x: number
@@ -316,6 +316,9 @@ export interface WidgetConfig {
     showDisks?: boolean
     showApps?: boolean
     showNetworkInterfaces?: boolean
+    // Home Assistant
+    haEntities?: string[]
+    haHours?: number
     [key: string]: unknown
 }
 

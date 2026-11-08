@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Container,
   HardDrive,
+  Network,
   Import,
   Plug,
 } from "lucide-react";
@@ -40,7 +41,7 @@ interface ServiceDiscoveryDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type FilterSource = "all" | "docker" | "truenas";
+type FilterSource = "all" | "docker" | "truenas" | "network";
 type FilterStatus = "all" | "running" | "stopped";
 
 export function ServiceDiscoveryDialog({
@@ -80,7 +81,7 @@ export function ServiceDiscoveryDialog({
 
   const services = discoveryData?.services || [];
   const errors = discoveryData?.errors || [];
-  const integrationCount = discoveryData?.integrationCount || { docker: 0, truenas: 0 };
+  const integrationCount = discoveryData?.integrationCount || { docker: 0, truenas: 0, network: 0 };
 
   // Filter services
   const filteredServices = services.filter((service) => {
@@ -146,7 +147,7 @@ export function ServiceDiscoveryDialog({
               Discover Services
             </DialogTitle>
             <DialogDescription>
-              Auto-discover services from Docker and TrueNAS integrations
+              Auto-discover services from Docker and TrueNAS integrations and a LAN scan
             </DialogDescription>
           </DialogHeader>
 
@@ -163,6 +164,12 @@ export function ServiceDiscoveryDialog({
                 <span className="flex items-center gap-1">
                   <HardDrive className="h-4 w-4" />
                   {integrationCount.truenas} TrueNAS
+                </span>
+              )}
+              {integrationCount.network > 0 && (
+                <span className="flex items-center gap-1">
+                  <Network className="h-4 w-4" />
+                  {integrationCount.network} network{integrationCount.network === 1 ? "" : "s"}
                 </span>
               )}
               {services.length > 0 && (
@@ -186,6 +193,7 @@ export function ServiceDiscoveryDialog({
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="docker">Docker</SelectItem>
                   <SelectItem value="truenas">TrueNAS</SelectItem>
+                  <SelectItem value="network">Network</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -248,13 +256,13 @@ export function ServiceDiscoveryDialog({
               </div>
             ) : filteredServices.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4 text-muted-foreground">
-                {integrationCount.docker === 0 && integrationCount.truenas === 0 ? (
+                {integrationCount.docker === 0 && integrationCount.truenas === 0 && integrationCount.network === 0 ? (
                   <>
                     <Plug className="h-12 w-12" />
                     <div className="text-center">
                       <p className="font-medium">No integrations configured</p>
                       <p className="text-sm mb-4">
-                        Add Docker or TrueNAS integrations to discover services
+                        Add Docker or TrueNAS integrations, or set DISCOVERY_NETWORKS to scan the LAN
                       </p>
                       <Button
                         variant="outline"

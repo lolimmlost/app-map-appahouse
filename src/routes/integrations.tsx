@@ -26,6 +26,7 @@ import {
   HardDrive,
   ShieldOff,
   Info,
+  House,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,8 @@ type IntegrationType =
   | "proxmox"
   | "portainer"
   | "glances"
-  | "truenas";
+  | "truenas"
+  | "home_assistant";
 
 const integrationTypes: {
   value: IntegrationType;
@@ -147,6 +149,12 @@ const integrationTypes: {
     label: "TrueNAS",
     icon: <HardDrive className="h-4 w-4" />,
     description: "TrueNAS Scale apps & storage",
+  },
+  {
+    value: "home_assistant",
+    label: "Home Assistant",
+    icon: <House className="h-4 w-4" />,
+    description: "Sensor history & smart plugs",
   },
 ];
 
@@ -295,6 +303,18 @@ const integrationHelp: Record<IntegrationType, {
       "Give it a name and save",
       "Copy the key (shown only once!)",
       "Used for service discovery",
+    ],
+  },
+  home_assistant: {
+    urlPlaceholder: "http://192.168.1.100:8123",
+    urlHelp: "Home Assistant URL (include the port unless it's behind a proxy)",
+    apiKeyPlaceholder: "Long-lived access token",
+    apiKeyHelp: "Profile → Security → Long-lived access tokens",
+    instructions: [
+      "Click your user (bottom-left) → Security tab",
+      "Long-lived access tokens → Create token",
+      "Copy the token (shown only once!)",
+      "Read-only use: the widget only reads sensor history",
     ],
   },
 };

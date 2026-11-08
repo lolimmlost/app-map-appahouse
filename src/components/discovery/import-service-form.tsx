@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Container, HardDrive, GitBranch } from "lucide-react";
+import { Loader2, Container, HardDrive, GitBranch, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { importDiscoveredService, type DiscoveredService } from "@/lib/server/discovery.server";
+import {
+  defaultServiceUrl,
+  importDiscoveredService,
+  type DiscoveredService,
+} from "@/lib/server/discovery.server";
+
+const SOURCE_LABELS: Record<DiscoveredService["source"], string> = {
+  docker: "Docker",
+  truenas: "TrueNAS",
+  network: "Network",
+};
 import { getCategories } from "@/lib/server/categories.server";
 import { getApps } from "@/lib/server/apps.server";
 import { createDependency } from "@/lib/server/app-dependencies.server";
@@ -40,15 +50,7 @@ export function ImportServiceForm({
   const queryClient = useQueryClient();
 
   // Get the best URL from the service
-  const getDefaultUrl = () => {
-    if (service.truenasPortal) return service.truenasPortal;
-    const webPort = service.ports.find((p) => p.isWebUI) || service.ports[0];
-    if (webPort) {
-      const port = webPort.hostPort || webPort.port;
-      return `http://localhost:${port}`;
-    }
-    return "";
-  };
+  const getDefaultUrl = () => defaultServiceUrl(service) ?? "";
 
   const [name, setName] = useState(service.displayName);
   const [localUrl, setLocalUrl] = useState(getDefaultUrl());
@@ -149,6 +151,8 @@ export function ImportServiceForm({
               />
             ) : service.source === "docker" ? (
               <Container className="h-6 w-6 text-muted-foreground" />
+            ) : service.source === "network" ? (
+              <Network className="h-6 w-6 text-muted-foreground" />
             ) : (
               <HardDrive className="h-6 w-6 text-muted-foreground" />
             )}
@@ -157,7 +161,7 @@ export function ImportServiceForm({
             <div className="font-medium">{service.displayName}</div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="text-xs py-0 h-5">
-                {service.source === "docker" ? "Docker" : "TrueNAS"}
+                {SOURCE_LABELS[service.source]}
               </Badge>
               {service.image && <span>{service.image}</span>}
               {service.ports.length > 0 && (
@@ -211,13 +215,14 @@ export function ImportServiceForm({
                     className="font-mono"
                     onClick={() => {
                       const hostPort = port.hostPort || port.port;
-                      // Try to extract host from current URL or use localhost
+                      // Keep the host from the current URL, falling back to where the service runs
+                      const fallbackHost = service.host || "localhost";
                       try {
-                        const url = new URL(localUrl || "http://localhost");
+                        const url = new URL(localUrl || `http://${fallbackHost}`);
                         url.port = String(hostPort);
                         setLocalUrl(url.toString().replace(/\/$/, ""));
                       } catch {
-                        setLocalUrl(`http://localhost:${hostPort}`);
+                        setLocalUrl(`http://${fallbackHost}:${hostPort}`);
                       }
                     }}
                   >
