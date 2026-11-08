@@ -257,6 +257,23 @@ function DashboardPage() {
     });
   };
 
+  // Sidebar-driven filters — computed before any early return so hook order stays stable
+  // across renders (avoids React error #300 "rendered fewer hooks than expected").
+  const hasFilters = !!(activeStatus || activeHost || activeCategoryId);
+  const visibleApps = useMemo(() => {
+    const list = appsData?.apps ?? [];
+    if (!hasFilters) return list;
+    return list.filter((app) => {
+      if (activeStatus && (healthStatuses[app.id] ?? "unknown") !== activeStatus) return false;
+      if (activeCategoryId && app.categoryId !== activeCategoryId) return false;
+      if (activeHost) {
+        const host = hostParts(app.localUrl)?.host ?? hostParts(app.remoteUrl)?.host;
+        if (host !== activeHost) return false;
+      }
+      return true;
+    });
+  }, [appsData, hasFilters, activeStatus, activeCategoryId, activeHost, healthStatuses]);
+
   // Show login prompt if not authenticated
   if (!isSessionPending && !session?.user) {
     return (
@@ -279,20 +296,6 @@ function DashboardPage() {
   const tags = tagsData?.tags ?? [];
   const healthBarStyle = settingsData?.settings?.healthBarStyle ?? "dot";
 
-  // Sidebar-driven filters — applied to every view mode.
-  const hasFilters = !!(activeStatus || activeHost || activeCategoryId);
-  const visibleApps = useMemo(() => {
-    if (!hasFilters) return apps;
-    return apps.filter((app) => {
-      if (activeStatus && (healthStatuses[app.id] ?? "unknown") !== activeStatus) return false;
-      if (activeCategoryId && app.categoryId !== activeCategoryId) return false;
-      if (activeHost) {
-        const host = hostParts(app.localUrl)?.host ?? hostParts(app.remoteUrl)?.host;
-        if (host !== activeHost) return false;
-      }
-      return true;
-    });
-  }, [apps, hasFilters, activeStatus, activeCategoryId, activeHost, healthStatuses]);
   const clearFilters = () => { setActiveStatus(null); setActiveHost(null); setActiveCategoryId(null); };
   const activeCategoryName = categories.find((c) => c.id === activeCategoryId)?.name;
 
