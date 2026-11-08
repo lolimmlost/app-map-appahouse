@@ -86,6 +86,32 @@ export function extractTitle(html: string): string | null {
     return title || null
 }
 
+const GENERIC_TITLE_PARTS = new Set([
+    "sign in",
+    "login",
+    "log in",
+    "home",
+    "dashboard",
+    "welcome"
+])
+
+/**
+ * Turn a page title into an app name: "Sign In - Jellyseerr" -> "Jellyseerr",
+ * "Indigo Sun Florals | Custom Floral Arrangements" -> "Indigo Sun Florals"
+ */
+export function shortTitle(title: string): string {
+    const parts = title
+        .replace(/^\[[^\]]*\]\s*/, "") // "[Coolify] Coolify" -> "Coolify"
+        .split(/\s+[|\-–—:]\s+/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+    return (
+        parts.find((p) => !GENERIC_TITLE_PARTS.has(p.toLowerCase())) ??
+        parts[0] ??
+        title
+    )
+}
+
 function isPortOpen(
     host: string,
     port: number,

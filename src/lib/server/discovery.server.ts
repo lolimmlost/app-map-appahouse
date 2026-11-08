@@ -389,12 +389,12 @@ export const discoverServices = createServerFn({ method: "GET" }).handler(
       .filter(Boolean);
     if (networks.length > 0) {
       try {
-        const { scanNetwork } = await import("./network-scan.server");
+        const { scanNetwork, shortTitle } = await import("./network-scan.server");
         // Skip addresses an integration already reported, so TrueNAS apps don't show twice
         const known = new Set(allServices.map((s) => hostPortKey(defaultServiceUrl(s))));
         for (const found of await scanNetwork({ cidrs: networks })) {
           if (known.has(`${found.host}:${found.port}`)) continue;
-          const name = found.title || `${found.host}:${found.port}`;
+          const name = found.title ? shortTitle(found.title) : `${found.host}:${found.port}`;
           allServices.push({
             id: `network:${found.host}:${found.port}`,
             source: "network",

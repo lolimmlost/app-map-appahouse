@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { expandCidrs, extractTitle } from "@/lib/server/network-scan.server"
+import { expandCidrs, extractTitle, shortTitle } from "@/lib/server/network-scan.server"
 
 describe("expandCidrs", () => {
     it("skips the network and broadcast addresses of a /24", () => {
@@ -32,4 +32,17 @@ describe("extractTitle", () => {
         expect(extractTitle("<html><body>hi</body></html>")).toBeNull()
         expect(extractTitle("<title>   </title>")).toBeNull()
     })
+})
+
+describe("shortTitle", () => {
+  it.each([
+    ["Sign In - Jellyseerr", "Jellyseerr"],
+    ["Indigo Sun Florals | Custom Floral Arrangements", "Indigo Sun Florals"],
+    ["AppaHouse | Juan - Full-Stack Developer | TanStack Start & Docker Expert", "AppaHouse"],
+    ["[Coolify] Coolify", "Coolify"],
+    ["Navidrome", "Navidrome"],
+    ["Self-Hosted Wiki", "Self-Hosted Wiki"],
+  ])("%s -> %s", (title, expected) => {
+    expect(shortTitle(title)).toBe(expected)
+  })
 })
