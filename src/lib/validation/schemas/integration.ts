@@ -22,6 +22,7 @@ export const INTEGRATION_TYPES = [
   "jellyfin",
   "glances",
   "proxmox",
+  "home_assistant",
 ] as const;
 
 export type IntegrationType = (typeof INTEGRATION_TYPES)[number];

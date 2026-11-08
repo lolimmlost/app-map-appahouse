@@ -17,6 +17,7 @@ export const widgetTypeEnum = pgEnum("widget_type", [
   "iframe",
   "bookmarks",
   "notes",
+  "home_assistant",
 ]);
 
 export type WidgetPosition = {
@@ -77,6 +78,9 @@ export type WidgetConfig = {
   showDisks?: boolean;
   showApps?: boolean;
   showNetworkInterfaces?: boolean;
+  // Home Assistant widget
+  haEntities?: string[];
+  haHours?: number;
   // Generic
   title?: string;
   refreshInterval?: number;

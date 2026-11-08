@@ -739,3 +739,119 @@ export const getTrueNASInterfaces = createServerFn({ method: "POST" }).handler(
     return client.getArray<TrueNASInterface>("/api/v2.0/interface");
   }
 );
+
+// ============================================================================
+// HOME ASSISTANT TYPES
+// ============================================================================
+
+export type HomeAssistantSensor = {
+  entityId: string;
+  name: string;
+  deviceClass: string | null;
+  unit: string | null;
+  state: number | null;
+};
+
+export type HomeAssistantHistory = {
+  /** Shared bucket timestamps (ms) for every series */
+  times: number[];
+  series: Array<{ entityId: string; values: Array<number | null> }>;
+};
+
+type HAState = {
+  entity_id: string;
+  state: string;
+  attributes: { friendly_name?: string; device_class?: string; unit_of_measurement?: string };
+};
+
+const HA_ENTITY_ID = /^sensor\.[a-z0-9_]+$/;
+const HA_HISTORY_BUCKETS = 120;
+
+function toNumber(value: string): number | null {
+  const n = Number.parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+// ============================================================================
+// HOME ASSISTANT ENDPOINTS
+// ============================================================================
+
+/**
+ * Numeric sensors with a unit, for the widget's entity picker and labels
+ */
+export const getHomeAssistantSensors = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string } }): Promise<HomeAssistantSensor[]> => {
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 15000 });
+    const states = await client.getArray<HAState>("/api/states");
+
+    return states
+      .filter((s) => s.entity_id.startsWith("sensor.") && s.attributes.unit_of_measurement)
+      .map((s) => ({
+        entityId: s.entity_id,
+        name: s.attributes.friendly_name || s.entity_id,
+        deviceClass: s.attributes.device_class ?? null,
+        unit: s.attributes.unit_of_measurement ?? null,
+        state: toNumber(s.state),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+);
+
+/**
+ * Sensor history averaged into fixed time buckets so every series shares one
+ * x-axis and the payload stays small regardless of how chatty a sensor is.
+ */
+export const getHomeAssistantHistory = createServerFn({ method: "POST" }).handler(
+  async (ctx: { data: { integrationId: string; entityIds: string[]; hours: number } }): Promise<HomeAssistantHistory> => {
+    const entityIds = ctx.data.entityIds.filter((id) => HA_ENTITY_ID.test(id));
+    if (entityIds.length === 0) return { times: [], series: [] };
+
+    const hours = Math.min(Math.max(Math.round(ctx.data.hours) || 24, 1), 168);
+    const end = Date.now();
+    const start = end - hours * 3600_000;
+    const bucketMs = (end - start) / HA_HISTORY_BUCKETS;
+
+    const { createAuthenticatedIntegrationClient } = await import("./integration-client.server");
+    const client = await createAuthenticatedIntegrationClient(ctx.data.integrationId, { timeout: 30000 });
+    const raw = await client.getArray<Array<{ entity_id?: string; state: string; last_changed: string }>>(
+      `/api/history/period/${encodeURIComponent(new Date(start).toISOString())}`,
+      {
+        params: {
+          filter_entity_id: entityIds.join(","),
+          end_time: new Date(end).toISOString(),
+          minimal_response: "",
+          no_attributes: "",
+        },
+      }
+    );
+
+    const times = Array.from({ length: HA_HISTORY_BUCKETS }, (_, i) => Math.round(start + (i + 0.5) * bucketMs));
+
+    // With minimal_response only the first row of each list carries entity_id
+    const byEntity = new Map(raw.map((rows) => [rows[0]?.entity_id ?? "", rows]));
+
+    const series = entityIds.map((entityId) => {
+      const sums = new Array<number>(HA_HISTORY_BUCKETS).fill(0);
+      const counts = new Array<number>(HA_HISTORY_BUCKETS).fill(0);
+      for (const row of byEntity.get(entityId) ?? []) {
+        const value = toNumber(row.state);
+        if (value === null) continue;
+        const bucket = Math.floor((Date.parse(row.last_changed) - start) / bucketMs);
+        const i = Math.min(Math.max(bucket, 0), HA_HISTORY_BUCKETS - 1);
+        sums[i] += value;
+        counts[i] += 1;
+      }
+
+      // Sensors only report on change, so carry the last value forward
+      let last: number | null = null;
+      const values = sums.map((sum, i) => {
+        if (counts[i] > 0) last = Math.round((sum / counts[i]) * 100) / 100;
+        return last;
+      });
+      return { entityId, values };
+    });
+
+    return { times, series };
+  }
+);

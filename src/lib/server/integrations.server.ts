@@ -257,6 +257,14 @@ async function testIntegrationConnection(
         }
         break;
 
+      case "home_assistant":
+        // Returns {"message":"API running."} when the long-lived token is valid
+        testUrl = `${integration.url}/api/`;
+        if (integration.apiKey) {
+          headers["Authorization"] = `Bearer ${integration.apiKey}`;
+        }
+        break;
+
       default:
         // Generic HTTP check
         break;
