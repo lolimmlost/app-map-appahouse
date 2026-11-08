@@ -16,6 +16,7 @@ systemd, etc.) rather than shipping a `.env` file.
 | `AUTHENTIK_CLIENT_SECRET` | SSO | runtime (secret) | OAuth2 client secret from your Authentik provider. |
 | `AUTHENTIK_DISCOVERY_URL` | SSO | runtime | `https://<authentik-host>/application/o/<app-slug>/.well-known/openid-configuration`. |
 | `VITE_AUTHENTIK_ENABLED` | SSO | **build** | Set to `"true"` to render the "Sign in with Authentik" button. Inlined at build time — see the warning below. |
+| `DISCOVERY_NETWORKS` | — | runtime | Comma-separated IPv4 CIDRs or IPs (between /22 and /32) that **Discover Services** scans for web UIs, e.g. `10.0.0.0/24`. Unset = no LAN scan. The server must be able to reach these hosts (on Docker, the default bridge network can). |
 | `PORT` | — | runtime | Port the production server listens on. Defaults to `3000`. |
 | `NODE_ENV` | — | runtime | `production` in deployed environments; set automatically in most hosts. |
 

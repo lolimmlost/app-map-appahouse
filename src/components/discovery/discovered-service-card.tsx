@@ -1,6 +1,7 @@
 import {
   Container,
   HardDrive,
+  Network,
   ExternalLink,
   Check,
   Import,
@@ -64,6 +65,8 @@ export function DiscoveredServiceCard({
         <span className={service.iconUrl ? "hidden" : ""}>
           {service.source === "docker" ? (
             <Container className="h-5 w-5 text-muted-foreground" />
+          ) : service.source === "network" ? (
+            <Network className="h-5 w-5 text-muted-foreground" />
           ) : (
             <HardDrive className="h-5 w-5 text-muted-foreground" />
           )}
@@ -99,6 +102,11 @@ export function DiscoveredServiceCard({
             {service.source === "docker" ? (
               <>
                 <Container className="h-3 w-3 mr-1" />
+                {service.integrationName}
+              </>
+            ) : service.source === "network" ? (
+              <>
+                <Network className="h-3 w-3 mr-1" />
                 {service.integrationName}
               </>
             ) : (

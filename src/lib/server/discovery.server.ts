@@ -11,7 +11,7 @@ export interface DiscoveredPort {
 
 export interface DiscoveredService {
   id: string;
-  source: "docker" | "truenas";
+  source: "docker" | "truenas" | "network";
   name: string;
   displayName: string;
   containerName?: string;
@@ -22,6 +22,10 @@ export interface DiscoveredService {
   labels?: Record<string, string>;
   truenasAppName?: string;
   truenasPortal?: string;
+  /** LAN host the service runs on (from the integration URL or the scan) */
+  host?: string;
+  /** Exact URL that answered, for services found by the network scan */
+  url?: string;
   existingAppId?: string | null;
   integrationId: string;
   integrationName: string;
@@ -69,12 +73,41 @@ function getDisplayName(name: string): string {
     .trim();
 }
 
+function hostFromUrl(url: string): string | undefined {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Best URL to open a discovered service at */
+export function defaultServiceUrl(service: DiscoveredService): string | null {
+  if (service.url) return service.url;
+  if (service.truenasPortal) return service.truenasPortal;
+  const webPort = service.ports.find((p) => p.isWebUI) || service.ports[0];
+  if (!webPort) return null;
+  // Integrations report host ports, so build the URL on the host they run on
+  return `http://${service.host || "localhost"}:${webPort.hostPort || webPort.port}`;
+}
+
+function hostPortKey(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return `${u.hostname}:${u.port || (u.protocol === "https:" ? "443" : "80")}`;
+  } catch {
+    return null;
+  }
+}
+
 // Transform Docker container to DiscoveredService
 function dockerToDiscoveredService(
   container: DockerContainer,
   integrationId: string,
   integrationName: string,
-  getIconUrl: (name: string) => string | null
+  getIconUrl: (name: string) => string | null,
+  host?: string
 ): DiscoveredService {
   const rawName = container.Names[0]?.replace(/^\//, "") || container.Id.substring(0, 12);
 
@@ -104,6 +137,7 @@ function dockerToDiscoveredService(
     status: container.State === "running" ? "running" : "stopped",
     iconUrl: iconUrl || undefined,
     labels: container.Labels,
+    host,
     integrationId,
     integrationName,
   };
@@ -114,7 +148,8 @@ function truenasToDiscoveredService(
   app: TrueNASApp,
   integrationId: string,
   integrationName: string,
-  getIconUrl: (name: string) => string | null
+  getIconUrl: (name: string) => string | null,
+  host?: string
 ): DiscoveredService {
   const ports: DiscoveredPort[] = (app.active_workloads?.used_ports || []).map((p) => ({
     port: p.container_port,
@@ -140,6 +175,7 @@ function truenasToDiscoveredService(
     ports,
     status: app.state === "RUNNING" ? "running" : app.state === "DEPLOYING" ? "unknown" : "stopped",
     iconUrl: iconUrl || undefined,
+    host,
     integrationId,
     integrationName,
   };
@@ -225,6 +261,23 @@ async function matchWithExistingApps(
       }
     }
 
+    // Try to match by the address the app already points at
+    const serviceUrl = defaultServiceUrl(service);
+    const serviceKey = hostPortKey(serviceUrl);
+    if (serviceKey && service.host) {
+      const match = existingApps.find(
+        (app) => hostPortKey(app.localUrl) === serviceKey || hostPortKey(app.remoteUrl) === serviceKey
+      );
+      if (match) {
+        service.existingAppId = match.id;
+        continue;
+      }
+    }
+
+    // Network-scan results are keyed by address only; a page title matching an
+    // app name is too weak a signal ("Login") to mark them as already added
+    if (service.source === "network") continue;
+
     // Try to match by name similarity
     const normalizedServiceName = normalizeName(service.name);
     const match = existingApps.find((app) => {
@@ -261,7 +314,7 @@ export const discoverServices = createServerFn({ method: "GET" }).handler(
       return {
         services: [],
         errors: [{ integration: "Auth", error: "Please log in to discover services" }],
-        integrationCount: { docker: 0, truenas: 0 },
+        integrationCount: { docker: 0, truenas: 0, network: 0 },
       };
     }
 
@@ -286,7 +339,13 @@ export const discoverServices = createServerFn({ method: "GET" }).handler(
         if (Array.isArray(containers)) {
           for (const container of containers as DockerContainer[]) {
             allServices.push(
-              dockerToDiscoveredService(container, integration.id, integration.name, getIconUrl)
+              dockerToDiscoveredService(
+                container,
+                integration.id,
+                integration.name,
+                getIconUrl,
+                hostFromUrl(integration.url)
+              )
             );
           }
         }
@@ -305,13 +364,54 @@ export const discoverServices = createServerFn({ method: "GET" }).handler(
         if (Array.isArray(apps)) {
           for (const app of apps as TrueNASApp[]) {
             allServices.push(
-              truenasToDiscoveredService(app, integration.id, integration.name, getIconUrl)
+              truenasToDiscoveredService(
+                app,
+                integration.id,
+                integration.name,
+                getIconUrl,
+                hostFromUrl(integration.url)
+              )
             );
           }
         }
       } catch (error) {
         errors.push({
           integration: integration.name,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    // Scan the LAN for web UIs the integrations don't know about
+    const networks = (process.env.DISCOVERY_NETWORKS || "")
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean);
+    if (networks.length > 0) {
+      try {
+        const { scanNetwork } = await import("./network-scan.server");
+        // Skip addresses an integration already reported, so TrueNAS apps don't show twice
+        const known = new Set(allServices.map((s) => hostPortKey(defaultServiceUrl(s))));
+        for (const found of await scanNetwork({ cidrs: networks })) {
+          if (known.has(`${found.host}:${found.port}`)) continue;
+          const name = found.title || `${found.host}:${found.port}`;
+          allServices.push({
+            id: `network:${found.host}:${found.port}`,
+            source: "network",
+            name: `${name} ${found.host}:${found.port}`,
+            displayName: name,
+            ports: [{ port: found.port, hostPort: found.port, protocol: "tcp", isWebUI: true }],
+            status: "running",
+            iconUrl: (found.title && getIconUrl(found.title)) || undefined,
+            host: found.host,
+            url: found.url,
+            integrationId: "",
+            integrationName: found.host,
+          });
+        }
+      } catch (error) {
+        errors.push({
+          integration: "Network scan",
           error: error instanceof Error ? error.message : "Unknown error",
         });
       }
@@ -342,6 +442,7 @@ export const discoverServices = createServerFn({ method: "GET" }).handler(
       integrationCount: {
         docker: dockerIntegrations.length,
         truenas: truenasIntegrations.length,
+        network: networks.length,
       },
     };
   }
@@ -367,16 +468,7 @@ export const importDiscoveredService = createServerFn({ method: "POST" }).handle
 
     const { service, name, localUrl, categoryId, healthCheckEnabled } = ctx.data;
 
-    // Determine the URL to use
-    let url = localUrl;
-    if (!url && service.truenasPortal) {
-      url = service.truenasPortal;
-    }
-    if (!url && service.ports.length > 0) {
-      const webPort = service.ports.find((p) => p.isWebUI) || service.ports[0];
-      const port = webPort.hostPort || webPort.port;
-      url = `http://localhost:${port}`;
-    }
+    const url = localUrl || defaultServiceUrl(service);
 
     const [newApp] = await db
       .insert(apps)
@@ -419,14 +511,7 @@ export const bulkImportServices = createServerFn({ method: "POST" }).handler(
 
     for (const service of services) {
       try {
-        let url: string | null = null;
-        if (service.truenasPortal) {
-          url = service.truenasPortal;
-        } else if (service.ports.length > 0) {
-          const webPort = service.ports.find((p) => p.isWebUI) || service.ports[0];
-          const port = webPort.hostPort || webPort.port;
-          url = `http://localhost:${port}`;
-        }
+        const url = defaultServiceUrl(service);
 
         await db.insert(apps).values({
           name: service.displayName,
