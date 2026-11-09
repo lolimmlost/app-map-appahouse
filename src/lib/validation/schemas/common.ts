@@ -24,12 +24,13 @@ export const requiredString = z
   .transform((val) => val.trim());
 
 /**
- * Optional string that transforms empty strings to null
+ * Optional string that transforms empty strings to null. Accepts null too,
+ * since forms send blank fields as null (e.g. an integration without a username)
  */
 export const optionalString = z
   .string()
-  .transform((val) => val.trim())
-  .transform((val) => val || null);
+  .nullish()
+  .transform((val) => val?.trim() || null);
 
 /**
  * URL validation that allows empty strings (optional URLs)
