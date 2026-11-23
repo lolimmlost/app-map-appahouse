@@ -35,6 +35,11 @@ import { getTags } from "@/lib/server/tags.server";
 import { getCategories } from "@/lib/server/categories.server";
 import { getUserSettings } from "@/lib/server/user-settings.server";
 import { searchSearxng } from "@/lib/server/searxng.server";
+import {
+  APP_VALUE_PREFIX,
+  commandPaletteFilter,
+  rankApps,
+} from "@/lib/command-palette-search";
 import type { App } from "@/types/database";
 import type { Category } from "@/types/database";
 
@@ -116,6 +121,10 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
   const apps = appsData?.apps ?? [];
   const tags = tagsData?.tags ?? [];
   const categories = categoriesData?.categories ?? [];
+
+  // Match against the full app list, then cap the results (not the input),
+  // so apps late in the list (e.g. "LubeLogger") are still found.
+  const appResults = rankApps(apps, search);
 
   // Apps with notes for searching
   const appsWithNotes = apps.filter((app) => app.notes && app.notes.trim().length > 0);
@@ -210,7 +219,7 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
         <span className="sr-only">Search</span>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setSearch(""); }}>
+      <CommandDialog filter={commandPaletteFilter} open={open} onOpenChange={(value) => { setOpen(value); if (!value) setSearch(""); }}>
         <CommandInput placeholder="Search apps, categories, tags, notes..." value={search} onValueChange={setSearch} />
         <CommandList>
           <CommandEmpty>
@@ -220,12 +229,13 @@ function CommandPaletteClient({ onAddApp, onFilterByCategory, onFilterByTag }: C
           </CommandEmpty>
 
           {/* Apps */}
-          {apps.length > 0 && (
+          {appResults.length > 0 && (
             <CommandGroup heading="Apps">
-              {apps.slice(0, 8).map((app) => (
+              {appResults.map((app) => (
                 <CommandItem
                   key={app.id}
-                  value={`app-${app.name}-${app.description || ""}-${app.notes || ""}`}
+                  value={`${APP_VALUE_PREFIX}${app.id}`}
+                  keywords={[app.name, app.description || "", app.notes || ""]}
                   onSelect={() => handleOpenApp(app)}
                   className="group"
                 >
